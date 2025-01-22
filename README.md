@@ -1,3 +1,9 @@
+# Project Title
+Building a Trusted Conversational Analytics System: Natural Language Interfaces for Effective Data Visualization and Exploration
+
+# Abstract
+Utilizing advanced NLP, database querying, and automated chart selection, this project investigates how to design, implement, and evaluate a conversational analytics system. By blending user-centered design with robust architecture, it aims to create an accessible, trustworthy environment for exploring and visualizing data using natural language interactions.
+
 # Literature Review
 - Cleveland, William S., and Robert McGill. “Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods.” Journal of the American Statistical Association 79, no. 387 (1984): 531–54. https://doi.org/10.2307/2288400.
 - Chambers, John M. Graphical methods for data analysis. Boca Raton, FL: CRC Press, 2018. 
