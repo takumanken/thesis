@@ -26,7 +26,8 @@ To develop an interface that expands accessibility to a wider range of users, th
 - **Automated Data Aggregation**  
   - Automatic detection and application of suitable aggregations (dimension or measure, pre-/post-aggregation filters)  
   - Capability to generate new calculations based on user requests (e.g., cumulative amounts, year-over-year, week-over-week)  
-  - Intelligent chart selection aligned with established best practices for chart usage
+- **Automated Data Visualization**
+    - Intelligent chart selection aligned with established best practices for chart usage
 
 - **Multi-Language Interface**  
   - Support for multiple languages to accommodate users with varying linguistic backgrounds
