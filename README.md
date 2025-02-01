@@ -10,8 +10,8 @@ This thesis explores the creation of an novel user experience with [NYC Open Dat
 Although **NYC Open Data** can benefit a wide range of users—from students to data scientists—the current interface requires a specific set of skills and conditions that can limit accessibility:
 
 - **Data Aggregation Skills**  
-  - Understanding of data aggregation terminology (e.g., *dimensions*, *measures*)  
-  - Proficiency in data aggregation tasks (e.g., `GROUP BY`, pre-/post-aggregation filters, creating new calculations)
+  - Understanding of data aggregation terminology (e.g., dimensions, measures)
+  - Proficiency in data aggregation tasks (e.g., aggregation vs. non-aggregation, pre-/post-aggregation filters, and creating new calculations)
 
 - **Data Visualization Skills**  
   - Ability to select the appropriate chart type (e.g., using a bar chart for category comparisons)  
