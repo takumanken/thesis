@@ -2,7 +2,7 @@
 **AskNYC: A Conversational Interface for NYC Open Data**
 
 ## 1. Abstract
-This thesis explores the creation of a novel user experience with [NYC Open Data](https://opendata.cityofnewyork.us/), a massive municipal dataset that provides valuable insights into New York City. Its primary goal is to develop a conversational interface that facilitates data aggregation and visualization through natural language interaction. By integrating state-of-the-art generative AI with established data aggregation and visualization methods, this research aims to improve the usability of open data while expanding accessibility to a wide range of users. A comprehensive literature review examines both historical and contemporary initiatives in natural language interfaces for data aggregation and the principles of map selection, leading to a guide for system development and optimization.
+This thesis explores a new approach to user interaction with [NYC Open Data](https://opendata.cityofnewyork.us/) through the development of a conversational interface designed to enhance accessibility. The system enables accurate data visualization and chart selection while capturing the semantics behind user prompts for selected datasets. To inform the system’s architecture, this research includes a comprehensive literature review on existing data platforms leveraging natural language, principles of effective map selection, and the latest advancements in generative AI technologies.
 
 ## 2. Background and Motivation
 
