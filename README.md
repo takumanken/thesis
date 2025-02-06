@@ -1,5 +1,5 @@
 # Project Title
-**AskNYC: A Conversational Interface for NYC Open Data**
+Democratizing Urban Data: A Natural Language Interface for Exploring NYC Open Data
 
 ## 1. Abstract
 ## Abstract
