@@ -2,12 +2,13 @@
 Democratizing Urban Data: A Natural Language Interface for Exploring NYC Open Data
 
 ## 1. Abstract
-## Abstract
-Generative AI is reshaping user experiences, most notably through AI-driven chatbots and customer support. This paper explores how similar advances can enhance interactions with public datasets by introducing a conversational interface using some datasets from [NYC Open Data](https://opendata.cityofnewyork.us/), a comprehensive collection of New York City records.
+With the rise of AI-powered chatbots and customer support, generative AI is transforming user experiences. This thesis explores how similar advancements can improve user interactions with public datasets by introducing a conversational interface for select datasets from [NYC Open Data](https://opendata.cityofnewyork.us/), a comprehensive collection of New York City’s public data.
 
-The system combines traditional data aggregation techniques with context-aware map selection to enable intuitive, language-agnostic data exploration. By interpreting natural language prompts-such as "Show crime trends in Brooklyn since 2020" or "How many rats have been spotted in each borough?"-the interface dynamically generates customized visualizations, making data more accessible to users without technical expertise or English proficiency.
+The system integrates traditional data aggregation techniques with context-aware visualization selection, enabling intuitive data exploration. By interpreting natural language prompts—such as “Show crime trends in Brooklyn since 2020” or “How many rats have been spotted in each borough?”—the interface dynamically generates customized visualizations, making data more accessible to users without technical expertise or English proficiency.
 
-To inform development, this research synthesizes insights from historical and state-of-the-art natural language processing methods for querying databases and exploratory data analysis, along with best practices for selecting appropriate graph types based on analytical objectives.
+To guide development, this research synthesizes insights from historical and state-of-the-art natural language processing (NLP) methods for querying databases and exploratory data analysis. It also incorporates best practices for selecting appropriate visualization types based on analytical objectives, balancing traditional principles with modern AI technologies.
+
+
 
 ## 2. Background and Motivation
 
