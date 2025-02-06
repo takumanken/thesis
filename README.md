@@ -1,5 +1,4 @@
-# Project Title
-Democratizing Urban Data: A Natural Language Interface for Exploring NYC Open Data
+# Democratizing Urban Data: A Natural Language Interface for Exploring NYC Open Data
 
 ## 1. Abstract
 With the rise of AI-powered chatbots and customer support, generative AI is transforming user experiences. This thesis explores how similar advancements can improve user interactions with public datasets by introducing a conversational interface for select datasets from [NYC Open Data](https://opendata.cityofnewyork.us/), a comprehensive collection of New York City’s public data.
