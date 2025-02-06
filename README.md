@@ -2,7 +2,12 @@
 **AskNYC: A Conversational Interface for NYC Open Data**
 
 ## 1. Abstract
-This thesis explores a new approach to user interaction with [NYC Open Data](https://opendata.cityofnewyork.us/) through the development of a conversational interface designed to enhance accessibility. The system enables accurate data visualization and chart selection while capturing the semantics behind user prompts for selected datasets. To inform the system’s architecture, this research includes a comprehensive literature review on existing data platforms leveraging natural language, principles of effective map selection, and the latest advancements in generative AI technologies.
+## Abstract
+Generative AI is reshaping user experiences, most notably through AI-driven chatbots and customer support. This paper explores how similar advances can enhance interactions with public datasets by introducing a conversational interface using some datasets from [NYC Open Data](https://opendata.cityofnewyork.us/), a comprehensive collection of New York City records.
+
+The system combines traditional data aggregation techniques with context-aware map selection to enable intuitive, language-agnostic data exploration. By interpreting natural language prompts-such as "Show crime trends in Brooklyn since 2020" or "How many rats have been spotted in each borough?"-the interface dynamically generates customized visualizations, making data more accessible to users without technical expertise or English proficiency.
+
+To inform development, this research synthesizes insights from historical and state-of-the-art natural language processing methods for querying databases and exploratory data analysis, along with best practices for selecting appropriate graph types based on analytical objectives.
 
 ## 2. Background and Motivation
 
