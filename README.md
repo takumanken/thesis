@@ -1,12 +1,11 @@
 # Democratizing Urban Data: A Natural Language Interface for Exploring NYC Open Data
 
 ## 1. Abstract
-With the rise of AI-powered chatbots and customer support, generative AI is transforming user experiences. This thesis explores how similar advancements can improve user interactions with public datasets by introducing a conversational interface for some datasets from [NYC Open Data](https://opendata.cityofnewyork.us/), a comprehensive collection of New York City's public data.
+As we started seeing AI-powered chatbots and customer support in our daily lives, generative AI is transforming user experiences. In this thesis, we explore the potential of user interaction with public datasets by introducing a conversational interface for a subset of datasets from [NYC Open Data](https://opendata.cityofnewyork.us/), a comprehensive collection of public data from New York City.
 
-The system integrates traditional data aggregation techniques with context-aware visualization selection, enabling intuitive data exploration. By interpreting natural language prompts—such as “Show crime trends in Brooklyn since 2020” or “How many rats have been spotted in each borough?”—the interface dynamically generates customized visualizations, making data more accessible to users without technical expertise or English proficiency.
+This system democratizes traditional data aggregation/visualization best practices to a broader range of users and improves the use of public data. For example, when a user asks the interface to "show crime trends in Brooklyn since 2020" or "how many rats have been spotted in each borough," the interface dynamically generates customized visualizations while capturing user intent and performing accurate data aggregation.
 
-To guide development, this research synthesizes insights from historical and state-of-the-art natural language processing (NLP) methods for querying databases and exploratory data analysis. It also incorporates best practices for selecting appropriate visualization types based on analytical objectives, balancing traditional principles with modern AI technologies.
-
+To guide development, this research synthesizes insights from historical to cutting-edge research on natural language processing, data aggregation, and chart selection techniques, balancing traditional principles with modern AI technologies.
 
 ## 2. Background and Motivation
 
