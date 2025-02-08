@@ -38,6 +38,7 @@ These features are designed to make NYC Open Data accessible to a broader range 
 To further customize the experience for NYC Open Data users, the following enhancements will be incorporated:
 - **Local Terminology Handling:** Recognizing and correctly interpreting NYC-specific terms (e.g., "The Village" for Greenwich Village).
 - **Geospatial Integration:** Utilizing off-the-shelf shape data (e.g., zip code boundaries) to create contextually relevant map visualizations.
+
 These features will provide capabilities that one-size-fits-all services, such as conventional business intelligence tools, cannot offer.
 
 ## 3. Treatment
