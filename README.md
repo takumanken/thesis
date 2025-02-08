@@ -14,9 +14,9 @@ To guide development, this research synthesizes insights from both historical an
 ### 2-1. Current Challenges of Open Data
 Traditionally, open data providers like NYC Open Data offer access to information through several methods:
 
-- File Downloads: e.g., CSV, TSV, Excel files.
-- APIs
-- Exploratory Interfaces: Visualization platforms.
+- **File Downloads**: e.g., CSV, TSV, Excel files.
+- **APIs**
+- **Exploratory Interfaces**: Visualization platforms.
 
 While these methods serve certain user groups well, they inherently require a specialized skill set:
 
@@ -26,19 +26,19 @@ While these methods serve certain user groups well, they inherently require a sp
 Since open data is intended for a broad audience, these technical requirements can pose significant barriers to widespread adoption and effective use. This project, therefore, explores innovative solutions to overcome these challenges.
 
 ### 2-2. Project Scope
+This project aims to develop an interface that enables the following user experiences:
 
-#### Target User Experience
-To address the limitations of traditional interfaces, this project aims to develop a natural language interface that offers the following user benefits:
+#### 2-2-1. Querying Data and Building Visualizations Through Natural Language
+To address the limitations of traditional interfaces, this application will provide the following capabilities:
 - **Natural Querying:** Users can obtain the data they need by simply describing their requirements in everyday language.
 - **Instant Visualization**: A single, dynamically generated visualization is created in response to the user's query without requiring data visualization expertise.
+These features are designed to make NYC Open Data accessible to a broader range of users, including those without technical backgrounds.
 
-These features are intended to make NYC Open Data accessible to a broader range of users, including those without specialized technical skills.
-
-#### Tailoring to NYC Open Data
-
-To further customize the experience for New York City users, the following enhancements are incorporated:
+#### 2-2-2. Tailoring exploratory to NYC Open Data
+To further customize the experience for NYC Open Data users, the following enhancements will be incorporated:
 - **Local Terminology Handling:** Recognizing and correctly interpreting NYC-specific terms (e.g., "The Village" for Greenwich Village).
 - **Geospatial Integration:** Utilizing off-the-shelf shape data (e.g., zip code boundaries) to create contextually relevant map visualizations.
+These features will provide capabilities that one-size-fits-all services, such as conventional business intelligence tools, cannot offer.
 
 ## 3. Treatment
 
