@@ -21,7 +21,7 @@ Traditionally, open data providers like NYC Open Data offer access to informatio
 While these methods serve certain user groups well, they inherently require a specialized skill set:
 
 - **Data Transformation**: The ability to implement custom data transformation and aggregation logic using software or programming languages.
-- **Data Visualization**: Proficiency in using visualization tools or programming languages to represent data graphically.
+- **Data Visualization**: Knowledge of visualization best practices and the use of visualization tools or programming languages.
 
 Since open data is intended for a broad audience, these technical requirements can pose significant barriers to widespread adoption and effective use. This project, therefore, explores innovative solutions to overcome these challenges.
 
@@ -30,7 +30,7 @@ Since open data is intended for a broad audience, these technical requirements c
 #### Target User Experience
 To address the limitations of traditional interfaces, this project aims to develop a natural language interface that offers the following user benefits:
 - **Natural Querying:** Users can obtain the data they need by simply describing their requirements in everyday language.
-- **Instant Visualization**: A single, dynamically generated visualization is produced in response to the user's query, eliminating the need for manual data visualization.
+- **Instant Visualization**: A single, dynamically generated visualization is created in response to the user's query without requiring data visualization expertise.
 
 These features are intended to make NYC Open Data accessible to a broader range of users, including those without specialized technical skills.
 
@@ -39,7 +39,6 @@ These features are intended to make NYC Open Data accessible to a broader range 
 To further customize the experience for New York City users, the following enhancements are incorporated:
 - **Local Terminology Handling:** Recognizing and correctly interpreting NYC-specific terms (e.g., "The Village" for Greenwich Village).
 - **Geospatial Integration:** Utilizing off-the-shelf shape data (e.g., zip code boundaries) to create contextually relevant map visualizations.
-
 
 ## 3. Treatment
 
