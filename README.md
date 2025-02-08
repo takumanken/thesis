@@ -1,39 +1,44 @@
 # Democratizing Urban Data: A Natural Language Interface for Exploring NYC Open Data
 
 ## 1. Abstract
-As we started seeing AI-powered chatbots and customer support in our daily lives, generative AI is transforming user experiences. In this thesis, we explore the potential of user interaction with public datasets by introducing a conversational interface for a subset of datasets from [NYC Open Data](https://opendata.cityofnewyork.us/), a comprehensive collection of public data from New York City.
+This work explores a novel user experience that enables natural language interactions with public datasets. To demonstrate this concept, we focus on developing an interface tailored specifically for a subset of datasets from [NYC Open Data](https://opendata.cityofnewyork.us/), a comprehensive repository of New York City public data.
 
-This system democratizes traditional data aggregation/visualization best practices to a broader range of users and improves the use of public data. For example, when a user asks the interface to "show crime trends in Brooklyn since 2020" or "how many rats have been spotted in each borough," the interface dynamically generates customized visualizations while capturing user intent and performing accurate data aggregation.
+The first goal of this project is to lower the technical barrier associated with data aggregation and visualization. By allowing users to simply ask questions—such as "show crime trends in Brooklyn since 2020" or "how many rats have been spotted in each borough"—the interface dynamically generates customized visualizations that capture user intent and perform accurate data processing.
 
-To guide development, this research synthesizes insights from historical to cutting-edge research on natural language processing, data aggregation, and chart selection techniques, balancing traditional principles with modern AI technologies.
+The second goal is to build a system finely tuned to the unique aspects of NYC Open Data. This includes handling local synonyms and slang (e.g., interpreting "The Village" as Greenwich Village or "uppertown" as the area around 59th Street extending northward) and integrating geospatial data (using shape files for borough boundaries, zip codes, etc.) to provide contextually relevant maps.
 
-## 2. Background and Motivation
+To guide development, this research synthesizes insights from both historical and cutting-edge work in natural language processing, data aggregation, and chart selection techniques, balancing traditional principles with modern AI technologies.
 
-### 2-1. Background
-Although **NYC Open Data** can benefit a wide range of users—from students to data scientists—the current interface requires a specific set of skills and conditions that can limit accessibility:
+## 2. Introduction
 
-- **Data Aggregation Skills**  
-  - Understanding of data aggregation terminology (e.g., dimensions, measures)
-  - Proficiency in data aggregation tasks (e.g., aggregation vs. non-aggregation, pre-/post-aggregation filters, and creating new calculations)
+### 2-1. Current Challenges of Open Data
+Traditionally, open data providers like NYC Open Data offer access to information through several methods:
 
-- **Data Visualization Skills**  
-  - Ability to select the appropriate chart type (e.g., using a bar chart for category comparisons)  
-  - Familiarity with data visualization tools (e.g., existing UIs, Excel, Tableau, or programming languages like R/Python)
+- File Downloads: e.g., CSV, TSV, Excel files.
+- APIs
+- Exploratory Interfaces: Visualization platforms.
 
-- **Other Accessibility Challenges**  
-  - **Language**: The interface is primarily available in English, potentially excluding non-English-speaking users  
+While these methods serve certain user groups well, they inherently require a specialized skill set:
 
-### 2-2. Motivation
-To develop an interface that expands accessibility to a wider range of users, the following requirements are crucial:
+- **Data Transformation**: The ability to implement custom data transformation and aggregation logic using software or programming languages.
+- **Data Visualization**: Proficiency in using visualization tools or programming languages to represent data graphically.
 
-- **Automated Data Aggregation**  
-  - Automatic detection and application of suitable aggregations (dimension or measure, pre-/post-aggregation filters)  
-  - Capability to generate new calculations based on user requests (e.g., cumulative amounts, year-over-year, week-over-week)  
-- **Automated Data Visualization**
-    - Intelligent chart selection aligned with established best practices for chart usage
+Since open data is intended for a broad audience, these technical requirements can pose significant barriers to widespread adoption and effective use. This project, therefore, explores innovative solutions to overcome these challenges.
 
-- **Multi-Language Interface**  
-  - Support for multiple languages to accommodate users with varying linguistic backgrounds
+### 2-2. Project Scope
+
+#### Target User Experience
+To address the limitations of traditional interfaces, this project aims to develop a natural language interface that offers the following user benefits:
+- **Natural Querying:** Users can obtain the data they need by simply describing their requirements in everyday language.
+- **Instant Visualization**: A single, dynamically generated visualization is produced in response to the user's query, eliminating the need for manual data visualization.
+
+These features are intended to make NYC Open Data accessible to a broader range of users, including those without specialized technical skills.
+
+#### Tailoring to NYC Open Data
+
+To further customize the experience for New York City users, the following enhancements are incorporated:
+- **Local Terminology Handling:** Recognizing and correctly interpreting NYC-specific terms (e.g., "The Village" for Greenwich Village).
+- **Geospatial Integration:** Utilizing off-the-shelf shape data (e.g., zip code boundaries) to create contextually relevant map visualizations.
 
 
 ## 3. Treatment
