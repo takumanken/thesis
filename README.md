@@ -32,7 +32,6 @@ This project aims to develop an interface that enables the following user experi
 To address the limitations of traditional interfaces, this application will provide the following capabilities:
 - **Natural Querying:** Users can obtain the data they need by simply describing their requirements in everyday language.
 - **Instant Visualization**: A single, dynamically generated visualization is created in response to the user's query without requiring data visualization expertise.
-These features are designed to make NYC Open Data accessible to a broader range of users, including those without technical backgrounds.
 
 #### 2-2-2. Tailoring exploratory to NYC Open Data
 To further customize the experience for NYC Open Data users, the following enhancements will be incorporated:
