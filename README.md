@@ -3,7 +3,7 @@
 ## 1. Abstract
 This work explores a novel user experience that enables natural language interactions with public datasets. To demonstrate this concept, we focus on developing an interface tailored specifically for a subset of datasets from [NYC Open Data](https://opendata.cityofnewyork.us/), a comprehensive repository of New York City public data.
 
-The first goal of this project is to lower the technical barrier associated with data aggregation and visualization. By allowing users to simply ask questions—such as "show crime trends in Brooklyn since 2020" or "how many rats have been spotted in each borough"—the interface dynamically generates customized visualizations that capture user intent and perform accurate data processing.
+The first goal of this project is to lower the technical barrier to data aggregation and visualization associated with the use of public data. By allowing users to simply ask questions-such as "show crime trends in Brooklyn since 2020" or "how many rats have been spotted in each borough"-the interface dynamically generates customized visualizations that capture user intent and perform accurate data processing.
 
 The second goal is to build a system finely tuned to the unique aspects of NYC Open Data. This includes handling local synonyms and slang (e.g., interpreting "The Village" as Greenwich Village or "uppertown" as the area around 59th Street extending northward) and integrating geospatial data (using shape files for borough boundaries, zip codes, etc.) to provide contextually relevant maps.
 
