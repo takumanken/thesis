@@ -17,13 +17,15 @@ Open data portals hold immense potential for research, civic engagement, and dec
 
 These barriers can alienate a broad audience, limiting the reach and utility of open data. Without accessible tools, important insights remain locked away, especially for community members, journalists, or small organizations that lack robust technical resources.
 
-### 2.2. This Project’s Approach
-To address these barriers, this thesis proposes a natural language interface that streamlines data exploration and visualization. As a proof of concept, we focus on selected datasets from NYC Open Data to demonstrate the viability of the system in a real-world context:
+### 2.2. Approach of this Project
 
-- Leveraging AI for Accessibility:** By applying advanced natural language processing and automation techniques, users can simply type or speak queries in everyday language. The system interprets these requests, retrieves and processes the relevant data, and generates visualizations without the need for manual data manipulation or coding.
-- The interface incorporates local terminology and slang, recognizing that "The Village" refers to Greenwich Village or "uppertown" refers to areas north of 59th Street. Geospatial data - such as borough boundaries and zip codes - is also integrated to provide context-rich maps and spatial analysis.
+To address these barriers, this work proposes a natural language interface that streamlines data exploration and visualization. As a proof of concept, we focus on selected datasets from NYC Open Data to demonstrate the viability of the system in a real-world context.
 
-By focusing on NYC Open Data, we demonstrate how this approach can be applied to large and diverse repositories of public information. Ultimately, this project aims to broaden public engagement with open data portals by reducing technical complexity and demonstrating how AI-driven natural language interfaces can help make data exploration more inclusive and intuitive.
+Firstly, by applying advanced natural language processing and automation techniques, this project builds an interface where users can type or speak queries in everyday language. The system interprets users’ requests, retrieves and processes the relevant data, and generates visualizations without requiring manual data manipulation or coding.
+
+For a better user experience, the interface supports local terminology and slang—for example, interpreting “The Village” as Greenwich Village or “uppertown” as areas north of 59th Street. In addition, geospatial data (such as borough boundaries and ZIP code polygons) is integrated to provide context-rich maps and enable spatial analysis.
+
+Lastly, by developing the interface for NYC Open Data, we assess how this approach can be applied to large and diverse open data portals. The system’s performance and user feedback offer valuable insights into how effectively the natural language interface scales across multiple datasets and varying usage scenarios. Looking ahead, this proof of concept could be adapted for other municipal or organizational data platforms, serving as a model for making open data more accessible and user-friendly.
 
 ## 3. Treatment
 
