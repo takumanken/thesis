@@ -1,44 +1,29 @@
 # Democratizing Urban Data: A Natural Language Interface for Exploring NYC Open Data
 
 ## 1. Abstract
-This work explores a novel user experience that enables natural language interactions with public datasets. To demonstrate this concept, we focus on developing an interface tailored specifically for a subset of datasets from [NYC Open Data](https://opendata.cityofnewyork.us/), a comprehensive repository of New York City public data.
+This thesis addresses a potential challenge in public data usage: the limited accessibility of existing open data portals. To overcome this barrier, we introduce a natural language interface powered by advanced AI technologies, simplifying how users explore and visualize open data. As a proof of concept, we focus on a subset of [NYC Open Data](https://opendata.cityofnewyork.us/), a vast repository of New York City’s public datasets.
 
-The first goal of this project is to lower the technical barrier to data aggregation and visualization associated with the use of public data. By allowing users to simply ask questions-such as "show crime trends in Brooklyn since 2020" or "how many rats have been spotted in each borough"-the interface dynamically generates customized visualizations that capture user intent and perform accurate data processing.
+By allowing users to ask everyday questions about NYC-such as "show crime trends in Brooklyn since 2020" or "how many rats have been spotted in each borough"-our system dynamically generates relevant visualizations and handles data processing automatically. This approach lowers technical barriers and empowers individuals to gain insights without specialized skills in coding or data transformation. In addition, the interface is sensitive to local nuances: it recognizes colloquialisms ("The Village" for Greenwich Village, "Uppertown" for the area north of 59th Street) and leverages geospatial data (e.g., shapefiles for borough boundaries) to ensure accurate, contextual results.
 
-The second goal is to build a system finely tuned to the unique aspects of NYC Open Data. This includes handling local synonyms and slang (e.g., interpreting "The Village" as Greenwich Village or "uppertown" as the area around 59th Street extending northward) and integrating geospatial data (using shape files for borough boundaries, zip codes, etc.) to provide contextually relevant maps.
-
-To guide development, this research synthesizes insights from both historical and cutting-edge work in natural language processing, data aggregation, and chart selection techniques, balancing traditional principles with modern AI technologies.
+In developing this solution, this project integrates established data aggregation and data visualization practices with emerging AI techniques, demonstrating how natural language systems can expand public engagement with open data.
 
 ## 2. Introduction
 
-### 2-1. Current Challenges of Open Data
-Traditionally, open data providers like NYC Open Data offer access to information through several methods:
+### 2.1. Current Open Data Challenges
+Open data portals hold immense potential for research, civic engagement, and decision-making across domains like crime, infrastructure, and public health. However, many of these portals suffer from limited accessibility due to the technical skills often required for effective use. Two significant hurdles include:
 
-- **File Downloads**: e.g., CSV, TSV, Excel files.
-- **APIs**
-- **Exploratory Interfaces**: Visualization platforms.
+1. **Data Aggregation:** Users are often expected to accurately convert raw data sets into aggregated formats and clean them for analysis-tasks that typically require programming skills or specialized software.
+2. **Data Visualization:** Even after acquiring the right data, creating meaningful charts or maps requires expertise in both visualization techniques (such as data visualization tools or programming languages) and best practices for selecting appropriate chart types.
 
-While these methods serve certain user groups well, they inherently require a specialized skill set:
+These barriers can alienate a broad audience, limiting the reach and utility of open data. Without accessible tools, important insights remain locked away, especially for community members, journalists, or small organizations that lack robust technical resources.
 
-- **Data Transformation**: The ability to implement custom data transformation and aggregation logic using software or programming languages.
-- **Data Visualization**: Knowledge of visualization best practices and the use of visualization tools or programming languages.
+### 2.2. This Project’s Approach
+To address these barriers, this thesis proposes a natural language interface that streamlines data exploration and visualization. As a proof of concept, we focus on selected datasets from NYC Open Data to demonstrate the viability of the system in a real-world context:
 
-Since open data is intended for a broad audience, these technical requirements can pose significant barriers to widespread adoption and effective use. This project, therefore, explores innovative solutions to overcome these challenges.
+- Leveraging AI for Accessibility:** By applying advanced natural language processing and automation techniques, users can simply type or speak queries in everyday language. The system interprets these requests, retrieves and processes the relevant data, and generates visualizations without the need for manual data manipulation or coding.
+- The interface incorporates local terminology and slang, recognizing that "The Village" refers to Greenwich Village or "uppertown" refers to areas north of 59th Street. Geospatial data - such as borough boundaries and zip codes - is also integrated to provide context-rich maps and spatial analysis.
 
-### 2-2. Project Scope
-This project aims to develop an interface that enables the following user experiences:
-
-#### 2-2-1. Querying Data and Building Visualizations Through Natural Language
-To address the limitations of traditional interfaces, this application will provide the following capabilities:
-- **Natural Querying:** Users can obtain the data they need by simply describing their requirements in everyday language.
-- **Instant Visualization**: A single, dynamically generated visualization is created in response to the user's query without requiring data visualization expertise.
-
-#### 2-2-2. Tailoring exploratory to NYC Open Data
-To further customize the experience for NYC Open Data users, the following enhancements will be incorporated:
-- **Local Terminology Handling:** Recognizing and correctly interpreting NYC-specific terms (e.g., "The Village" for Greenwich Village).
-- **Geospatial Integration:** Utilizing off-the-shelf shape data (e.g., zip code boundaries) to create contextually relevant map visualizations.
-
-These features will provide capabilities that one-size-fits-all services, such as conventional business intelligence tools, cannot offer.
+By focusing on NYC Open Data, we demonstrate how this approach can be applied to large and diverse repositories of public information. Ultimately, this project aims to broaden public engagement with open data portals by reducing technical complexity and demonstrating how AI-driven natural language interfaces can help make data exploration more inclusive and intuitive.
 
 ## 3. Treatment
 
