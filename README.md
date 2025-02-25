@@ -10,12 +10,12 @@ In developing this solution, this project integrates established data aggregatio
 ## 2. Introduction
 
 ### 2.1. Current Open Data Challenges
-Open data portals hold immense potential for research, civic engagement, and decision-making across domains like crime, infrastructure, and public health. However, many of these portals suffer from limited accessibility due to the technical skills often required for effective use. Two significant hurdles include:
+Open data portals have played an important role for research, civic engagement, business and decision-making across multiple sectors. However, many of these portals appear to have limited accessibility due to the technical skills often required for effective use. Two key barriers include:
 
 1. **Data Aggregation:** Users are often expected to accurately convert raw data sets into aggregated formats and clean them for analysis-tasks that typically require programming skills or specialized software.
 2. **Data Visualization:** Even after acquiring the right data, creating meaningful charts or maps requires expertise in both visualization techniques (such as data visualization tools or programming languages) and best practices for selecting appropriate chart types.
 
-These barriers can alienate a broad audience, limiting the reach and utility of open data. Without accessible tools, important insights remain locked away, especially for community members, journalists, or small organizations that lack robust technical resources.
+These barriers can alienate a broad audience, limiting the reach and utility of open data.
 
 ### 2.2. Approach of this Project
 
