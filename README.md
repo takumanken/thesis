@@ -1,7 +1,7 @@
 # Democratizing Urban Data: A Natural Language Interface for Exploring NYC Open Data
 
 ## 1. Abstract
-This thesis addresses a pressing challenge in public data usage: the limited accessibility of open data portals resulting from the technical skills they often require. To overcome this barrier, we introduce a natural language interface powered by advanced AI technologies, simplifying how users explore and visualize open data. As a proof of concept, we focus on a subset of [NYC Open Data](https://opendata.cityofnewyork.us/), a vast repository of New York City’s public datasets.
+This thesis addresses a challenge in public data usage: the limited accessibility of open data portals resulting from the technical skills they often require. To overcome this barrier, we introduce a natural language interface powered by advanced AI technologies, simplifying how users explore and visualize open data. As a proof of concept, we focus on a subset of [NYC Open Data](https://opendata.cityofnewyork.us/), a vast repository of New York City’s public datasets.
 
 By allowing users to ask everyday questions about NYC-such as "show crime trends in Brooklyn since 2020" or "how many rats have been spotted in each borough"-our system dynamically generates relevant visualizations and handles data processing automatically. This approach lowers technical barriers and empowers individuals to gain insights without specialized skills in coding or data transformation. In addition, the interface is sensitive to local nuances: it recognizes colloquialisms ("The Village" for Greenwich Village, "Uppertown" for the area north of 59th Street) and leverages geospatial data (e.g., shapefiles for borough boundaries) to ensure accurate, contextual results.
 
@@ -10,8 +10,9 @@ In developing this solution, this project integrates established data aggregatio
 ## 2. Introduction
 
 ### 2.1. Current Open Data Challenges
-Open data portals have played an important role for research, civic engagement, business and decision-making across multiple sectors. However, many of these portals appear to have limited accessibility due to the technical skills often required for effective use. Two key barriers include:
+Open data portals have played a significant role in research, civic engagement, business, and decision-making across various sectors. However, many of these portals have limited accessibility due to the technical skills often required for effective use. NYC Open Data, one of the largest open data portals in the world, appears to face a similar challenge. A 2017 usability study stated, "The Open Data Portal is still perceived as a tool for—and predominantly used by—a niche community of civic hackers and tech journalists."
 
+Where does this technical barrier originate? Two potential challenges include:
 1. **Data Aggregation:** Users are often expected to accurately convert raw data sets into aggregated formats and clean them for analysis-tasks that typically require programming skills or specialized software.
 2. **Data Visualization:** Even after acquiring the right data, creating meaningful charts or maps requires expertise in both visualization techniques (such as data visualization tools or programming languages) and best practices for selecting appropriate chart types.
 
