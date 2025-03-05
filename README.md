@@ -10,7 +10,7 @@ In developing this solution, this project integrates established data aggregatio
 ## 2. Introduction
 
 ### 2.1. Current Open Data Challenges
-Open data portals have played a significant role in research, civic engagement, business, and decision-making across various sectors. However, many of these portals have limited accessibility due to the technical skills often required for effective use. NYC Open Data, one of the largest open data portals in the world, appears to face a similar challenge. A 2017 usability study stated, "The Open Data Portal is still perceived as a tool for—and predominantly used by—a niche community of civic hackers and tech journalists."
+Open data portals have played a significant role in research, civic engagement, business, and decision-making across various sectors. However, many of these portals have limited accessibility due to the technical skills often required for effective use. NYC Open Data, one of the largest open data portals in the world, appears to face a similar challenge. [A 2017 usability study](https://opendata.cityofnewyork.us/wp-content/uploads/2017/07/Understanding-the-Users-of-Open-Data_Reboot.pdf) stated, "The Open Data Portal is still perceived as a tool for—and predominantly used by—a niche community of civic hackers and tech journalists."
 
 Where does this technical barrier originate? Two potential challenges include:
 1. **Data Aggregation:** Users are often expected to accurately convert raw data sets into aggregated formats and clean them for analysis-tasks that typically require programming skills or specialized software.
