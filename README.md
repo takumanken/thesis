@@ -1,4 +1,4 @@
-# Democratizing Urban Data: A Natural Language Interface for Exploring NYC Open Data
+# A Natural Language Interface for exploring NYC Open Data: Making Open Data More Accessible
 
 ## 1. Abstract
 This thesis addresses a challenge in public data usage: the limited accessibility of open data portals resulting from the technical skills they often require. To overcome this barrier, we introduce a natural language interface powered by advanced AI technologies, simplifying how users explore and visualize open data. As a proof of concept, we focus on a subset of [NYC Open Data](https://opendata.cityofnewyork.us/), a vast repository of New York City’s public datasets.
