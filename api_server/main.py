@@ -15,4 +15,4 @@ async def process_item(item: Item):
     result = prompt + " was received."
     
     # Return the response
-    return result
+    return {"response": result}
