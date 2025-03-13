@@ -5,14 +5,6 @@ import duckdb
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["POST"],
-    allow_headers=["Content-Type"],
-)
-
 # Define the structure of the input
 class Item(BaseModel):
     prompt: str
