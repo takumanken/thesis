@@ -1,14 +1,18 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
 import duckdb
 
 app = FastAPI()
 
-@app.get("/")
-def read_root():
-    # Example DuckDB in-memory table
-    con = duckdb.connect(database=':memory:')
-    con.execute("CREATE TABLE fruits (id INTEGER, name VARCHAR)")
-    con.execute("INSERT INTO fruits VALUES (1, 'apple'), (2, 'banana')")
-    result = con.execute("SELECT * FROM fruits").fetchall()
-    con.close()
-    return {"items": result}
+# Define the structure of the input
+class Item(BaseModel):
+    prompt: str
+
+@app.post("/process")
+async def process_item(item: Item):
+
+    prompt = item.prompt
+    result = prompt + " was received."
+    
+    # Return the response
+    return result
