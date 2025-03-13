@@ -1,7 +1,7 @@
 # A Natural Language Interface for exploring NYC Open Data: Making Open Data More Accessible
 
 ## 1. Abstract
-This thesis addresses a challenge in open data usage: the limited accessibility of open data portals resulting from the technical skills they often require. To overcome this barrier, we introduce a natural language interface powered by advanced AI technologies, simplifying how users explore and visualize open data. As a proof of concept, we focus on a subset of [NYC Open Data](https://opendata.cityofnewyork.us/), a vast repository of New York City’s public datasets.
+This thesis addresses a challenge in open data usage: the limited accessibility of open data portals resulting from the technical skills they often require. To overcome this barrier, this project introduces a natural language interface powered by advanced AI technologies, simplifying how users explore and visualize open data. As a proof of concept, we focus on a subset of [NYC Open Data](https://opendata.cityofnewyork.us/), a vast repository of New York City’s public datasets.
 
 By allowing users to ask everyday questions about NYC-such as "show crime trends in Brooklyn since 2020" or "how many rats have been spotted in each borough"-the system dynamically generates relevant visualizations and handles data processing automatically. This approach could lower technical barriers and empowers individuals to gain insights without specialized skills in coding or data transformation. In addition, the interface is sensitive to local nuances: it recognizes colloquialisms ("The Village" for Greenwich Village, "Uppertown" for the area north of 59th Street) and leverages geospatial data (e.g., shapefiles for borough boundaries) to ensure accurate, contextual results.
 
