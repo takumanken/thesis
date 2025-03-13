@@ -5,6 +5,15 @@ import duckdb
 
 app = FastAPI()
 
+# Configure CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For production, replace "*" with your frontend's URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Define the structure of the input
 class Item(BaseModel):
     prompt: str
