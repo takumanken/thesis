@@ -4,3 +4,4 @@ duckdb
 slowapi
 pandas
 dotenv
+google-genai

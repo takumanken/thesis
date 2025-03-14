@@ -9,6 +9,7 @@ import os
 import duckdb
 import pandas as pd
 from dotenv import load_dotenv
+from google import genai
 
 load_dotenv()
 app = FastAPI()
@@ -17,6 +18,7 @@ app = FastAPI()
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 # Configure CORS middleware
 app.add_middleware(
@@ -31,6 +33,12 @@ app.add_middleware(
 PUBLIC_BUCKET_URL = os.getenv("R2_PUBLIC_BUCKET_URL")
 OBJECT_NAME = 'requests_311.parquet'
 OBJECT_URL = f"{PUBLIC_BUCKET_URL}{OBJECT_NAME}"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+client = genai.Client(api_key=GEMINI_API_KEY)
+response = client.models.generate_content(
+    model="gemini-2.0-flash", contents="1+1=?"
+)
 
 # Define the structure of the input
 class Item(BaseModel):
@@ -51,6 +59,7 @@ async def process_item(item: Item, request: Request):
         result_df = con.execute(query).fetchdf()
         result_data = result_df.to_dict(orient='records')
         con.close()
+        result_data = response
         return result_data
 
     except Exception as e:
