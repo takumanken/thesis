@@ -5,8 +5,12 @@ from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-import duckdb  # (Assuming you'll use it later)
+import os
+import duckdb
+import json
+from dotenv import load_dotenv
 
+load_dotenv()
 app = FastAPI()
 
 # Rate limiter
@@ -23,6 +27,11 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
+# Set Variables
+PUBLIC_BUCKET_URL = os.getenv("R2_PUBLIC_BUCKET_URL")
+OBJECT_NAME = 'requests_311.parquet'
+OBJECT_URL = f"{PUBLIC_BUCKET_URL}{OBJECT_NAME}"
+
 # Define the structure of the input
 class Item(BaseModel):
     prompt: str
@@ -30,13 +39,21 @@ class Item(BaseModel):
 @app.post("/process")
 @limiter.limit("10/minute")
 async def process_item(item: Item, request: Request):
-    prompt = item.prompt
+    prompt = item.prompt.strip()
 
-    # Basic input validation (optional but good practice)
-    if not prompt.strip():
-        return JSONResponse(status_code=400, content={"error": "Prompt cannot be empty."})
+    try:
+        con = duckdb.connect(database=':memory:')
 
-    result = f"{prompt} was received."
+        query = f"""
+            SELECT json_group_array(json_object(*))
+            FROM read_parquet('{OBJECT_URL}')
+            LIMIT 5
+        """
+        result = con.execute(query).fetchone()[0]
+        parsed_result = json.loads(result)
 
-    # Return the response as JSON
-    return {"response": result}
+        con.close()
+        return {"data": parsed_result}
+
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
