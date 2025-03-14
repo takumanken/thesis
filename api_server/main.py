@@ -9,7 +9,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://takumanken.github.io"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["POST"],
     allow_headers=["Content-Type"],
 )
