@@ -7,7 +7,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import os
 import duckdb
-import json
+import pandas as pd
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -43,17 +43,15 @@ async def process_item(item: Item, request: Request):
 
     try:
         con = duckdb.connect(database=':memory:')
-
         query = f"""
-            SELECT json_group_array(json_object(*))
+            SELECT *
             FROM read_parquet('{OBJECT_URL}')
-            LIMIT 5
+            LIMIT 3
         """
-        result = con.execute(query).fetchone()[0]
-        parsed_result = json.loads(result)
-
+        result_df = con.execute(query).fetchdf()
+        result_data = result_df.to_dict(orient='records')
         con.close()
-        return {"data": parsed_result}
+        return result_data
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
