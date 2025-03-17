@@ -19,7 +19,10 @@ con = duckdb.connect(db_filename)
 # Create Views
 for object_name in OBJECTS:
     object_url = PUBLIC_BUCKET_URL + object_name + '.parquet'
-    create_view_query = f"CREATE VIEW {object_name} AS SELECT * FROM read_parquet('{object_url}');"
+    sql_file = f'./sql/{object_name}.sql'
+    with open(sql_file, 'r') as file:
+        _create_view_query = file.read()
+        create_view_query = _create_view_query.format(object_name=object_name, object_url=object_url)
     con.execute(create_view_query)
     print(f'View {object_name} is successfully created.')
 
