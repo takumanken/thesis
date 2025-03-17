@@ -1,22 +1,25 @@
-# A Natural Language Interface for exploring NYC Open Data: Making Open Data More Accessible
+# A natural language interface for exploring NYC open data: Making Open Data More Accessible
 
-## 1. Abstract
-This thesis addresses a challenge in open data usage: the limited accessibility of open data portals resulting from the technical skills they often require. To overcome this barrier, this project introduces a natural language interface powered by advanced AI technologies, simplifying how users explore and visualize open data. As a proof of concept, we focus on a subset of [NYC Open Data](https://opendata.cityofnewyork.us/), a vast repository of New York City’s public datasets.
+## 1. Abstract.
+This work addresses a challenge in the use of open data: the limited accessibility of open data portals, due to the technical skills they often require. To overcome this barrier, this project introduces a natural language interface powered by advanced AI technologies that simplifies the way users explore and visualize open data. As a proof of concept, we focus on a subset of [NYC Open Data] (https://opendata.cityofnewyork.us/), a massive repository of New York City's public datasets.
 
-By allowing users to ask everyday questions about NYC-such as "show crime trends in Brooklyn since 2020" or "how many rats have been spotted in each borough"-the system dynamically generates relevant visualizations and handles data processing automatically. This approach could lower technical barriers and empowers individuals to gain insights without specialized skills in coding or data transformation. In addition, the interface is sensitive to local nuances: it recognizes colloquialisms ("The Village" for Greenwich Village, "Uppertown" for the area north of 59th Street) and leverages geospatial data (e.g., shapefiles for borough boundaries) to ensure accurate, contextual results.
+By allowing users to ask everyday questions about NYC-such as "show crime trends in Brooklyn since 2020," or "how many rats have been spotted in each borough"-the system dynamically generates relevant visualizations and handles data processing automatically. This approach could lower technical barriers and empower individuals to gain insights without specialized skills in coding or data transformation. In addition, the interface is sensitive to local nuances: it recognizes colloquialisms ("The Village" for Greenwich Village, "Uppertown" for the area north of 59th Street) and leverages geospatial data (e.g., shapefiles for borough boundaries) to ensure accurate, contextual results.
 
 In developing this solution, this project integrates established data aggregation and data visualization practices with emerging AI techniques, demonstrating how natural language systems can expand public engagement with open data.
 
-## 2. Introduction
+## 2. Introduction.
 
 ### 2.1. Current Open Data Challenges
-Open data portals have played an important role in research, civic engagement, business, and decision-making across many sectors. However, many of these portals are potentially at risk of limited accessibility due to the technical skills often required for effective use. NYC Open Data, one of the largest open data portals in the world, appears to face a similar challenge. In fact, [the usability research for NYC Open Data in 2017](https://opendata.cityofnewyork.us/wp-content/uploads/2017/07/Understanding-the-Users-of-Open-Data_Reboot.pdf) stated, "The Open Data Portal is still perceived as a tool for—and predominantly used by—a niche community of civic hackers and tech journalists."
+Open data portals have played an important role in research, civic engagement, business, and decision-making across many sectors. However, many of these portals are potentially at risk of limited accessibility due to the technical skills often required for effective use. NYC Open Data, one of the most popular open data portals in the world, appears to face a similar challenge. In fact, [the usability research for NYC Open Data in 2017](https://opendata.cityofnewyork.us/wp-content/uploads/2017/07/Understanding-the-Users-of-Open-Data_Reboot.pdf) found that "the open data portal is still perceived as a tool for - and predominantly used by - a niche community of civic hackers and tech journalists."
 
-Where does this technical barrier originate? Two potential challenges include:
-1. **Data Aggregation:** Users are often expected to accurately convert raw data sets into aggregated formats and clean them for analysis-tasks that typically require programming skills or specialized software.
-2. **Data Visualization:** Even after acquiring the right data, creating meaningful charts or maps requires expertise in both visualization techniques (such as data visualization tools or programming languages) and best practices for selecting appropriate chart types.
+### 2.2. Potential technical challenges
+Where does this technical barrier come from? Two potential challenges could come from data aggregation and data visualization.
 
-These barriers can alienate a broad audience, limiting the reach and utility of open data.
+#### Data Aggregation
+Most open data portals implicitly require data aggregation skills. One of the most common ways to distribute open data is to provide an aggregated format in a file format such as CSV or Excel files. This requires users to handle data aggregation in their local environment, which means that they also need to have sufficient skills to use the data. Some open data portals, such as NYC Open Data, also offer a data aggregation interface that allows users to have more granular control over the data before downloading it. However, this feature also creates technical barriers for novice users, as users are expected to be familiar with some technical concepts such as types of filters and group-by and aggregated-by.
+
+#### Data Visualization
+Data visualization is another skill that open data portals implicitly require users to have. After downloading aggregated data from the open data portal, they are expected to visualize the data themselves using spreadsheet applications, data visualization software, or some programming languages. Although some advanced open data portals, such as NYC Open Data, provide a data visualization interface where users can visualize data by specifying "dimension" and "measure," this is not a common practice among all open data portals, and it also requires users to get used to the interface itself.
 
 ### 2.2. Approach of this Project
 
