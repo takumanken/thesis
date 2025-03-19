@@ -109,7 +109,8 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         return JSONResponse(content={
             "dataset": dataset,
             "sql": sql,
-            "agg_def": parsed_json
+            "aggregation_definition": parsed_json.get("aggregation_definition"),
+            "chart_type": parsed_json.get("chart_type")
         })
 
     except Exception as error:

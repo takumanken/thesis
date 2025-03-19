@@ -6,13 +6,13 @@
 </head>
 <body>
 
-    <h1>Send Prompt to FastAPI</h1>
+    <h1>NYC Open Data Natural Language Interface</h1>
 
-    <input type="text" id="promptInput" placeholder="Enter your prompt">
+    <input type="text" id="promptInput" placeholder="Enter your prompt" style="width: 600px;">
     <button onclick="sendPrompt()">Send</button>
 
     <h2>Response:</h2>
-    <pre id="responseOutput"></pre>
+    <pre id="responseOutput" style="width: 90%; min-height: 300px; border: 1px solid #ccc; padding: 10px; white-space: pre-wrap;"></pre>
 
     <script>
         async function sendPrompt() {
@@ -28,7 +28,10 @@
 
             if (response.ok) {
                 const result = await response.json();
-                document.getElementById('responseOutput').textContent = JSON.stringify(result, null, 2);
+                const aggregationDefinition = result.aggregation_definition;
+                const aggregationResult = result.aggregation_result;
+
+                document.getElementById('responseOutput').textContent = result;
             } else {
                 document.getElementById('responseOutput').textContent = 'Error: ' + response.status;
             }
