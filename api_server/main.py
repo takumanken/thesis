@@ -62,7 +62,7 @@ class Chart(enum.Enum):
 
 class AggregationDefinition(BaseModel):
     dimensions: list[str]
-    measures: list[str]
+    measures: list[dict]
     pre_aggregation_filters: str
     post_aggregation_filters: str
 
@@ -120,7 +120,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
 # Generate SQL based on aggregation definition
 def generate_sql(definition: AggregationDefinition, table_name: str):
     dimensions = ", ".join(definition.dimensions)
-    measures = ", ".join(definition.measures) if definition.measures else ""
+    measures = ", ".join([f"{measure['expression']} AS {measure['alias']}" for measure in definition.measures])
     sql = f"SELECT {dimensions}, {measures} FROM {table_name}"
     
     if definition.pre_aggregation_filters:

@@ -33,8 +33,8 @@ You can only use the options from the dimension and measure list below to build 
 - longitude           : Longitude of the incident address
 
 # Measure List
-- count(1) as num_of_requests : Number of SRs
-- avg(time_to_resolve_sec) as avg_time_to_resolve_sec : Time taken to resolve SR in seconds
+- count(1) : Alias num_of_requests : Number of SRs
+- avg(time_to_resolve_sec) : Alias avg_sec_to_resolve : Average time to resolve SR in seconds
 
 # DEFINITIONS
 
@@ -72,7 +72,10 @@ Return your output in valid JSON format, adhering to the following structure:
     "aggregation_definition":
         {
             "dimensions": ["<dimension1>", "<dimension2>"],
-            "measures": ["<measure1>", "<measure2>"],
+            "measures": [
+                { "expression": "<measure1>", "alias": "<alias1>" },
+                { "expression": "<measure2>", "alias": "<alias2>" }
+            ],
             "pre_aggregation_filters": "<some_pre_aggregation_filter>",
             "post_aggregation_filters": "<some_post_aggregation_filter>"
         },
@@ -91,7 +94,9 @@ Expected Output:
 {
     "aggregation_definition": {
         "dimensions": ["created_date"],
-        "measures": ["count(1) as num_of_requests"],
+        "measures": [
+            { "expression": "count(1)", "alias": "num_of_requests" }
+        ],
         "pre_aggregation_filters": "",
         "post_aggregation_filters": ""
     },
@@ -123,7 +128,9 @@ Expected Output:
 {
     "aggregation_definition": {
         "dimensions": ["borough"],
-        "measures": ["count(1) as num_of_requests"],
+        "measures": [
+            { "expression": "count(1)", "alias": "num_of_requests" }
+        ],
         "pre_aggregation_filters": "complaint_type = 'Noise - Street/Sidewalk'",
         "post_aggregation_filters": "count(1) >= 1000"
     },
