@@ -108,6 +108,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         # Return as JSON
         return JSONResponse(content={
             "dataset": dataset,
+            "fields": list(dataset[0].keys()),
             "sql": sql,
             "aggregation_definition": parsed_json.get("aggregation_definition"),
             "chart_type": parsed_json.get("chart_type")
