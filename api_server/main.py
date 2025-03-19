@@ -30,7 +30,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Configure CORS for allowed origins and methods
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://takumanken.github.io"],
+    allow_origins=[
+        "https://takumanken.github.io",
+        "http://127.0.0.1:5500",
+    ],
     allow_credentials=False,
     allow_methods=["POST"],
     allow_headers=["Content-Type"],
