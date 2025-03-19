@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { businessInfo } from "../constants.js";
+import { businessInfo } from "./constants.js";
 import { API_KEY } from "../secrets.js";
 
 const genAI = new GoogleGenerativeAI(API_KEY);
