@@ -14,20 +14,18 @@ import json
 import enum
 import duckdb
 
-# Configure logging
+# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Load environment variables and initialize FastAPI
+# Initialize environment and FastAPI app
 load_dotenv()
 app = FastAPI()
 
-# Set up rate limiting and attach the handler
+# Configure rate limiting and CORS middleware
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-# Configure CORS for allowed origins and methods
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -44,10 +42,8 @@ PUBLIC_BUCKET_URL = "https://pub-cb6e94f4490c42b9b0c520e8116fb9b7.r2.dev/"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 DB_FILE_NAME = "nyc_open_data.db"
 SYSTEM_INSTRUCTION_FILE = "system_instruction.txt"
-
 with open(SYSTEM_INSTRUCTION_FILE, "r") as file:
     system_instruction = file.read()
-
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 # Data models
@@ -70,28 +66,25 @@ class AggregationResponse(BaseModel):
     aggregation_definition: AggregationDefinition
     chart_type: Chart
 
-# Process prompt endpoint
 @app.post("/process")
 @limiter.limit("10/minute")
 async def process_prompt(request_data: PromptRequest, request: Request):
+    """Process a prompt, generate SQL, execute it and return the result."""
     logger.info("Received prompt request.")
     try:
-        # Generate content using Gemini API
+        # Generate response using Gemini API
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             config=types.GenerateContentConfig(system_instruction=system_instruction),
             contents=[request_data.prompt],
         )
-
         json_text = response.candidates[0].content.parts[0].text
 
-        # Clean up response if wrapped in markdown
+        # Remove markdown formatting if present
         if json_text.startswith("```json"):
             json_text = json_text.replace("```json", "").replace("```", "").strip()
 
         parsed_json = json.loads(json_text)
-
-        # Check if no answer was provided
         if parsed_json.get("chart_type") == "no_answer":
             raise Exception("No answer found for the prompt.")
 
@@ -101,11 +94,10 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         sql = generate_sql(aggregation_definition, "requests_311")
         logger.info("Generated SQL: %s", sql)
         
-        # Execute the SQL query and log result
+        # Execute SQL query and parse result
         dataset = json.loads(execute_sql_in_duckDB(sql, DB_FILE_NAME))
         logger.info("SQL executed successfully. Result: %s", dataset)
 
-        # Return as JSON
         return JSONResponse(content={
             "dataset": dataset,
             "fields": list(dataset[0].keys()),
@@ -118,41 +110,37 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         logger.exception("Error processing prompt.")
         return JSONResponse(status_code=500, content={"error": str(error)})
 
-# Generate SQL based on aggregation definition
-def generate_sql(definition: AggregationDefinition, table_name: str):
+def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
+    """
+    Generate an SQL query based on the aggregation definition.
+    """
     dimensions = ", ".join(definition.dimensions)
     measures = ", ".join([f"{measure['expression']} AS {measure['alias']}" for measure in definition.measures])
     sql = f"SELECT {dimensions}, {measures} FROM {table_name}"
     
     if definition.pre_aggregation_filters:
         sql += f" WHERE {definition.pre_aggregation_filters}"
-    
     sql += f" GROUP BY {dimensions}"
-    
     if definition.post_aggregation_filters:
         sql += f" HAVING {definition.post_aggregation_filters}"
-    
-    if len(definition.measures) > 0:
+    if definition.measures:
         sql += f" ORDER BY {len(definition.dimensions) + 1} DESC"
-
     sql += " LIMIT 1000;"
-
     return sql.strip()
 
-# Execute the SQL query in DuckDB
-def execute_sql_in_duckDB(sql: str, db_filename: str):
-    
-    # Execute the SQL query in DuckDB
-    logger.info("Connecting to DuckDB.")
-    con = duckdb.connect(db_filename)
-    logger.info("Executing SQL on DuckDB.")
-    result = con.execute(sql)
-    df = result.fetchdf()
-    logger.info("SQL execution complete.")
-    con.close()
+def execute_sql_in_duckDB(sql: str, db_filename: str) -> str:
+    """
+    Execute the SQL query in DuckDB and return results as JSON.
+    """
+    try:
+        with duckdb.connect(db_filename) as con:
+            result = con.execute(sql)
+            df = result.fetchdf()
+    except Exception as e:
+        logger.error("Database query failed: %s", str(e))
+        raise
 
-    # Convert datetime columns to string
+    # Convert datetime columns to string for JSON serialization
     for col in df.select_dtypes(include=['datetime64[ns]']).columns:
         df[col] = df[col].dt.strftime('%Y-%m-%d')
-
     return df.to_json(orient="records")
