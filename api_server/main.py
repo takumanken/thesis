@@ -102,9 +102,15 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         logger.info("Generated SQL: %s", sql)
         
         # Execute the SQL query and log result
-        result = execute_sql_in_duckDB(sql, DB_FILE_NAME)
-        logger.info("SQL executed successfully. Result: %s", result)
-        return JSONResponse(content={"result": result, "sql": sql, "agg_def": json_text})
+        dataset = json.loads(execute_sql_in_duckDB(sql, DB_FILE_NAME))
+        logger.info("SQL executed successfully. Result: %s", dataset)
+
+        # Return as JSON
+        return JSONResponse(content={
+            "dataset": dataset,
+            "sql": sql,
+            "agg_def": parsed_json
+        })
 
     except Exception as error:
         logger.exception("Error processing prompt.")
