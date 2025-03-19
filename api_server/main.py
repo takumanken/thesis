@@ -141,11 +141,18 @@ def generate_sql(definition: AggregationDefinition, table_name: str):
 
 # Execute the SQL query in DuckDB
 def execute_sql_in_duckDB(sql: str, db_filename: str):
-    logger.info("Executing SQL on DuckDB.")
+    
+    # Execute the SQL query in DuckDB
+    logger.info("Connecting to DuckDB.")
     con = duckdb.connect(db_filename)
+    logger.info("Executing SQL on DuckDB.")
     result = con.execute(sql)
-    logger.info("SQL query executed; fetching results.")
     df = result.fetchdf()
-    con.close()
     logger.info("SQL execution complete.")
+    con.close()
+
+    # Convert datetime columns to string
+    for col in df.select_dtypes(include=['datetime64[ns]']).columns:
+        df[col] = df[col].dt.strftime('%Y-%m-%d')
+
     return df.to_json(orient="records")
