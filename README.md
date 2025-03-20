@@ -101,27 +101,31 @@ The business intelligence (BI) sector has recently seen a surge in tools that us
 **Implications for Public Data**  
 These BI developments can guide future enhancements to open data portals. Integrating user-friendly, conversation-based features and proactive insights can significantly lower the entry barriers—particularly for non-technical users. Applying industry best practices to public portals like NYC Open Data can widen access to data and support deeper civic engagement.
 
-### 2.3 Potential Challenge and Strategy
+### 2.3 Key Challenges and Mitigation Strategies
 
-Even though large language models (LLMs) have greatly improved natural language interfaces, **hallucination** remains a significant concern. Hallucination occurs when a model confidently provides information that is incorrect or unrelated to the source data. In the context of open data, unreliable answers can undermine trust and lead to poor decisions, so it is essential to manage this risk effectively.
+While modern language models improve the feasibility of natural language interfaces (NLIs), two critical challenges must be addressed to ensure trustworthy and actionable outputs: **hallucination** and **ambiguous data semantics**. This thesis tackles these issues through rigorous **data preparation** and a structured **semantic layer**.
 
-To address this challenge, this thesis adopts a **semantic layer** that aligns natural language queries with structured data. This layer ensures that user requests correspond to valid database fields, data types, and transformations. It includes:
+#### Mitigating Hallucination with a Trusted Data Model
 
-1. **Database Schema Details**  
-   - Table names (e.g., `311_requests`)  
-   - Column names, data types, and typical values (e.g., “Manhattan,” “Brooklyn,” “Queens”)  
-   - Calculation rules (e.g., `COUNT(*) AS number_of_requests`)
+To anchor LLM outputs to factual data, raw datasets undergo preprocessing to create an intuitive, machine-friendly schema. For example:
 
-2. **Word Dictionary (Synonyms and Variants)**  
-   - Links common synonyms or alternative phrases (e.g., “noise complaint” = “noise issue”) to the correct fields  
-   - Provides flexible matching between user queries and relevant technical terms
+-   Temporal fields like `Created Date` are parsed into granular components (`created_year`, `created_month`, `created_weekday`) to simplify time-based queries.
 
-3. **Chart Type Selection**  
-   - Recommends charts based on query intent (e.g., bar chart for comparison, line chart for time series) and data attributes (categorical, numerical, etc.).  
+-   Domain-specific flags (e.g., `is_noise_complaint`) are derived from raw text fields to improve accuracy for common inquiry patterns.
 
-By anchoring user requests to this semantic layer, the system reduces errors and prevents misleading outputs. Instead of generating free-form responses, the NLI can validate queries against structured metadata, resulting in more accurate and trustworthy data retrieval and visualization.
+These transformations standardize ambiguous or unstructured fields, enabling reliable mappings between natural language queries (e.g., "noise complaints in 2023") and their underlying data representations.
 
----
+#### Semantic Layer: Constraining Interpretation
+
+The semantic layer builds on this prepared data model to enforce consistency:
+
+1.  **Schema Metadata** defines valid tables, columns, and relationships (e.g., `311_requests.created_year`).
+
+2.  **Synonyms and Mappings** link colloquial terms ("noise issues") to standardized fields (`is_noise_complaint`).
+
+3.  **Chart Logic** aligns query intent (e.g., trends over time) with visualization types (line charts).
+
+By combining a cleaned, semantically explicit data model with structured validation rules, the system minimizes misinterpretations and ensures outputs remain grounded in the source data. This dual approach---data preparation and semantic constraints---reduces hallucination risks while preserving the flexibility of natural language interaction.
 
 ## 3. Treatment
 
