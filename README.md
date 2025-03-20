@@ -1,99 +1,58 @@
-# A natural language interface for exploring NYC open data: Making Open Data More Accessible
+# A Natural Language Interface for Exploring NYC Open Data: Enhancing the Accessibility of Public Datasets
 
-## 1. Abstract.
-This work addresses a challenge in the use of open data: the limited accessibility of open data portals, due to the technical skills they often require. To overcome this barrier, this project introduces a natural language interface powered by advanced AI technologies that simplifies the way users explore and visualize open data. As a proof of concept, we focus on a subset of [NYC Open Data] (https://opendata.cityofnewyork.us/), a massive repository of New York City's public datasets.
+## 1. Abstract
+Open data portals are invaluable resources, providing information for research, civic engagement, business intelligence, and informed decision-making across various sectors. Despite this potential, they often remain underutilized due to the advanced technical expertise required to navigate, manipulate, and interpret the data. This thesis addresses this challenge by introducing a natural language interface (NLI) powered by advanced AI technologies, designed to streamline data exploration and visualization. As a proof of concept, the system is tailored to a subset of [NYC Open Data](https://opendata.cityofnewyork.us/), one of the most extensive public repositories of municipal data in the United States.
 
-By allowing users to ask everyday questions about NYC-such as "show crime trends in Brooklyn since 2020," or "how many rats have been spotted in each borough"-the system dynamically generates relevant visualizations and handles data processing automatically. This approach could lower technical barriers and empower individuals to gain insights without specialized skills in coding or data transformation. In addition, the interface is sensitive to local nuances: it recognizes colloquialisms ("The Village" for Greenwich Village, "Uppertown" for the area north of 59th Street) and leverages geospatial data (e.g., shapefiles for borough boundaries) to ensure accurate, contextual results.
+The NLI allows users to pose everyday questions about New York City, such as "Show crime trends in Brooklyn since 2020" or "How many rat sightings have been reported in each borough?" The system then automatically generates relevant visualizations while handling the complex data processing and transformations behind the scenes. By minimizing the technical burden typically associated with open data exploration, this approach democratizes access, enabling individuals without specialized coding or data analysis skills to gain meaningful insights and actively engage with their city’s data.
 
-In developing this solution, this project integrates established data aggregation and data visualization practices with emerging AI techniques, demonstrating how natural language systems can expand public engagement with open data.
+Through the integration of established data aggregation and visualization practices with cutting-edge AI methodologies, this thesis demonstrates how natural language interfaces can transform public engagement with open data. It also identifies key developmental challenges for such systems and proposes practical solutions aimed at enhancing the user experience for open data portals—ultimately encouraging broader participation and a deeper, data-driven understanding of our communities.
 
-## 2. Introduction.
+---
 
-### 2.1. Current Open Data Challenges
-Open data portals have played an important role in research, civic engagement, business, and decision-making across many sectors. However, many of these portals are potentially at risk of limited accessibility due to the technical skills often required for effective use. NYC Open Data, one of the most popular open data portals in the world, appears to face a similar challenge. In fact, [the usability research for NYC Open Data in 2017](https://opendata.cityofnewyork.us/wp-content/uploads/2017/07/Understanding-the-Users-of-Open-Data_Reboot.pdf) found that "the open data portal is still perceived as a tool for - and predominantly used by - a niche community of civic hackers and tech journalists."
+## 2. Introduction
 
-### 2.2. Potential technical challenges
-Where does this technical barrier come from? Two potential challenges could come from data aggregation and data visualization.
+### 2.1 Current Open Data Challenges
+Open data portals have significantly advanced transparency, innovation, and community engagement. However, their inherent complexity can limit widespread adoption. Although they offer a wealth of information, harnessing that information often requires advanced technical skills, such as programming and data analytics. Researchers, public officials, and community members without these skills frequently struggle to navigate, process, and derive actionable insights from the available datasets. This skills gap significantly reduces the potential impact of these valuable resources.
+
+NYC Open Data, despite being one of the most widely used open data portals in the world, faces a similar challenge. Usability research from 2017 reported that the portal remains largely perceived as a specialized tool for a relatively small community of “civic hackers and tech journalists,” underscoring the need to make open data more accessible to the broader public. To unlock the full potential of open data and widen its appeal, it is crucial to examine how raw data is typically transformed into meaningful information.
+
+In particular, the processes of data aggregation and visualization demand specialized knowledge—posing major hurdles for individuals without a technical background. These challenges can be broadly grouped as follows:
+
+---
 
 #### Data Aggregation
-Most open data portals implicitly require data aggregation skills. One of the most common ways to distribute open data is to provide an aggregated format in a file format such as CSV or Excel files. This requires users to handle data aggregation in their local environment, which means that they also need to have sufficient skills to use the data. Some open data portals, such as NYC Open Data, also offer a data aggregation interface that allows users to have more granular control over the data before downloading it. However, this feature also creates technical barriers for novice users, as users are expected to be familiar with some technical concepts such as types of filters and group-by and aggregated-by.
+Most open data portals assume a baseline proficiency in data aggregation. Two common methods of distributing open data—**Approach 1** and **Approach 2**—illustrate the difficulties non-technical users may face.
+
+##### Approach 1: File-Based Data Distribution
+Many datasets, including those on [DATA.GOV](https://data.gov/), are available for download as CSV, Excel, or JSON files. This simplicity, however, introduces several obstacles:
+
+1. **Local Burden**: Users bear full responsibility for loading, cleaning, filtering, and transforming the data locally, requiring familiarity with a variety of analytical tools and techniques (e.g., Excel, Python, or R).  
+2. **Scalability Constraints**: Large datasets can exceed the average user’s computing capacity. Handling massive files locally becomes cumbersome or impossible, thereby deterring those with limited computing resources.
+
+##### Approach 2: Portal-Based Aggregation Tools
+Alternatively, platforms like [NYC Open Data](https://opendata.cityofnewyork.us/) provide interfaces for filtering, grouping, and other advanced operations before data is downloaded. This can help manage large datasets but still imposes a different technical hurdle: users must understand underlying concepts such as filtering criteria, group-by operations, and aggregation methods. While second nature to data professionals, these concepts can be unfamiliar and daunting for the average user.
+
+---
 
 #### Data Visualization
-Data visualization is another skill that open data portals implicitly require users to have. After downloading aggregated data from the open data portal, they are expected to visualize the data themselves using spreadsheet applications, data visualization software, or some programming languages. Although some advanced open data portals, such as NYC Open Data, provide a data visualization interface where users can visualize data by specifying "dimension" and "measure," this is not a common practice among all open data portals, and it also requires users to get used to the interface itself.
+Even after overcoming data aggregation challenges, users must still visualize the data effectively:
 
-### 2.2. Approach of this Project
+1. **Chart Selection**: Identifying the most appropriate chart for a given dataset and objective requires knowledge of data visualization principles and a clear understanding of different chart types (e.g., bar charts, line charts, scatter plots, histograms).  
+2. **Software Proficiency**: Popular tools like Excel can be intimidating for those without experience. Managing variables, correctly formatting dates, and ensuring proper alignment of data can all present significant barriers to creating clear and accurate visualizations.
 
-To address these barriers, this work proposes a natural language interface that streamlines data exploration and visualization. As a proof of concept, we focus on selected datasets from NYC Open Data to demonstrate the viability of the system in a real-world context.
+NYC Open Data’s visualization interface attempts to address some of these issues by allowing users to define “dimensions” and “measures.” However, it still demands learning a specialized interface and grasping basic concepts in data analysis—both of which can deter non-technical users.
 
-Firstly, by applying advanced natural language processing and automation techniques, this project builds an interface where users can type or speak queries in everyday language. The system interprets users’ requests, retrieves and processes the relevant data, and generates visualizations without requiring manual data manipulation or coding.
+In summary, while open data portals offer a wealth of raw material for analysis, they also place substantial technical demands on their users. The complexity of both data aggregation and visualization can be especially discouraging for newcomers, limiting the scope and depth of public engagement. This situation highlights the need for a natural language interface—one that alleviates the technical burden by guiding users through data aggregation and visualization steps without requiring direct interaction with complex operations.
 
-For a better user experience, the interface supports local terminology and slang—for example, interpreting “The Village” as Greenwich Village or “uppertown” as areas north of 59th Street. In addition, geospatial data (such as borough boundaries and ZIP code polygons) is integrated to provide context-rich maps and enable spatial analysis.
+### 2.2 Requirements for a More Accessible User Experience
+An integrated web application capable of translating everyday language into the technical operations needed for open data exploration offers a compelling solution to these challenges. By enabling users to type questions such as “How have 311 noise complaints changed over the past five years in Manhattan?” and automating the required data manipulation and visualization, such an interface can significantly simplify the user experience.
 
-Lastly, by developing the interface for NYC Open Data, we assess how this approach can be applied to large and diverse open data portals. The system’s performance and user feedback offer valuable insights into how effectively the natural language interface scales across multiple datasets and varying usage scenarios. Looking ahead, this proof of concept could be adapted for other municipal or organizational data platforms, serving as a model for making open data more accessible and user-friendly.
+Two main features are particularly important:
 
-## 3. Treatment
+1. **Automated Data Aggregation**  
+   Dynamically filtering, grouping, and merging datasets based on user queries relieves individuals from having to download, configure, or manually manipulate data files. This allows them to focus on asking questions rather than performing complex data preparation.  
 
-### 3.1 Research
-A comprehensive study will be conducted on the key areas related to the system, including **data aggregation**, **data visualization**, and **large language models (LLMs).**
+2. **Automated Visualization Selection**  
+   Suggesting or generating a suitable chart type aligned with both the user’s intent and the underlying data structure reduces the need for specialized knowledge of data visualization principles.
 
-#### 3.1.1 Data Aggregation with Natural Language
-- **Historical Efforts**: Previous research and implementations of natural language interfaces for data retrieval.
-- **Current Initiatives**: State-of-the-art techniques and advancements in enabling natural language-driven data aggregation.
-
-#### 3.1.2 Data Visualization and Chart Selection
-- **Historical Approaches**: Past research on automated chart selection based on user queries.
-- **Current Trends**: Modern data visualization initiatives incorporating natural language interaction.
-
-#### 3.1.3 Evaluating Vanilla LLM Capabilities and Solutions
-A structured assessment of the raw capabilities of large language models will be conducted:
-
-- **3.1.3.1 Vanilla LLM Capability Assessment**
-    - **Data Aggregation Accuracy**: Can the LLM interpret user queries correctly and execute precise data queries?  
-    - **Chart Selection Accuracy**: Can the LLM suggest the appropriate chart type for given queries?  
-    - **Code Generation Accuracy**: Can the LLM generate functional and error-free code for data visualization?  
-
-- **3.1.3.2 Solution Design Based on Assessment Findings**
-    - Developing strategies to enhance LLM performance based on identified limitations.
-
-
-### 3.2 System Design & Development
-Based on research findings, the system's user experience (UI/UX) and architecture will be designed and implemented.
-
-#### 3.2.1 System Design
-- **UI/UX Design**
-    - Developing an intuitive natural language interface.
-    - Identifying essential UI components to facilitate user interaction.
-- **System Architecture**
-    - Structuring the backend and frontend components.
-    - Defining workflows for query processing and visualization generation.
-
-#### 3.2.2 System Development
-- **Implementation** of the designed system, incorporating insights from research.
-- **Testing & Iteration** to refine functionality and improve performance.
-
-
-## 4. Evaluation & Conclusion
-
-### 4.1 UI/UX Evaluation
-- Assessing the impact of the conversational interface on user interaction with NYC Open Data.
-- **Comparative Analysis**: Evaluating improvements over existing UI/UX models.
-
-### 4.2 System Performance Evaluation
-- **Data Aggregation Accuracy**: Measuring the correctness of LLM-driven data queries.
-- **Chart Selection Accuracy**: Assessing the effectiveness of LLM-powered chart selections.
-
-### 4.3 Future Work & Improvements
-- Identifying potential enhancements for system accuracy and usability.
-- Exploring future integration with evolving AI and data visualization technologies.
-
-
-## 5. Literature Review
-### 5-1. Chart Selection
-- Cleveland, William S., and Robert McGill. “Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods.” Journal of the American Statistical Association 79, no. 387 (1984): 531–54. https://doi.org/10.2307/2288400.
-- Chambers, John M. Graphical methods for data analysis. Boca Raton, FL: CRC Press, 2018. 
-- Ware, Colin. Information Visualization : Perception for Design. Waltham, Ma: Morgan Kaufmann, 2019.
-
-### 5-2. Natural Language Query to Database
-- Androutsopoulos, I., G.D. Ritchie, and P. Thanisch. “Natural Language Interfaces to Databases – an Introduction.” Natural Language Engineering 1, no. 1 (1995): 29–81. https://doi.org/10.1017/S135132490000005X.
-- Woods, William A. The Lunar Sciences Natural Language Information System: Final Report. Cambridge, Mass. :Bolt, Beranek and Newman, inc., 1972.
-- Lei, Fangyu, Jixuan Chen, Yuxiao Ye, Ruisheng Cao, Dongchan Shin, Hongjin Su, Zhaoqing Suo, et al. “Spider 2.0: Evaluating Language Models on Real-World Enterprise Text-To-SQL Workflows.” arXiv.org, 2024. https://arxiv.org/abs/2411.07763.
+By incorporating these capabilities, the proposed interface can expand the reach of platforms like NYC Open Data to a far wider audience, encouraging spontaneous exploration and deeper engagement. When users can simply ask questions in natural language, they are more likely to interact with open data and glean valuable insights—ultimately broadening public participation and fostering greater community awareness of data-driven trends and policy issues.
