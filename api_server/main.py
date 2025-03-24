@@ -103,7 +103,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         #     "sql": sql,
         #     "aggregation_definition": parsed_json.get("aggregation_definition"),
         #     "chart_type": parsed_json.get("chart_type")
-        # })
+        # })å
         return "Processing not implemented yet."
 
     except Exception as error:
