@@ -72,39 +72,38 @@ async def process_prompt(request_data: PromptRequest, request: Request):
     logger.info("Received prompt request.")
     try:
         # Generate response using Gemini API
-        # response = client.models.generate_content(
-        #     model="gemini-2.0-flash",
-        #     config=types.GenerateContentConfig(system_instruction=system_instruction),
-        #     contents=[request_data.prompt],
-        # )
-        # json_text = response.candidates[0].content.parts[0].text
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            config=types.GenerateContentConfig(system_instruction=system_instruction),
+            contents=[request_data.prompt],
+        )
+        json_text = response.candidates[0].content.parts[0].text
 
-        # # Remove markdown formatting if present
-        # if json_text.startswith("```json"):
-        #     json_text = json_text.replace("```json", "").replace("```", "").strip()
+        # Remove markdown formatting if present
+        if json_text.startswith("```json"):
+            json_text = json_text.replace("```json", "").replace("```", "").strip()
 
-        # parsed_json = json.loads(json_text)
-        # if parsed_json.get("chart_type") == "no_answer":
-        #     raise Exception("No answer found for the prompt.")
+        parsed_json = json.loads(json_text)
+        if parsed_json.get("chart_type") == "no_answer":
+            raise Exception("No answer found for the prompt.")
 
-        # # Build SQL query from the aggregation definition
-        # agg_def_data = parsed_json.get("aggregation_definition")
-        # aggregation_definition = AggregationDefinition(**agg_def_data)
-        # sql = generate_sql(aggregation_definition, "requests_311")
-        # logger.info("Generated SQL: %s", sql)
+        # Build SQL query from the aggregation definition
+        agg_def_data = parsed_json.get("aggregation_definition")
+        aggregation_definition = AggregationDefinition(**agg_def_data)
+        sql = generate_sql(aggregation_definition, "requests_311")
+        logger.info("Generated SQL: %s", sql)
         
-        # # Execute SQL query and parse result
-        # dataset = json.loads(execute_sql_in_duckDB(sql, DB_FILE_NAME))
-        # logger.info("SQL executed successfully. Result: %s", dataset)
+        # Execute SQL query and parse result
+        dataset = json.loads(execute_sql_in_duckDB(sql, DB_FILE_NAME))
+        logger.info("SQL executed successfully. Result: %s", dataset)
 
-        # return JSONResponse(content={
-        #     "dataset": dataset,
-        #     "fields": list(dataset[0].keys()),
-        #     "sql": sql,
-        #     "aggregation_definition": parsed_json.get("aggregation_definition"),
-        #     "chart_type": parsed_json.get("chart_type")
-        # })å
-        return "Processing not implemented yet."
+        return JSONResponse(content={
+            "dataset": dataset,
+            "fields": list(dataset[0].keys()),
+            "sql": sql,
+            "aggregation_definition": parsed_json.get("aggregation_definition"),
+            "chart_type": parsed_json.get("chart_type")
+        })
 
     except Exception as error:
         logger.exception("Error processing prompt.")
