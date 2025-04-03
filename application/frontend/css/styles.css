@@ -1,0 +1,6 @@
+.gridjs-table th,
+.gridjs-table td {
+    padding: 5px;
+    font-family: 'Arial', sans-serif;
+    font-size: 12px;
+}
