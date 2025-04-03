@@ -18,6 +18,11 @@ export async function askGemini() {
   const result = await response.json();
   state.dataset = result.dataset;
   state.chartType = result.chart_type;
+  state.aggregationDefinition = result.aggregation_definition;
+  state.sql = result.sql;
+
+  console.log("Response from backend:", result);
+  console.log("State after processing:", state);
 }
 
 export default askGemini;
