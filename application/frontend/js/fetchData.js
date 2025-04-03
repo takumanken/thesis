@@ -13,3 +13,5 @@ async function fetchData(promptValue) {
 
   return response.json();
 }
+
+export default fetchData;

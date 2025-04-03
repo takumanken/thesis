@@ -1,18 +1,13 @@
-let gridInstance = null;
-
+// Visualize data in the specified container using Grid.js
 function visualizeData(container, fields, dataset) {
-  if (gridInstance) {
-    gridInstance
-      .updateConfig({
-        columns: fields,
-        data: dataset,
-      })
-      .forceRender();
-  } else {
-    gridInstance = new gridjs.Grid({
-      columns: fields,
-      data: dataset,
-    });
-    gridInstance.render(container);
-  }
+  // Clear the container before rendering
+  container.innerHTML = "";
+
+  // Initialize and render the Grid.js table
+  gridInstance = new gridjs.Grid({
+    columns: fields,
+    data: dataset,
+  }).render(container);
 }
+
+export default visualizeData;
