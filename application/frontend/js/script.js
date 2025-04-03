@@ -1,41 +1,23 @@
-let gridInstance = null;
+document.getElementById("promptInput").addEventListener("keypress", async (event) => {
+  if (event.key === "Enter") {
+    await sendPrompt();
+  }
+});
+
+document.querySelector("button").addEventListener("click", sendPrompt);
 
 async function sendPrompt() {
   const promptValue = document.getElementById("promptInput").value;
+  const container = document.getElementById("tableContainer");
 
-  const response = await fetch("https://thesis-production-65a4.up.railway.app/process", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ prompt: promptValue }),
-  });
-
-  if (response.ok) {
-    const result = await response.json();
-    console.log(result);
-    const aggregationDefinition = result.aggregation_definition;
-    const dataset = result.dataset;
-    const fields = aggregationDefinition.fields;
-
-    const container = document.getElementById("tableContainer");
-
-    // If the grid already exists, update its config; otherwise, create a new grid
-    if (gridInstance) {
-      gridInstance
-        .updateConfig({
-          columns: fields,
-          data: dataset,
-        })
-        .forceRender();
-    } else {
-      gridInstance = new gridjs.Grid({
-        columns: fields,
-        data: dataset,
-      });
-      gridInstance.render(container);
-    }
-  } else {
-    document.getElementById("tableContainer").textContent = "Error: " + response.status;
+  try {
+    const result = await fetchData(promptValue);
+    const {
+      aggregation_definition: { fields },
+      dataset,
+    } = result;
+    visualizeData(container, fields, dataset);
+  } catch (error) {
+    container.textContent = error.message;
   }
 }
