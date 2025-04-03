@@ -3,7 +3,6 @@ import visualizeData from "./visualizeData.js";
 
 async function handleUserQuery() {
   const promptInput = document.getElementById("promptInput");
-  const container = document.getElementById("tableContainer");
 
   try {
     const result = await askGemini(promptInput.value);
@@ -11,9 +10,9 @@ async function handleUserQuery() {
     const dataset = result.dataset;
     const chartType = result.chart_type;
 
-    visualizeData(container, dataset);
+    visualizeData(dataset);
   } catch (error) {
-    container.textContent = error.message;
+    // container.textContent = error.message;
   }
 }
 
