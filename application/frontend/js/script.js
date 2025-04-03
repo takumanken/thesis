@@ -1,4 +1,4 @@
-import fetchData from "./fetchData.js";
+import askGemini from "./askGemini.js";
 import visualizeData from "./visualizeData.js";
 
 async function sendPrompt() {
@@ -6,7 +6,7 @@ async function sendPrompt() {
   const container = document.getElementById("tableContainer");
 
   try {
-    const result = await fetchData(promptInput.value);
+    const result = await askGemini(promptInput.value);
 
     const {
       aggregation_definition: { fields },

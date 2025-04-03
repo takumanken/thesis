@@ -1,4 +1,4 @@
-async function fetchData(promptValue) {
+export async function askGemini(promptValue) {
   const response = await fetch("https://thesis-production-65a4.up.railway.app/process", {
     method: "POST",
     headers: {
@@ -14,4 +14,4 @@ async function fetchData(promptValue) {
   return response.json();
 }
 
-export default fetchData;
+export default askGemini;
