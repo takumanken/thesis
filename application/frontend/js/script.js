@@ -8,12 +8,10 @@ async function handleUserQuery() {
   try {
     const result = await askGemini(promptInput.value);
 
-    const {
-      aggregation_definition: { fields },
-      dataset,
-    } = result;
+    const dataset = result.dataset;
+    const chartType = result.chart_type;
 
-    visualizeData(container, fields, dataset);
+    visualizeData(container, dataset);
   } catch (error) {
     container.textContent = error.message;
   }
