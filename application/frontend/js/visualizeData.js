@@ -9,8 +9,8 @@ let currentChart = null;
 
 function visualizeData() {
   const { dataset, chartType } = state;
+
   const container = document.getElementById("tableContainer");
-  document.getElementById("chartTypeSelector").value = state.chartType || "table";
 
   // Clean up previous visualizations
   cleanupVisualization(container);

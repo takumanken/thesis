@@ -13,6 +13,12 @@ function initializeEventListeners() {
     state.chartType = event.target.value;
     visualizeData();
   });
+
+  // In events.js or a dedicated UI module
+  document.getElementById("chartTypeSelector").addEventListener("change", (event) => {
+    state.chartType = event.target.value;
+    visualizeData();
+  });
 }
 
 export default initializeEventListeners;
