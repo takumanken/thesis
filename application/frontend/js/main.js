@@ -1,21 +1,8 @@
 import askGemini from "./askGemini.js";
 import visualizeData from "./visualizeData.js";
+import { state } from "./state.js";
 
-async function handleUserQuery() {
-  const promptInput = document.getElementById("promptInput");
-
-  try {
-    const result = await askGemini(promptInput.value);
-
-    const dataset = result.dataset;
-    const chartType = result.chart_type;
-
-    visualizeData(dataset);
-  } catch (error) {
-    // container.textContent = error.message;
-  }
-}
-
+// Initialize event listeners
 function initializeEventListeners() {
   document.getElementById("promptInput").addEventListener("keypress", async (event) => {
     if (event.key === "Enter") {
@@ -25,5 +12,10 @@ function initializeEventListeners() {
 
   document.querySelector("button").addEventListener("click", handleUserQuery);
 }
-
 initializeEventListeners();
+
+// Function to handle user query
+export async function handleUserQuery() {
+  await askGemini();
+  visualizeData();
+}

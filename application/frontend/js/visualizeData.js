@@ -1,32 +1,31 @@
+import { state } from "./state.js";
+
 let currentGridInstance = null;
 
-function visualizeData(dataset) {
+function visualizeData() {
+  const { dataset, chartType } = state;
   const container = document.getElementById("tableContainer");
 
+  // Exit if there's no dataset
+  if (!dataset || !dataset.length) {
+    container.innerHTML = "<p>No data available</p>";
+    return;
+  }
+
+  // Clean up previous instance
   if (currentGridInstance) {
-    try {
-      currentGridInstance.destroy();
-    } catch (e) {
-      console.warn("Error cleaning up previous grid:", e);
-    }
+    currentGridInstance.destroy();
     currentGridInstance = null;
   }
+
   container.innerHTML = "";
 
-  try {
-    const fields = Object.keys(dataset[0]);
-
-    currentGridInstance = new gridjs.Grid({
-      columns: fields,
-      data: dataset,
-      pagination: {
-        limit: 50,
-      },
-    }).render(container);
-  } catch (error) {
-    container.innerHTML = `<p>Error displaying data: ${error.message}</p>`;
-    console.error("Error in visualizeData:", error);
-  }
+  const fields = Object.keys(dataset[0]);
+  currentGridInstance = new gridjs.Grid({
+    columns: fields,
+    data: dataset,
+    pagination: { limit: 50 },
+  }).render(container);
 }
 
 export default visualizeData;
