@@ -13,6 +13,14 @@
     <input type="text" id="promptInput" placeholder="Enter your prompt" style="width: 600px;">
     <button>Send</button>
     <h2>Response:</h2>
+    <div id="chartControls" style="margin-bottom: 10px;">
+        <label for="chartTypeSelector">Chart Type:</label>
+        <select id="chartTypeSelector">
+            <option value="table">Table</option>
+            <option value="bar_chart">Bar Chart</option>
+            <option value="line_chart">Line Chart</option>
+        </select>
+    </div>
     <div id="tableContainer"></div>
     <script type="module" src="js/main.js"></script>
 </body>
