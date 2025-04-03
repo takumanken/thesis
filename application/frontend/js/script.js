@@ -1,7 +1,7 @@
 import askGemini from "./askGemini.js";
 import visualizeData from "./visualizeData.js";
 
-async function sendPrompt() {
+async function handleUserQuery() {
   const promptInput = document.getElementById("promptInput");
   const container = document.getElementById("tableContainer");
 
@@ -22,11 +22,11 @@ async function sendPrompt() {
 function initializeEventListeners() {
   document.getElementById("promptInput").addEventListener("keypress", async (event) => {
     if (event.key === "Enter") {
-      await sendPrompt();
+      await handleUserQuery();
     }
   });
 
-  document.querySelector("button").addEventListener("click", sendPrompt);
+  document.querySelector("button").addEventListener("click", handleUserQuery);
 }
 
 initializeEventListeners();
