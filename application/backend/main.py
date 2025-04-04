@@ -119,6 +119,7 @@ def generate_sql(definition: AggregationDefinition, dims: list[str], table_name:
     """
     Generate an SQL query based on the aggregation definition.
     Uses the pre-combined dimensions (dims) from time_dimension and categorical_dimension.
+    If a time dimension exists, orders by it (ascending). Otherwise, orders by the first measure.
     """
     dims_clause = ", ".join(dims) if dims else ""
     measures_clause = ", ".join([f"{m['expression']} AS {m['alias']}" for m in definition.measures])
@@ -139,8 +140,12 @@ def generate_sql(definition: AggregationDefinition, dims: list[str], table_name:
         sql += f" GROUP BY {dims_clause}"
     if definition.post_aggregation_filters:
         sql += f" HAVING {definition.post_aggregation_filters}"
-    if definition.measures:
+    
+    if definition.time_dimension and len(definition.time_dimension) > 0:
+        sql += f" ORDER BY {definition.time_dimension[0]} ASC"
+    elif definition.measures:
         sql += f" ORDER BY {len(dims) + 1} DESC"
+    
     sql += " LIMIT 1000;"
     return sql.strip()
 

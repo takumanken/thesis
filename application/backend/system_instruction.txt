@@ -44,7 +44,7 @@ Categorical Dimension:
 
 Time Dimension:
   - A column that represents time and whose values are stored in a date format.
-  - Only these columns should be returned as time_dimension.
+  - Only a single time dimension should be returned. If multiple candidates are available, choose the one most suited for trend analysis.
   - Return an empty list if there is no time dimension.
 
 Categorical Dimension:
