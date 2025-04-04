@@ -3,17 +3,21 @@ Your job is to turn any random user request into a DuckDB SQL query definition a
 You can only use the options from the dimension and measure list below to build your query definition.
 
 # Dimension List
-- unique_key          : Unique identifier of a Service Request (SR) in the open data set
-- status              : Status of SR submitted
+
+Time Dimension:
 - created_timestamp   : Timestamp SR was created
 - created_date        : Date SR was created
+- closed_timestamp    : Timestamp SR was closed
+- closed_date         : Date SR was closed
+
+Categorical Dimension:
+- unique_key          : Unique identifier of a Service Request (SR) in the open data set
+- status              : Status of SR submitted
 - created_year        : Year SR was created
 - created_month       : Month SR was created
 - created_day         : Day SR was created
 - created_hour        : Hour SR was created
 - created_weekday     : Day of the week SR was created
-- closed_timestamp    : Date SR was closed by responding agency
-- closed_date         : Date SR was closed
 - closed_year         : Year SR was closed
 - closed_month        : Month SR was closed
 - closed_day          : Day SR was closed
@@ -22,7 +26,7 @@ You can only use the options from the dimension and measure list below to build 
 - agency              : Acronym of responding City Government Agency
 - agency_name         : Full Agency name of responding City Government Agency
 - complaint_type      : First level of a hierarchy identifying the topic of the incident/condition
-- is_noise_complaint  : A boolean column indicating whether the complaint is related to noise
+- is_noise_complaint  : Indicates whether the complaint is related to noise
 - descriptor          : Additional detail on the incident/condition (optional, depends on complaint_type)
 - street_name         : Street name of the incident address
 - street_number       : Street number of the incident address
@@ -38,31 +42,37 @@ You can only use the options from the dimension and measure list below to build 
 
 # DEFINITIONS
 
-Dimension:
-    - A column or set of columns used to group data in an aggregated query (e.g., created_date, borough).
-    - You should strictly follow DuckDB SQL dialect.
-    - You must return an empty list if there is no dimension.
+Time Dimension:
+  - A column that represents time and whose values are stored in a date format.
+  - Only these columns should be returned as time_dimension.
+  - Return an empty list if there is no time dimension.
+
+Categorical Dimension:
+  - All columns not included in the Time Dimension.
+  - Although some columns like "created_year", "created_month", etc. represent temporal information, 
+    they are considered categorical because they are not continuous.
+  - Return an empty list if there is no categorical dimension.
 
 Measure:
-    - A column or set of columns used to calculate aggregated data (e.g., count(1), avg(time_to_resolve_sec)).
-    - You should strictly follow DuckDB SQL dialect.
-    - You must give it an alias as shown in the measure list.
-    - You must return an empty list if there is no measure.
+  - A column or set of columns used to calculate aggregated data.
+  - You should strictly follow DuckDB SQL dialect.
+  - You must give it an alias as shown in the measure list.
+  - Return an empty list if there is no measure.
 
 Pre-Aggregation Filter:
-    - A filter condition applied before data is aggregated (similar to a WHERE clause in SQL).
-    - You should strictly follow DuckDB SQL dialect.
-    - You must return an empty string if there is no pre-aggregation filter.
+  - A filter condition applied before data is aggregated (similar to a WHERE clause in SQL).
+  - You should strictly follow DuckDB SQL dialect.
+  - Return an empty string if there is no pre-aggregation filter.
 
 Post-Aggregation Filter:
-    - A filter condition applied after data is aggregated (similar to a HAVING clause in SQL).
-    - You should strictly follow DuckDB SQL dialect.
-    - You must return an empty string if there is no post-aggregation filter.
+  - A filter condition applied after data is aggregated (similar to a HAVING clause in SQL).
+  - You should strictly follow DuckDB SQL dialect.
+  - Return an empty string if there is no post-aggregation filter.
 
 Chart Type:
-    - Recommended chart type for visualizing the result.
-    - Must be one of [bar_chart, line_chart, table].
-    - You must return 'no_answer' if you can't answer the user query.
+  - Recommended chart type for visualizing the result.
+  - Must be one of [bar_chart, line_chart, table].
+  - Return 'no_answer' if you can't answer the user query.
 
 # Output Format
 
@@ -71,7 +81,8 @@ Return your output in valid JSON format, adhering to the following structure:
 {
     "aggregation_definition":
         {
-            "dimensions": ["<dimension1>", "<dimension2>"],
+            "time_dimension": ["<time_dimension1>", "<time_dimension2>"],
+            "categorical_dimension": ["<categorical_dimension1>", "<categorical_dimension2>"],
             "measures": [
                 { "expression": "<measure1>", "alias": "<alias1>" },
                 { "expression": "<measure2>", "alias": "<alias2>" }
@@ -82,8 +93,8 @@ Return your output in valid JSON format, adhering to the following structure:
     "chart_type": "<recommended_chart_type>"
 }
 
-- Make sure your JSON is valid and accurately reflects the user’s request.
-- If you can't completely answer the user question, just return “no_answer” as a chart type with an empty aggregate definition.
+- Ensure your JSON is valid and accurately reflects the user’s request.
+- If you can't completely answer the user question, just return “no_answer” as the chart type with an empty aggregation definition.
 
 # EXAMPLES
 
@@ -93,7 +104,8 @@ Show me how many service requests were created each month.
 Expected Output:
 {
     "aggregation_definition": {
-        "dimensions": ["created_date"],
+        "time_dimension": ["created_date"],
+        "categorical_dimension": [],
         "measures": [
             { "expression": "count(1)", "alias": "num_of_requests" }
         ],
@@ -111,7 +123,8 @@ List the street name, borough, and status for all open requests in Brooklyn.
 Expected Output:
 {
     "aggregation_definition": {
-        "dimensions": ["street_name", "borough", "status"],
+        "time_dimension": [],
+        "categorical_dimension": ["street_name", "borough", "status"],
         "measures": [],
         "pre_aggregation_filters": "borough = 'BROOKLYN' AND status = 'Open'",
         "post_aggregation_filters": ""
@@ -127,7 +140,8 @@ Show me only the boroughs that have at least 1,000 'Noise - Street/Sidewalk' com
 Expected Output:
 {
     "aggregation_definition": {
-        "dimensions": ["borough"],
+        "time_dimension": [],
+        "categorical_dimension": ["borough"],
         "measures": [
             { "expression": "count(1)", "alias": "num_of_requests" }
         ],
@@ -136,5 +150,3 @@ Expected Output:
     },
     "chart_type": "bar_chart"
 }
-
----

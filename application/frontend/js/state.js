@@ -5,6 +5,8 @@ export const state = {
   userQuery: "",
   aggregationDefinition: {},
   sql: "",
+  timeDimension: [],
+  categoricalDimension: [],
 
   // Function to update the state
   update(newData) {

@@ -57,7 +57,8 @@ class Chart(enum.Enum):
     NO_ANSWER = "no_answer"
 
 class AggregationDefinition(BaseModel):
-    dimensions: list[str]
+    time_dimension: list[str]
+    categorical_dimension: list[str]
     measures: list[dict]
     pre_aggregation_filters: str
     post_aggregation_filters: str
@@ -90,40 +91,56 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         # Build SQL query from the aggregation definition
         agg_def_data = parsed_json.get("aggregation_definition")
         aggregation_definition = AggregationDefinition(**agg_def_data)
-        sql = generate_sql(aggregation_definition, "requests_311")
+        dimensions = aggregation_definition.time_dimension + aggregation_definition.categorical_dimension
+        sql = generate_sql(aggregation_definition, dimensions, "requests_311")
         logger.info("Generated SQL: %s", sql)
         
         # Execute SQL query and parse result
         dataset = json.loads(execute_sql_in_duckDB(sql, DB_FILE_NAME))
         logger.info("SQL executed successfully. Result: %s", dataset)
+        
+        # Combine time_dimension and categorical_dimension into dimensions
+        dimensions = aggregation_definition.time_dimension + aggregation_definition.categorical_dimension
 
         return JSONResponse(content={
             "dataset": dataset,
             "fields": list(dataset[0].keys()),
             "sql": sql,
-            "aggregation_definition": parsed_json.get("aggregation_definition"),
-            "chart_type": parsed_json.get("chart_type")
+            "aggregation_definition": agg_def_data,
+            "chart_type": parsed_json.get("chart_type"),
+            "dimensions": dimensions
         })
 
     except Exception as error:
         logger.exception("Error processing prompt.")
         return JSONResponse(status_code=500, content={"error": str(error)})
 
-def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
+def generate_sql(definition: AggregationDefinition, dims: list[str], table_name: str) -> str:
     """
     Generate an SQL query based on the aggregation definition.
+    Uses the pre-combined dimensions (dims) from time_dimension and categorical_dimension.
     """
-    dimensions = ", ".join(definition.dimensions)
-    measures = ", ".join([f"{measure['expression']} AS {measure['alias']}" for measure in definition.measures])
-    sql = f"SELECT {dimensions}, {measures} FROM {table_name}"
+    dims_clause = ", ".join(dims) if dims else ""
+    measures_clause = ", ".join([f"{m['expression']} AS {m['alias']}" for m in definition.measures])
+    
+    # Build the SELECT clause.
+    if dims_clause and measures_clause:
+        select_clause = f"{dims_clause}, {measures_clause}"
+    elif dims_clause:
+        select_clause = dims_clause
+    else:
+        select_clause = measures_clause
+
+    sql = f"SELECT {select_clause} FROM {table_name}"
     
     if definition.pre_aggregation_filters:
         sql += f" WHERE {definition.pre_aggregation_filters}"
-    sql += f" GROUP BY {dimensions}"
+    if dims_clause:
+        sql += f" GROUP BY {dims_clause}"
     if definition.post_aggregation_filters:
         sql += f" HAVING {definition.post_aggregation_filters}"
     if definition.measures:
-        sql += f" ORDER BY {len(definition.dimensions) + 1} DESC"
+        sql += f" ORDER BY {len(dims) + 1} DESC"
     sql += " LIMIT 1000;"
     return sql.strip()
 
