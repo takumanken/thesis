@@ -56,21 +56,39 @@ class AggregationDefinition(BaseModel):
     pre_aggregation_filters: str
     post_aggregation_filters: str
 
+    @property
+    def dimensions(self) -> list[str]:
+        return self.time_dimension + self.categorical_dimension
+
 def determine_ideal_chart(agg_def: AggregationDefinition) -> str:
-    if len(agg_def.categorical_dimension) == 1 and len(agg_def.measures) == 1:
-        return "bar_chart"
-    elif len(agg_def.time_dimension) == 1 and len(agg_def.measures) == 1:
-        return "line_chart"
+    if len(agg_def.dimensions) == 1:
+        if len(agg_def.categorical_dimension) == 1 and len(agg_def.measures) == 1:
+            return "bar_chart"
+        elif len(agg_def.time_dimension) == 1 and len(agg_def.measures) == 1:
+            return "line_chart"
     else:
         return "table"
 
 def determine_available_charts(agg_def: AggregationDefinition) -> list:
-    available = ["table"]  # table is always available
-    if len(agg_def.categorical_dimension) == 1 and len(agg_def.measures) == 1:
-        available.append("bar_chart")
-    if len(agg_def.time_dimension) == 1 and len(agg_def.measures) == 1:
-        available.append("line_chart")
+    available = ["table"]
+    if len(agg_def.dimensions) == 1:
+        if len(agg_def.categorical_dimension) == 1 and len(agg_def.measures) == 1:
+            available.append("bar_chart")
+        if len(agg_def.time_dimension) == 1 and len(agg_def.measures) == 1:
+            available.append("line_chart")
     return available
+
+def get_chart_options(agg_def: AggregationDefinition) -> tuple[str, list[str]]:
+    ideal = "table"
+    available = ["table"]
+    if len(agg_def.measures) == 1 and len(agg_def.dimensions) == 1:
+        if len(agg_def.categorical_dimension) == 1:
+            ideal = "bar_chart"
+            available.append("bar_chart")
+        elif len(agg_def.time_dimension) == 1:
+            ideal = "line_chart"
+            available.append("line_chart")
+    return ideal, available
 
 @app.post("/process")
 @limiter.limit("10/minute")
@@ -90,34 +108,31 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         if not parsed_json:
             raise Exception("Aggregation definition not found in response.")
         
-        # Use flat structure (no aggregation_definition wrapper)
-        agg_def_data = parsed_json
-        aggregation_definition = AggregationDefinition(**agg_def_data)
-        dimensions = aggregation_definition.time_dimension + aggregation_definition.categorical_dimension
-        sql = generate_sql(aggregation_definition, dimensions, "requests_311")
+        # Create and use a single AggregationDefinition instance.
+        aggregation_definition = AggregationDefinition(**parsed_json)
+        sql = generate_sql(aggregation_definition, "requests_311")
         logger.info("Generated SQL: %s", sql)
-        
         dataset = json.loads(execute_sql_in_duckDB(sql, DB_FILE_NAME))
         logger.info("SQL executed successfully. Result: %s", dataset)
         
-        ideal_chart = determine_ideal_chart(aggregation_definition)
-        available_charts = determine_available_charts(aggregation_definition)
-
+        ideal_chart, available_charts = get_chart_options(aggregation_definition)
+        agg_def_with_dims = { **aggregation_definition.dict(), "dimensions": aggregation_definition.dimensions }
+        
         return JSONResponse(content={
             "dataset": dataset,
             "fields": list(dataset[0].keys()) if dataset else [],
             "sql": sql,
-            "aggregation_definition": agg_def_data,
+            "aggregation_definition": agg_def_with_dims,
             "chart_type": ideal_chart,
-            "available_chart_types": available_charts,
-            "dimensions": dimensions
+            "available_chart_types": available_charts
         })
 
     except Exception as error:
         logger.exception("Error processing prompt.")
         return JSONResponse(status_code=500, content={"error": str(error)})
 
-def generate_sql(definition: AggregationDefinition, dims: list[str], table_name: str) -> str:
+def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
+    dims = definition.dimensions
     dims_clause = ", ".join(dims) if dims else ""
     measures_clause = ", ".join([f"{m['expression']} AS {m['alias']}" for m in definition.measures])
     
