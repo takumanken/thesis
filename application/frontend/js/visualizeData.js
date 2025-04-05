@@ -1,4 +1,5 @@
 import { state } from "./state.js";
+import * as d3 from "d3";
 
 let currentGridInstance = null;
 let currentChart = null;
@@ -8,29 +9,22 @@ let currentChart = null;
 // ------------------------------
 
 function visualizeData() {
-  const { dataset, chartType } = state;
-
+  const { chartType } = state;
   const container = document.getElementById("tableContainer");
 
   // Clean up previous visualizations
   cleanupVisualization(container);
 
-  // Check if dataset is available
-  if (!dataset || !dataset.length) {
-    container.innerHTML = "<p>No data available</p>";
-    return;
-  }
-
   // Render based on selected chart type
   switch (chartType) {
     case "table":
-      renderTable(dataset, container);
+      renderTable(container);
       break;
     case "bar_chart":
-      renderBarChart(dataset, container);
+      renderBarChart(container);
       break;
     case "line_chart":
-      renderLineChart(dataset, container);
+      renderLineChart(container);
       break;
     default:
       container.innerHTML = `<p>Chart type "${chartType}" is not supported.</p>`;
@@ -57,7 +51,8 @@ function cleanupVisualization(container) {
 }
 
 // Render a table using gridjs.
-function renderTable(dataset, container) {
+function renderTable(container) {
+  const dataset = state.dataset;
   const fields = Object.keys(dataset[0]);
   currentGridInstance = new gridjs.Grid({
     columns: fields,
@@ -67,20 +62,19 @@ function renderTable(dataset, container) {
 }
 
 // Render a horizontal bar chart with pagination (20 items per page) using D3.
-function renderBarChart(dataset, container) {
+function renderBarChart(container) {
+  const dataset = state.dataset;
   container.innerHTML = "";
 
+  // Retrieve categorical dimension and measure from state.aggregationDefinition.
+  let dimension = state.aggregationDefinition.categorical_dimension[0];
+  let measure = state.aggregationDefinition.measures[0].alias;
+
+  // Pagination: using 20 items per page.
   const pageSize = 20;
   const page = state.barChartPage || 0;
   const totalPages = Math.ceil(dataset.length / pageSize);
   const pageData = dataset.slice(page * pageSize, (page + 1) * pageSize);
-
-  const dimension = Object.keys(dataset[0]).find((key) => typeof dataset[0][key] === "string");
-  const measure = Object.keys(dataset[0]).find((key) => typeof dataset[0][key] === "number");
-  if (!dimension || !measure) {
-    container.innerHTML = "<p>Cannot create bar chart: missing dimension or measure</p>";
-    return;
-  }
 
   const width = 1200,
     height = 600;
@@ -125,6 +119,7 @@ function renderBarChart(dataset, container) {
         .tickSize(0)
     );
 
+  // Pagination controls.
   const paginationDiv = document.createElement("div");
   paginationDiv.style.marginTop = "5px";
 
@@ -133,7 +128,7 @@ function renderBarChart(dataset, container) {
   prevButton.disabled = page <= 0;
   prevButton.addEventListener("click", () => {
     state.barChartPage = page - 1;
-    renderBarChart(dataset, container);
+    renderBarChart(container);
   });
 
   const nextButton = document.createElement("button");
@@ -141,7 +136,7 @@ function renderBarChart(dataset, container) {
   nextButton.disabled = page >= totalPages - 1;
   nextButton.addEventListener("click", () => {
     state.barChartPage = page + 1;
-    renderBarChart(dataset, container);
+    renderBarChart(container);
   });
 
   const pageInfo = document.createElement("span");
@@ -154,7 +149,8 @@ function renderBarChart(dataset, container) {
 }
 
 // Render a placeholder for a line chart.
-function renderLineChart(dataset, container) {
+function renderLineChart(container) {
+  const dataset = state.dataset;
   container.innerHTML =
     "<p>Line chart visualization would appear here.</p>" +
     "<pre>" +
