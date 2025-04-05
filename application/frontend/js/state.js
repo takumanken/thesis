@@ -9,7 +9,6 @@ export const state = {
   update(newData) {
     Object.assign(this, newData);
 
-    // Update the chart type selector in the UI if needed.
     const chartTypeSelector = document.getElementById("chartTypeSelector");
     if (chartTypeSelector) {
       chartTypeSelector.value = this.chartType || "table";
