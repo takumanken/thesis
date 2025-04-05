@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import * as d3 from "d3";
+import { CHART_DIMENSIONS, BAR_CHART_PAGE_SIZE } from "./constants.js";
 
 let currentGridInstance = null;
 let currentChart = null;
@@ -66,18 +66,17 @@ function renderBarChart(container) {
   const dataset = state.dataset;
   container.innerHTML = "";
 
-  // Retrieve categorical dimension and measure from state.aggregationDefinition.
   let dimension = state.aggregationDefinition.categorical_dimension[0];
   let measure = state.aggregationDefinition.measures[0].alias;
 
-  // Pagination: using 20 items per page.
-  const pageSize = 20;
+  // Pagination Setup
+  const pageSize = BAR_CHART_PAGE_SIZE;
   const page = state.barChartPage || 0;
   const totalPages = Math.ceil(dataset.length / pageSize);
   const pageData = dataset.slice(page * pageSize, (page + 1) * pageSize);
 
-  const width = 1200,
-    height = 600;
+  const width = CHART_DIMENSIONS.width,
+    height = CHART_DIMENSIONS.height;
   const margin = { top: 20, right: 20, bottom: 20, left: 200 };
 
   const svg = d3.select(container).append("svg").attr("width", width).attr("height", height);
@@ -148,12 +147,74 @@ function renderBarChart(container) {
   container.appendChild(paginationDiv);
 }
 
-// Render a placeholder for a line chart.
+// Render a line chart
 function renderLineChart(container) {
   const dataset = state.dataset;
-  container.innerHTML =
-    "<p>Line chart visualization would appear here.</p>" +
-    "<pre>" +
-    JSON.stringify(dataset.slice(0, 3), null, 2) +
-    "...</pre>";
+  container.innerHTML = "";
+
+  const timeDimension = state.aggregationDefinition.time_dimension[0];
+  const measure = state.aggregationDefinition.measures[0].alias;
+
+  // Parse time
+  const parseTime = d3.timeParse("%Y-%m-%d");
+  const data = dataset.map((d) => ({
+    ...d,
+    parsedTime: parseTime(d[timeDimension]),
+  }));
+
+  // Set up SVG canvas.
+  const margin = { top: 20, right: 20, bottom: 70, left: 70 };
+  const width = CHART_DIMENSIONS.width - margin.left - margin.right;
+  const height = CHART_DIMENSIONS.height - margin.top - margin.bottom;
+
+  const svg = d3
+    .select(container)
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // Set up scales.
+  const x = d3
+    .scaleTime()
+    .domain(d3.extent(data, (d) => d.parsedTime))
+    .range([0, width]);
+
+  const y = d3
+    .scaleLinear()
+    .domain([0, d3.max(data, (d) => d[measure])])
+    .range([height, 0]);
+
+  // Define the line generator.
+  const line = d3
+    .line()
+    .x((d) => x(d.parsedTime))
+    .y((d) => y(d[measure]));
+
+  // Append the path for the line chart.
+  svg
+    .append("path")
+    .datum(data)
+    .attr("fill", "none")
+    .attr("stroke", "steelblue")
+    .attr("stroke-width", 2)
+    .attr("d", line);
+
+  // Add the X axis.
+  const xAxis = d3.axisBottom(x).tickFormat(d3.timeFormat("%Y-%m-%d"));
+  svg
+    .append("g")
+    .attr("transform", `translate(0, ${height})`)
+    .call(xAxis)
+    .selectAll("text")
+    .attr("dx", "-.8em")
+    .attr("dy", ".15em")
+    .attr("transform", "rotate(-45)")
+    .style("text-anchor", "end");
+
+  // Add the Y axis.
+  svg.append("g").call(d3.axisLeft(y));
 }
+
+export { renderLineChart };
