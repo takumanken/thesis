@@ -5,6 +5,7 @@ You can only use the options from the dimension and measure list below to build 
 # Dimension List
 
 Time Dimension: Use the apporpriate grain based on the user query.
+The default is weekly unless specified otherwise.
 - created_date           : Date when the SR was created.
 - created_week           : Week when the SR was created.
 - created_month          : Month when the SR was created.
