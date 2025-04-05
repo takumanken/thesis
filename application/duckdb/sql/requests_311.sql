@@ -221,10 +221,8 @@ SELECT
         ELSE 'Unspecified'
     END AS county,
     "Incident Zip" AS incident_zip,
-    "Latitude" AS latitude,
-    "Longitude" AS longitude,
+    "Location" AS location,
     neighborhood_code AS neighborhood_code,
-    neighborhood_name AS neighborhood_name,
-    
+    neighborhood_name AS neighborhood_name
 FROM
     read_parquet('{object_url}');

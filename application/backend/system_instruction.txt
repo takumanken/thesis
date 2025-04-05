@@ -21,7 +21,15 @@ A. Time Dimension
    - closed_month     : Month when the SR was closed.
    - closed_year      : Year when the SR was closed.
 
-B. Categorical Dimension
+B. Geo Dimension
+----------------
+• borough                   : Borough of the incident.
+• county                    : County
+• location                  : Latitude and longitude of the incident
+• incident_zip              : Incident zip code
+• neighborhood_name         : Neighborhood name
+
+C. Categorical Dimension
 ------------------------
 • unique_key                : Unique identifier of a Service Request.
 • status                    : Status of the SR.
@@ -43,12 +51,6 @@ B. Categorical Dimension
 • descriptor                : Additional complaint details.
 • street_name               : Incident street name.
 • street_number             : Incident street number.
-• borough                   : Borough of the incident.
-• county                    : County (mapped from borough).
-• incident_zip              : Incident zip code.
-• latitude                  : Latitude coordinate.
-• longitude                 : Longitude coordinate.
-• neighborhood_name         : Neighborhood name.
 
 ────────────────────────────
 II. MEASURE LIST
@@ -60,235 +62,20 @@ II. MEASURE LIST
 III. COMPLAINT TYPE HIERARCHY
 
 For complaint-related queries, **complaint_category is the PRIMARY FIELD**.
-Only use complaint_type or complaint_descriptor for more granular detail if specifically requested.
+Only use complaint_type or complaint_descriptor for more granular detail when explicitly requested.
 
 1. Complaint Category (Broad)
    - Aggregates detailed complaint types into high-level categories.
-   - You can use the following values for filtering:
-       - Public Infrastructure & Facilities  
-       - Environmental & Sanitation  
-       - Public Safety & Health  
-       - Transportation & Traffic  
-       - Administrative & Regulatory  
-       - Miscellaneous
+   - You can refer to "ADDITIONAL COMPLAINT FILTER VALUES" section for filtering.
 
 2. Complaint Type (Moderate Detail)
-   - The original complaint value (see complete list below).
-   - Use only on explicit request for higher resolution.
-   - You can use the following values for filtering:
-       - APPLIANCE
-       - ATF
-       - Adopt-A-Basket
-       - Air Quality
-       - Alzheimer's Care
-       - Animal Facility - No Permit
-       - Animal in a Park
-       - Asbestos
-       - BEST/Site Safety
-       - Beach/Pool/Sauna Complaint
-       - Benefit Card Replacement
-       - Bereavement Support Group
-       - Bike Rack Condition
-       - Bike/Roller/Skate Chronic
-       - Blocked Driveway
-       - Boilers
-       - Bottled Water
-       - Bridge Condition
-       - Broken Muni Meter
-       - Broken Parking Meter
-       - Building Condition
-       - Building/Use
-       - Bus Stop Shelter Complaint
-       - Bus Stop Shelter Placement
-       - CONSTRUCTION
-       - Calorie Labeling
-       - Case Management Agency Complaint
-       - City Vehicle Placard Complaint
-       - Collection Truck Noise
-       - Construction
-       - Construction Safety Enforcement
-       - Consumer Complaint
-       - Cranes and Derricks
-       - Curb Condition
-       - DCA / DOH New License Application Request
-       - DHS Advantage - Tenant
-       - DHS Advantage - Third Party
-       - DHS Advantage -Landlord/Broker
-       - DHS Income Savings Requirement
-       - DOF Parking - Address Update
-       - DOF Parking - DMV Clearance
-       - DOF Parking - Payment Issue
-       - DOF Parking - Request Copy
-       - DOF Parking - Request Status
-       - DOF Parking - Tax Exemption
-       - DOF Property - City Rebate
-       - DOF Property - Owner Issue
-       - DOF Property - Payment Issue
-       - DOF Property - Property Value
-       - DOF Property - RPIE Issue
-       - DOF Property - Reduction Issue
-       - DOF Property - Request Copy
-       - DOF Property - State Rebate
-       - Damaged Tree
-       - Dead Tree
-       - Derelict Bicycle
-       - Derelict Vehicle
-       - Derelict Vehicles
-       - Dirty Conditions
-       - Discipline and Suspension
-       - Disorderly Youth
-       - Drinking
-       - Drinking Water
-       - ELECTRIC
-       - Elder Abuse
-       - Electrical
-       - Elevator
-       - Emergency Response Team (ERT)
-       - Eviction
-       - FATF
-       - Ferry Complaint
-       - Ferry Inquiry
-       - Ferry Permit
-       - Food Establishment
-       - Food Poisoning
-       - For Hire Vehicle Complaint
-       - Forensic Engineering
-       - Forms
-       - Found Property
-       - GENERAL
-       - GENERAL CONSTRUCTION
-       - General Construction/Plumbing
-       - Graffiti
-       - HEAP Assistance
-       - HEATING
-       - HPD Literature Request
-       - Harboring Bees/Wasps
-       - Hazardous Material
-       - Hazardous Materials
-       - Health
-       - Highway Condition
-       - Highway Sign - Damaged
-       - Highway Sign - Dangling
-       - Highway Sign - Missing
-       - Home Care Provider Complaint
-       - Home Delivered Meal - Missed Delivery
-       - Home Delivered Meal Complaint
-       - Home Repair
-       - Homeless Encampment
-       - Housing - Low Income Senior
-       - Housing Options
-       - Illegal Animal Kept as Pet
-       - Illegal Animal Sold
-       - Illegal Fireworks
-       - Illegal Parking
-       - Illegal Tree Damage
-       - Indoor Air Quality
-       - Indoor Sewage
-       - Industrial Waste
-       - Interior Demo
-       - Investigations and Discipline (IAD)
-       - Lead
-       - Legal Services Provider Complaint
-       - Lifeguard
-       - Literature Request
-       - Litter Basket / Request
-       - Lost Property
-       - Maintenance or Facility
-       - Miscellaneous Categories
-       - Missed Collection (All Materials)
-       - Mold
-       - Municipal Parking Facility
-       - NONCONST
-       - NORC Complaint
-       - New Tree Request
-       - No Child Left Behind
-       - Noise
-       - Noise - Commercial
-       - Noise - Helicopter
-       - Noise - House of Worship
-       - Noise - Park
-       - Noise - Residential
-       - Noise - Street/Sidewalk
-       - Noise - Vehicle
-       - Noise Survey
-       - Non-Emergency Police Matter
-       - Non-Residential Heat
-       - OEM Disabled Vehicle
-       - OEM Literature Request
-       - Other Enforcement
-       - Overflowing Litter Baskets
-       - Overgrown Tree/Branches
-       - PAINT - PLASTER
-       - PAINT/PLASTER
-       - PLUMBING
-       - Panhandling
-       - Parent Leadership
-       - Parking Card
-       - Plant
-       - Plumbing
-       - Poison Ivy
-       - Portable Toilet
-       - Posting Advertisement
-       - Public Payphone Complaint
-       - Public Toilet
-       - Quality of Life
-       - Radioactive Material
-       - Recycling Enforcement
-       - Registration and Transfers
-       - Rodent
-       - Root/Sewer/Sidewalk Condition
-       - SCRIE
-       - Safety
-       - Sanitation Condition
-       - Scaffold Safety
-       - School Maintenance
-       - Senior Center Complaint
-       - Sewer
-       - Sidewalk Condition
-       - Smoking
-       - Snow
-       - Special Natural Area District (SNAD)
-       - Special Projects Inspection Team (SPIT)
-       - Squeegee
-       - Stalled Sites
-       - Street Condition
-       - Street Light Condition
-       - Street Sign - Damaged
-       - Street Sign - Dangling
-       - Street Sign - Missing
-       - Summer Camp
-       - Sweeping/Missed-Inadequate
-       - Tattooing
-       - Taxi Complaint
-       - Taxi Compliment
-       - Teaching/Learning/Instruction
-       - Traffic
-       - Traffic Signal Condition
-       - Traffic/Illegal Parking
-       - Trans Fat
-       - Transportation Provider Complaint
-       - Trapping Pigeon
-       - Tunnel Condition
-       - Unleashed Dog
-       - Unsanitary Animal Facility
-       - Unsanitary Animal Pvt Property
-       - Unsanitary Pigeon Condition
-       - Urinating in Public
-       - Utility Program
-       - Vacant Lot
-       - Vending
-       - Violation of Park Rules
-       - Water Conservation
-       - Water Maintenance
-       - Water Quality
-       - Water System
-       - Weatherization
-       - Window Guard
-       - X-Ray Machine/Equipment
+   - Represents the original detailed complaint value.
+   - Use only when higher resolution is explicitly requested.
+   - You can refer to "ADDITIONAL COMPLAINT FILTER VALUES" section for filtering.
 
 3. Complaint Descriptor (Finer Detail)
-   - Contains additional, fine-grained details.
-   - Use only if the user explicitly asks for the most detailed information.
+   - Contains additional fine-grained details.
+   - Use only if the user explicitly requests the most detailed information.
 
 ────────────────────────────
 IV. DEFINITIONS FOR SQL GENERATION
@@ -299,24 +86,29 @@ IV. DEFINITIONS FOR SQL GENERATION
    - Return an empty list if none exists.
 
 2. Categorical Dimension:
-   - All non-time columns.
-   - Treat columns, e.g., created_year_datepart & closed_month_datepart, as categorical.
+   - All non-time and non-location related dimensions from the dataset.
+   - Typically includes identifiers, statuses, agency details, and complaint texts.
    - Return an empty list if none exists.
 
-3. Measure:
-   - A column or expression for aggregate calculations.
-   - Use DuckDB SQL dialect. Provide aliases as specified.
-   - Return an empty list if none exists.
+3. Geo Dimension:
+   - One column representing geographical information.
+   - If multiple are available, select the best for spatial analysis.
+   - Return an empty list if no geo-dimension exists.
 
-4. Pre-Aggregation Filter:
-   - A filter applied before aggregation (like a WHERE clause).
-   - Use DuckDB SQL syntax.
-   - Return an empty string if no filter is required.
+4. Measure:
+   - A column or an expression used for aggregate calculations.
+   - Use the DuckDB SQL dialect and provide an alias when required.
+   - Return an empty list if no measure exists.
 
-5. Post-Aggregation Filter:
-   - A filter applied after aggregation (like a HAVING clause).
-   - Use DuckDB SQL syntax.
-   - Return an empty string if no filter is required.
+5. Pre-Aggregation Filter:
+   - A filter applied before performing any aggregation (comparable to a WHERE clause).
+   - Use valid DuckDB SQL syntax.
+   - Return an empty string if no pre-aggregation filter is needed.
+
+6. Post-Aggregation Filter:
+   - A filter applied to the aggregated results (comparable to a HAVING clause).
+   - Use valid DuckDB SQL syntax.
+   - Return an empty string if no post-aggregation filter is needed.
 
 ────────────────────────────
 V. OUTPUT FORMAT
@@ -326,6 +118,7 @@ Your output must be valid JSON in the following structure:
 {
     "time_dimension": ["<time_dimension1>"],
     "categorical_dimension": ["<categorical_dimension1>", "<categorical_dimension2>"],
+    "geo_dimension": ["<geo_dimension1>"],
     "measures": [
         { "expression": "<measure1>", "alias": "<alias1>" },
         { "expression": "<measure2>", "alias": "<alias2>" }
@@ -345,6 +138,7 @@ Expected Output:
 {
     "time_dimension": ["created_date"],
     "categorical_dimension": [],
+    "geo_dimension": [],
     "measures": [
         { "expression": "count(1)", "alias": "num_of_requests" }
     ],
@@ -358,20 +152,46 @@ Expected Output:
 {
     "time_dimension": [],
     "categorical_dimension": ["street_name", "borough", "status"],
+    "geo_dimension": [],
     "measures": [],
     "pre_aggregation_filters": "borough = 'BROOKLYN' AND status = 'Open'",
     "post_aggregation_filters": ""
 }
 
 Example 3:
-User Query: Show me only the boroughs that have at least 1,000 'Noise - Street/Sidewalk' complaints.
+User Query: Show me the count of requests by neighborhood.
 Expected Output:
 {
     "time_dimension": [],
-    "categorical_dimension": ["borough"],
+    "categorical_dimension": [],
+    "geo_dimension": ["neighborhood"],
     "measures": [
         { "expression": "count(1)", "alias": "num_of_requests" }
     ],
-    "pre_aggregation_filters": "complaint_category = 'Community Noise'",
-    "post_aggregation_filters": "count(1) >= 1000"
+    "pre_aggregation_filters": "",
+    "post_aggregation_filters": ""
 }
+
+────────────────────────────
+ADDITIONAL GEO FILTER VALUES
+
+When filtering by geo dimensions, use the following actual values:
+
+Borough:
+  BRONX, BROOKLYN, MANHATTAN, QUEENS, STATEN ISLAND, Unspecified
+
+Neighborhood_name:
+  Allerton, Alley Pond Park, Annadale-Huguenot-Prince's Bay-Woodrow, Arden Heights-Rossville, Astoria (Central), Astoria (East)-Woodside (North), Astoria (North)-Ditmars-Steinway, Astoria Park, Auburndale, Baisley Park, Barren Island-Floyd Bennett Field, Bath Beach, Bay Ridge, Bay Terrace-Clearview, Bayside, Bedford Park, Bedford-Stuyvesant (East), Bedford-Stuyvesant (West), Bellerose, Belmont, Bensonhurst, Borough Park, Breezy Point-Belle Harbor-Rockaway Park-Broad Channel, Brighton Beach, Bronx Park, Brooklyn Heights, Brooklyn Navy Yard, Brownsville, Bushwick (East), Bushwick (West), Calvary & Mount Zion Cemeteries, Calvert Vaux Park, Cambria Heights, Canarsie, Canarsie Park & Pier, Carroll Gardens-Cobble Hill-Gowanus-Red Hook, Castle Hill-Unionport, Central Park, Chelsea-Hudson Yards, Chinatown-Two Bridges, Claremont Park, Claremont Village-Claremont (East), Clinton Hill, Co-op City, College Point, Concourse-Concourse Village, Coney Island-Sea Gate, Corona, Crotona Park, Crotona Park East, Crown Heights (North), Crown Heights (South), Cunningham Park, Cypress Hills, Douglaston-Little Neck, Downtown Brooklyn-DUMBO-Boerum Hill, Dyker Beach Park, Dyker Heights, East Elmhurst, East Flatbush-Erasmus, East Flatbush-Farragut, East Flatbush-Remsen Village, East Flatbush-Rugby, East Flushing, East Harlem (North), East Harlem (South), East Midtown-Turtle Bay, East New York (North), East New York-City Line, East New York-New Lots, East Village, East Williamsburg, Eastchester-Edenwald-Baychester, Elmhurst, Far Rockaway-Bayswater, Ferry Point Park-St. Raymond Cemetery, Financial District-Battery Park City, Flatbush, Flatbush (West)-Ditmas Park-Parkville, Flatlands, Flushing Meadows-Corona Park, Flushing-Willets Point, Fordham Heights, Forest Hills, Forest Park, Fort Greene, Fort Hamilton, Fort Totten, Fort Wadsworth, Fresh Meadows-Utopia, Freshkills Park (North), Freshkills Park (South), Glen Oaks-Floral Park-New Hyde Park, Glendale, Gramercy, Grasmere-Arrochar-South Beach-Dongan Hills, Gravesend (East)-Homecrest, Gravesend (South), Gravesend (West), Great Kills Park, Great Kills-Eltingville, Green-Wood Cemetery, Greenpoint, Greenwich Village, Hamilton Heights-Sugar Hill, Harlem (North), Harlem (South), Hell's Kitchen, Highbridge, Highbridge Park, Highland Park-Cypress Hills Cemeteries (North), Highland Park-Cypress Hills Cemeteries (South), Hollis, Holy Cross Cemetery, Howard Beach-Lindenwood, Hunts Point, Hutchinson, Metro Center, Inwood, Inwood Hill Park, Jackson Heights, Jacob Riis Park-Fort Tilden-Breezy Point Tip, Jamaica, Jamaica Bay (East), Jamaica Estates-Holliswood, Jamaica Hills-Briarwood, John F. Kennedy International Airport, Kensington, Kew Gardens, Kew Gardens Hills, Kingsbridge Heights-Van Cortlandt Village, Kingsbridge-Marble Hill, Kissena Park, LaGuardia Airport, Laurelton, Lincoln Terrace Park, Long Island City-Hunters Point, Longwood, Lower East Side, Madison, Manhattanville-West Harlem, Mapleton-Midwood (West), Marine Park-Mill Basin-Bergen Beach, Marine Park-Plumb Island, Mariner's Harbor-Arlington-Graniteville, Maspeth, McGuire Fields, Melrose, Middle Village, Middle Village Cemetery, Midtown South-Flatiron-Union Square, Midtown-Times Square, Midwood, Miller Field, Montefiore Cemetery, Morningside Heights, Morris Park, Morrisania, Mott Haven-Port Morris, Mount Eden-Claremont (West), Mount Hope, Mount Olivet & All Faiths Cemeteries, Murray Hill-Broadway, Flushing Murray Hill-Kips Bay, New Dorp-Midland Beach, New Springville-Willowbrook-Bulls Head-Travis, North Corona, Norwood, Oakland Gardens-Hollis Hills, Oakwood-Richmondtown, Ocean Hill, Old Astoria-Hallets Point, Ozone Park, Ozone Park (North), Park Slope, Parkchester, Pelham Bay Park, Pelham Bay-Country Club-City Island, Pelham Gardens, Pelham Parkway-Van Nest, Pomonok-Electchester-Hillcrest, Port Richmond, Prospect Heights, Prospect Lefferts Gardens-Wingate, Prospect Park, Queens Village, Queensboro Hill, Queensbridge-Ravenswood-Dutch Kills, Randall's Island, Rego Park, Richmond Hill, Ridgewood, Rikers Island, Riverdale-Spuyten Duyvil, Rockaway Beach-Arverne-Edgemere, Rockaway Community Park, Rosebank-Shore Acres-Park Hill, Rosedale, Sheepshead Bay-Manhattan Beach-Gerritsen Beach, Shirley Chisholm State Park, Snug Harbor, SoHo-Little Italy-Hudson Square, Soundview Park, Soundview-Bruckner-Bronx River, Soundview-Clason Point, South Jamaica, South Ozone Park, South Richmond Hill, South Williamsburg, Spring Creek Park, Spring Creek-Starrett City, Springfield Gardens (North)-Rochdale Village, Springfield Gardens (South)-Brookville, St. Albans, St. George-New Brighton, St. John Cemetery, St. Michael's Cemetery, Stuyvesant Town-Peter Cooper Village, Sunnyside, Sunnyside Yards (North), Sunnyside Yards (South), Sunset Park (Central), Sunset Park (East)-Borough Park (West), Sunset Park (West), The Battery-Governors Island-Ellis Island-Liberty Island, The Evergreens Cemetery, Throgs Neck-Schuylerville, Todt Hill-Emerson Hill-Lighthouse Hill-Manor Heights, Tompkinsville-Stapleton-Clifton-Fox Hills, Tottenville-Charleston, Tremont, Tribeca-Civic Center, United Nations, University Heights (North)-Fordham, University Heights (South)-Morris Heights, Upper East Side-Carnegie Hill, Upper East Side-Lenox Hill-Roosevelt Island, Upper East Side-Yorkville, Upper West Side (Central), Upper West Side-Lincoln Square, Upper West Side-Manhattan Valley, Van Cortlandt Park, Wakefield-Woodlawn, Washington Heights (North), Washington Heights (South), West Farms, West New Brighton-Silver Lake-Grymes Hill, West Village, Westchester Square, Westerleigh-Castleton Corners, Whitestone-Beechhurst, Williamsbridge-Olinville, Williamsburg, Windsor Terrace-South Slope, Woodhaven, Woodlawn Cemetery, Woodside, Yankee Stadium-Macombs Dam Park.
+
+────────────────────────────
+ADDITIONAL COMPLAINT FILTER VALUES
+
+When filtering by complaint dimensions, use the following actual values (ensure the value format is consistent):
+
+Complaint Category:
+  PUBLIC INFRASTRUCTURE & FACILITIES, ENVIRONMENTAL & SANITATION, PUBLIC SAFETY & HEALTH, TRANSPORTATION & TRAFFIC, ADMINISTRATIVE & REGULATORY, MISCELLANEOUS
+
+Complaint Type:
+  APPLIANCE, ATF, ADOPT-A-BASKET, AIR QUALITY, ALZHEIMER'S CARE, ANIMAL FACILITY - NO PERMIT, ANIMAL IN A PARK, ASBESTOS, BEST/SITE SAFETY, BEACH/POOL/SAUNA COMPLAINT, BENEFIT CARD REPLACEMENT, BEREAVEMENT SUPPORT GROUP, BIKE RACK CONDITION, BIKE/ROLLER/SKATE CHRONIC, BLOCKED DRIVEWAY, BOILERS, BOTTLED WATER, BRIDGE CONDITION, BROKEN MUNI METER, BROKEN PARKING METER, BUILDING CONDITION, BUILDING/USE, BUS STOP SHELTER COMPLAINT, BUS STOP SHELTER PLACEMENT, CONSTRUCTION, CALORIE LABELING, CASE MANAGEMENT AGENCY COMPLAINT, CITY VEHICLE PLACARD COMPLAINT, COLLECTION TRUCK NOISE, CONSTRUCTION SAFETY ENFORCEMENT, CONSUMER COMPLAINT, CRANES AND DERRICKS, CURB CONDITION, DCA / DOH NEW LICENSE APPLICATION REQUEST, DHS ADVANTAGE - TENANT, DHS ADVANTAGE - THIRD PARTY, DHS ADVANTAGE -LANDLORD/BROKER, DHS INCOME SAVINGS REQUIREMENT, DOF PARKING - ADDRESS UPDATE, DOF PARKING - DMV CLEARANCE, DOF PARKING - PAYMENT ISSUE, DOF PARKING - REQUEST COPY, DOF PARKING - REQUEST STATUS, DOF PARKING - TAX EXEMPTION, DOF PROPERTY - CITY REBATE, DOF PROPERTY - OWNER ISSUE, DOF PROPERTY - PAYMENT ISSUE, DOF PROPERTY - PROPERTY VALUE, DOF PROPERTY - RPIE ISSUE, DOF PROPERTY - REDUCTION ISSUE, DOF PROPERTY - REQUEST COPY, DOF PROPERTY - STATE REBATE, DAMAGED TREE, DEAD TREE, DERELICT BICYCLE, DERELICT VEHICLE, DERELICT VEHICLES, DIRTY CONDITIONS, DISCIPLINE AND SUSPENSION, DISORDERLY YOUTH, DRINKING, DRINKING WATER, ELECTRIC, ELDER ABUSE, ELECTRICAL, ELEVATOR, EMERGENCY RESPONSE TEAM (ERT), EVICTION, FATF, FERRY COMPLAINT, FERRY INQUIRY, FERRY PERMIT, FOOD ESTABLISHMENT, FOOD POISONING, FOR HIRE VEHICLE COMPLAINT, FORENSIC ENGINEERING, FORMS, FOUND PROPERTY, GENERAL, GENERAL CONSTRUCTION, GENERAL CONSTRUCTION/PLUMBING, GRAFFITI, HEAP ASSISTANCE, HEATING, HPD LITERATURE REQUEST, HARBORING BEES/WASPS, HAZARDOUS MATERIAL, HAZARDOUS MATERIALS, HEALTH, HIGHWAY CONDITION, HIGHWAY SIGN - DAMAGED, HIGHWAY SIGN - DANGLING, HIGHWAY SIGN - MISSING, HOME CARE PROVIDER COMPLAINT, HOME DELIVERED MEAL - MISSED DELIVERY, HOME DELIVERED MEAL COMPLAINT, HOME REPAIR, HOMELESS ENCAMPMENT, HOUSING - LOW INCOME SENIOR, HOUSING OPTIONS, ILLEGAL ANIMAL KEPT AS PET, ILLEGAL ANIMAL SOLD, ILLEGAL FIREWORKS, ILLEGAL PARKING, ILLEGAL TREE DAMAGE, INDOOR AIR QUALITY, INDOOR SEWAGE, INDUSTRIAL WASTE, INTERIOR DEMO, INVESTIGATIONS AND DISCIPLINE (IAD), LEAD, LEGAL SERVICES PROVIDER COMPLAINT, LIFEGUARD, LITERATURE REQUEST, LITTER BASKET / REQUEST, LOST PROPERTY, MAINTENANCE OR FACILITY, MISCELLANEOUS CATEGORIES, MISSED COLLECTION (ALL MATERIALS), MOLD, MUNICIPAL PARKING FACILITY, NONCONST, NORC COMPLAINT, NEW TREE REQUEST, NO CHILD LEFT BEHIND, NOISE, NOISE - COMMERCIAL, NOISE - HELICOPTER, NOISE - HOUSE OF WORSHIP, NOISE - PARK, NOISE - RESIDENTIAL, NOISE - STREET/SIDEWALK, NOISE - VEHICLE, NOISE SURVEY, NON-EMERGENCY POLICE MATTER, NON-RESIDENTIAL HEAT, OEM DISABLED VEHICLE, OEM LITERATURE REQUEST, OTHER ENFORCEMENT, OVERFLOWING LITTER BASKETS, OVERGROWN TREE/BRANCHES, PAINT - PLASTER, PAINT/PLASTER, PLUMBING, PANHANDLING, PARENT LEADERSHIP, PARKING CARD, PLANT, PLUMBING, POISON IVY, PORTABLE TOILET, POSTING ADVERTISEMENT, PUBLIC PAYPHONE COMPLAINT, PUBLIC TOILET, QUALITY OF LIFE, RADIOACTIVE MATERIAL, RECYCLING ENFORCEMENT, REGISTRATION AND TRANSFERS, RODENT, ROOT/SEWER/SIDEWALK CONDITION, SCRIE, SAFETY, SANITATION CONDITION, SCAFFOLD SAFETY, SCHOOL MAINTENANCE, SENIOR CENTER COMPLAINT, SEWER, SIDEWALK CONDITION, SMOKING, SNOW, SPECIAL NATURAL AREA DISTRICT (SNAD), SPECIAL PROJECTS INSPECTION TEAM (SPIT), SQUEEGEE, STALLED SITES, STREET CONDITION, STREET LIGHT CONDITION, STREET SIGN - DAMAGED, STREET SIGN - DANGLING, STREET SIGN - MISSING, SUMMER CAMP, SWEEPING/MISSED-INADEQUATE, TATTOOING, TAXI COMPLAINT, TAXI COMPLIMENT, TEACHING/LEARNING/INSTRUCTION, TRAFFIC, TRAFFIC SIGNAL CONDITION, TRAFFIC/ILLEGAL PARKING, TRANS FAT, TRANSPORTATION PROVIDER COMPLAINT, TRAPPING PIGEON, TUNNEL CONDITION, UNLEASHED DOG, UNSANITARY ANIMAL FACILITY, UNSANITARY ANIMAL PVT PROPERTY, UNSANITARY PIGEON CONDITION, URINATING IN PUBLIC, UTILITY PROGRAM, VACANT LOT, VENDING, VIOLATION OF PARK RULES, WATER CONSERVATION, WATER MAINTENANCE, WATER QUALITY, WATER SYSTEM, WEATHERIZATION, WINDOW GUARD, X-RAY MACHINE/EQUIPMENT
+
+────────────────────────────

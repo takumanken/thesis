@@ -52,25 +52,28 @@ class PromptRequest(BaseModel):
 class AggregationDefinition(BaseModel):
     time_dimension: list[str]
     categorical_dimension: list[str]
+    geo_dimension: list[str]
     measures: list[dict]
     pre_aggregation_filters: str
     post_aggregation_filters: str
 
     @property
     def dimensions(self) -> list[str]:
-        return self.time_dimension + self.categorical_dimension
+        return self.time_dimension + self.categorical_dimension + self.geo_dimension
 
 # Add or update helper function to determine chart options
 def get_chart_options(agg_def: AggregationDefinition) -> tuple[str, list[str]]:
     ideal = "table"
     available = ["table"]
-    if len(agg_def.measures) == 1:
+    if len(agg_def.measures) == 1 and len(agg_def.dimensions) == 1:
+        available.append("bar_chart")
+        ideal = "bar_chart"
         if len(agg_def.time_dimension) == 1:
             available.append("line_chart")
             ideal = "line_chart"
-        elif len(agg_def.categorical_dimension) == 1:
-            available.append("bar_chart")
-            ideal = "bar_chart"
+        elif len(agg_def.geo_dimension) == 1:
+            available.append("map")
+            ideal = "map"
     return ideal, available
 
 @app.post("/process")
@@ -120,14 +123,14 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     select_dims = []
     group_dims = []
     
-    # Use time dimensions directly.
+    # Add time dimension to select and group by clauses.
     for dim in definition.time_dimension:
         select_dims.append(dim)
         group_dims.append(dim)
-    
-    # For categorical dimensions, wrap with IFNULL and assign alias equal to the column name.
-    for dim in definition.categorical_dimension:
-        select_dims.append(f"IFNULL({dim}, 'Unspecified') AS {dim}")
+
+    # For categorical & geo dimensions, wrap with COALESCE and assign alias equal to the column name.
+    for dim in definition.categorical_dimension + definition.geo_dimension:
+        select_dims.append(f"COALESCE({dim}, 'Unspecified') AS {dim}")
         group_dims.append(dim)
     
     dims_clause = ", ".join(select_dims) if select_dims else ""
@@ -144,9 +147,11 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     
     if definition.pre_aggregation_filters:
         sql += f" WHERE {definition.pre_aggregation_filters}"
+        
     if group_dims:
-        group_clause = ", ".join(group_dims)
+        group_clause = ", ".join([str(i) for i in range(1, len(group_dims) + 1)])
         sql += f" GROUP BY {group_clause}"
+        
     if definition.post_aggregation_filters:
         sql += f" HAVING {definition.post_aggregation_filters}"
     
