@@ -14,12 +14,14 @@ export async function askGemini() {
 
   const result = await response.json();
 
-  // Update the state using the update method
+  // Update the state using camelCase keys consistently.
   state.update({
+    fields: result.fields,
     dataset: result.dataset,
-    chartType: result.chart_type,
     aggregationDefinition: result.aggregation_definition,
     sql: result.sql,
+    chartType: result.chart_type,
+    availableChartTypes: result.available_chart_types,
   });
 
   console.log("Response from backend:", result);
