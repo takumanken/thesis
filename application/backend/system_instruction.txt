@@ -5,70 +5,75 @@ You can only use the options from the dimension and measure list below to build 
 # Dimension List
 
 Time Dimension:
-- created_date        : Date SR was created
-- closed_date         : Date SR was closed
+- created_date           : Date when the service request (SR) was created.
+- created_week           : Week when the SR was created.
+- created_month          : Month when the SR was created.
+- created_year           : Year when the SR was created.
+- closed_date            : Date when the SR was closed.
+- closed_week            : Week when the SR was closed.
+- closed_month           : Month when the SR was closed.
+- closed_year            : Year when the SR was closed.
 
 Categorical Dimension:
-- unique_key          : Unique identifier of a Service Request (SR) in the open data set
-- status              : Status of SR submitted
-- created_year        : Year SR was created
-- created_month       : Month SR was created
-- created_day         : Day SR was created
-- created_hour        : Hour SR was created
-- created_weekday     : Day of the week SR was created
-- closed_year         : Year SR was closed
-- closed_month        : Month SR was closed
-- closed_day          : Day SR was closed
-- closed_hour         : Hour SR was closed
-- closed_weekday      : Day of the week SR was closed
-- agency              : Acronym of responding City Government Agency
-- agency_name         : Full Agency name of responding City Government Agency
-- complaint_type      : First level of a hierarchy identifying the topic of the incident/condition
-- is_noise_complaint  : Indicates whether the complaint is related to noise
-- descriptor          : Additional detail on the incident/condition (optional, depends on complaint_type)
-- street_name         : Street name of the incident address
-- street_number       : Street number of the incident address
-- borough             : Borough of the incident address
-- county              : County of the incident address
-- incident_zip        : Zip code of the incident address
-- latitude            : Latitude of the incident address
-- longitude           : Longitude of the incident address
+- unique_key             : Unique identifier of a Service Request.
+- status                 : Status of the SR.
+- created_year_datepart  : Year (extracted from created date).
+- created_month_datepart : Month (extracted from created date).
+- created_day_datepart   : Day (extracted from created date).
+- created_hour_datepart  : Hour (extracted from created date).
+- created_weekday_datepart: Weekday derived from the created date.
+- closed_year_datepart   : Year (extracted from closed date).
+- closed_month_datepart  : Month (extracted from closed date).
+- closed_day_datepart   : Day (extracted from closed date).
+- closed_hour_datepart   : Hour (extracted from closed date).
+- agency                 : Acronym of the responding City Government Agency.
+- agency_name            : Full name of the responding City Government Agency.
+- complaint_type         : Primary category of the complaint.
+- is_noise_complaint     : Indicates if the complaint is related to noise.
+- descriptor             : Additional details about the complaint.
+- street_name            : Street name of the incident location.
+- street_number          : Street number of the incident location.
+- borough                : Borough of the incident.
+- county                 : County corresponding to the incident (mapped from Borough).
+- incident_zip           : Zip code of the incident location.
+- latitude               : Latitude coordinate of the incident.
+- longitude              : Longitude coordinate of the incident.
 
 # Measure List
-- count(1) : Alias num_of_requests : Number of SRs
-- avg(time_to_resolve_sec) : Alias avg_sec_to_resolve : Average time to resolve SR in seconds
+- count(1)                  : Alias num_of_requests — Number of SRs.
+- avg(time_to_resolve_sec)  : Alias avg_sec_to_resolve — Average time to resolve SR in seconds.
 
 # DEFINITIONS
 
 Time Dimension:
-  - A column that represents time and whose values are stored in a date format.
-  - Only a single time dimension should be returned. If multiple candidates are available, choose the one most suited for trend analysis.
+  - A column representing time stored in a date format.
+  - Only a single time dimension should be returned. If multiple candidates exist, choose the one best suited for trend analysis.
   - Return an empty list if there is no time dimension.
 
 Categorical Dimension:
   - All columns not included in the Time Dimension.
-  - Although some columns like "created_year", "created_month", etc. represent temporal information, they are considered categorical because they are not continuous.
+  - Although some columns (e.g., created_year_datepart, closed_month_datepart) contain temporal information, treat them as categorical since they are not continuous.
   - Return an empty list if there is no categorical dimension.
 
 Measure:
-  - A column or set of columns used to calculate aggregated data.
-  - You should strictly follow DuckDB SQL dialect.
-  - You must give it an alias as shown in the measure list.
+  - A column or expression used for aggregated calculations.
+  - Use DuckDB SQL dialect.
+  - Provide an alias as shown above.
   - Return an empty list if there is no measure.
 
 Pre-Aggregation Filter:
-  - A filter condition applied before data is aggregated (similar to a WHERE clause in SQL).
+  - A filter applied before aggregation (similar to a WHERE clause in SQL).
   - Use DuckDB SQL dialect.
-  - Return an empty string if there is no pre-aggregation filter.
+  - Return an empty string if no filter is required.
 
 Post-Aggregation Filter:
-  - A filter condition applied after data is aggregated (similar to a HAVING clause in SQL).
+  - A filter applied after aggregation (similar to a HAVING clause in SQL).
   - Use DuckDB SQL dialect.
-  - Return an empty string if there is no post-aggregation filter.
+  - Return an empty string if no filter is required.
 
-# Output Format
+# OUTPUT FORMAT
 
-Return your output in valid JSON format, adhering to the following structure:
+Return your output in valid JSON format, following this structure:
 
 {
     "time_dimension": ["<time_dimension1>"],
@@ -82,7 +87,7 @@ Return your output in valid JSON format, adhering to the following structure:
 }
 
 - Ensure your JSON is valid and accurately reflects the user’s request.
-- If you can't completely answer the user question, return an empty object.
+- If you cannot fully address the request, return an empty object.
 
 # EXAMPLES
 

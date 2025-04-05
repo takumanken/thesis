@@ -1,5 +1,5 @@
 secrets.js
 secrets.json
-sandbox/duckdb/data/
+application/duckdb/data/
 .env
-myenv/
+application/duckdb/venv/
