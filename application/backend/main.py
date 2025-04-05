@@ -131,8 +131,16 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         return JSONResponse(status_code=500, content={"error": str(error)})
 
 def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
-    dims = definition.dimensions
-    dims_clause = ", ".join(dims) if dims else ""
+    # Build expressions for dimensions:
+    # - Leave time dimensions as they are.
+    # - Wrap categorical dimensions using IFNULL(..., 'Unspecified').
+    dim_exprs = []
+    for dim in definition.time_dimension:
+        dim_exprs.append(dim)
+    for dim in definition.categorical_dimension:
+        dim_exprs.append(f"IFNULL({dim}, 'Unspecified')")
+    dims_clause = ", ".join(dim_exprs) if dim_exprs else ""
+    
     measures_clause = ", ".join([f"{m['expression']} AS {m['alias']}" for m in definition.measures])
     
     if dims_clause and measures_clause:
@@ -154,7 +162,7 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     if definition.time_dimension and len(definition.time_dimension) > 0:
         sql += f" ORDER BY {definition.time_dimension[0]} ASC"
     elif definition.measures:
-        sql += f" ORDER BY {len(dims) + 1} DESC"
+        sql += f" ORDER BY {len(dim_exprs) + 1} DESC"
     
     sql += " LIMIT 1000;"
     return sql.strip()
