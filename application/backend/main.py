@@ -60,30 +60,18 @@ class AggregationDefinition(BaseModel):
     def dimensions(self) -> list[str]:
         return self.time_dimension + self.categorical_dimension
 
-def determine_ideal_chart(agg_def: AggregationDefinition) -> str:
-    if len(agg_def.dimensions) == 1:
-        if len(agg_def.categorical_dimension) == 1 and len(agg_def.measures) == 1:
-            return "bar_chart"
-        elif len(agg_def.time_dimension) == 1 and len(agg_def.measures) == 1:
-            return "line_chart"
-    else:
-        return "table"
-
-def determine_available_charts(agg_def: AggregationDefinition) -> list:
-    available = ["table"]
-    if len(agg_def.dimensions) == 1:
-        if len(agg_def.categorical_dimension) == 1 and len(agg_def.measures) == 1:
-            available.append("bar_chart")
-        if len(agg_def.time_dimension) == 1 and len(agg_def.measures) == 1:
-            available.append("line_chart")
-    return available
-
 # Add or update helper function to determine chart options
 def get_chart_options(agg_def: AggregationDefinition) -> tuple[str, list[str]]:
-    if len(agg_def.time_dimension) == 1 and len(agg_def.measures) == 1:
-        return "line_chart", ["table", "line_chart"]
-    else:
-        return "table", ["table"]
+    ideal = "table"
+    available = ["table"]
+    if len(agg_def.measures) == 1:
+        if len(agg_def.time_dimension) == 1:
+            available.append("line_chart")
+            ideal = "line_chart"
+        elif len(agg_def.categorical_dimension) == 1:
+            available.append("bar_chart")
+            ideal = "bar_chart"
+    return ideal, available
 
 @app.post("/process")
 @limiter.limit("10/minute")
@@ -103,7 +91,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         if not parsed_json:
             raise Exception("Aggregation definition not found in response.")
         
-        # Create a single AggregationDefinition instance.
+        # Use single AggregationDefinition instance.
         aggregation_definition = AggregationDefinition(**parsed_json)
         sql = generate_sql(aggregation_definition, "requests_311")
         logger.info("Generated SQL: %s", sql)
@@ -111,10 +99,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         dataset = json.loads(execute_sql_in_duckDB(sql, DB_FILE_NAME))
         logger.info("SQL executed successfully. Result: %s", dataset)
         
-        # Determine ideal chart type and available chart types.
         ideal_chart, available_charts = get_chart_options(aggregation_definition)
-        
-        # Build aggregation_definition dict including computed dimensions.
         agg_def_with_dims = { **aggregation_definition.dict(), "dimensions": aggregation_definition.dimensions }
         
         return JSONResponse(content={
