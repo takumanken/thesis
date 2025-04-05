@@ -57,18 +57,20 @@ class AggregationDefinition(BaseModel):
     post_aggregation_filters: str
 
 def determine_ideal_chart(agg_def: AggregationDefinition) -> str:
-    """
-    Determine the ideal chart type based on the aggregation definition.
-    - If exactly one categorical dimension and one measure: "bar_chart"
-    - If exactly one time dimension and one measure: "line_chart"
-    - Otherwise: "table"
-    """
     if len(agg_def.categorical_dimension) == 1 and len(agg_def.measures) == 1:
         return "bar_chart"
     elif len(agg_def.time_dimension) == 1 and len(agg_def.measures) == 1:
         return "line_chart"
     else:
         return "table"
+
+def determine_available_charts(agg_def: AggregationDefinition) -> list:
+    available = ["table"]  # table is always available
+    if len(agg_def.categorical_dimension) == 1 and len(agg_def.measures) == 1:
+        available.append("bar_chart")
+    if len(agg_def.time_dimension) == 1 and len(agg_def.measures) == 1:
+        available.append("line_chart")
+    return available
 
 @app.post("/process")
 @limiter.limit("10/minute")
@@ -99,6 +101,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         logger.info("SQL executed successfully. Result: %s", dataset)
         
         ideal_chart = determine_ideal_chart(aggregation_definition)
+        available_charts = determine_available_charts(aggregation_definition)
 
         return JSONResponse(content={
             "dataset": dataset,
@@ -106,6 +109,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             "sql": sql,
             "aggregation_definition": agg_def_data,
             "chart_type": ideal_chart,
+            "available_chart_types": available_charts,
             "dimensions": dimensions
         })
 
