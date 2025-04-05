@@ -34,7 +34,9 @@ Use the appropriate grain based on the user query.
 - closed_hour_datepart   : Hour (extracted from closed date).
 - agency                 : Acronym of the responding City Government Agency.
 - agency_name            : Full name of the responding City Government Agency.
+- complaint_category     : Broad category of the complaint.
 - complaint_type         : Primary category of the complaint.
+- complaint_descriptor   : Detailed description of the complaint.
 - is_noise_complaint     : Indicates if the complaint is related to noise.
 - descriptor             : Additional details about the complaint.
 - street_name            : Street name of the incident location.
@@ -56,13 +58,13 @@ Use the appropriate grain based on the user query.
 
 Many users will ask about the complaint type in their queries.  
 You can directly use is_noise_complaint to filter out noise complaints.
+Use complaint_category as the primary field for complaint-related queries.
 
 There are **three levels** of complaint-related fields:
 
 1. **Complaint Category (Broad)**
-   - Derived from the original complaint type.
-   - Aggregates similar complaint types into high-level categories for filtering and aggregation.
-   - Typical categories include:
+   - The most important field for complaint-related queries.
+   - Values:
        • Public Infrastructure & Facilities  
        • Environmental & Sanitation  
        • Public Safety & Health  
@@ -71,18 +73,223 @@ There are **three levels** of complaint-related fields:
        • Miscellaneous
 
 2. **Complaint Type (Moderate Detail)**
-   - This is the original value received (e.g., "Building Condition", "Noise", "Portable Toilet").
-   - The value here is used to determine the broad category above.
+   - The second important field for complaint-related queries.
+   - Don't use this field unless the user explicitly asks for it.
+   - Values:
+      • APPLIANCE
+      • ATF
+      • Adopt-A-Basket
+      • Air Quality
+      • Alzheimer's Care
+      • Animal Facility - No Permit
+      • Animal in a Park
+      • Asbestos
+      • BEST/Site Safety
+      • Beach/Pool/Sauna Complaint
+      • Benefit Card Replacement
+      • Bereavement Support Group
+      • Bike Rack Condition
+      • Bike/Roller/Skate Chronic
+      • Blocked Driveway
+      • Boilers
+      • Bottled Water
+      • Bridge Condition
+      • Broken Muni Meter
+      • Broken Parking Meter
+      • Building Condition
+      • Building/Use
+      • Bus Stop Shelter Complaint
+      • Bus Stop Shelter Placement
+      • CONSTRUCTION
+      • Calorie Labeling
+      • Case Management Agency Complaint
+      • City Vehicle Placard Complaint
+      • Collection Truck Noise
+      • Construction
+      • Construction Safety Enforcement
+      • Consumer Complaint
+      • Cranes and Derricks
+      • Curb Condition
+      • DCA / DOH New License Application Request
+      • DHS Advantage - Tenant
+      • DHS Advantage - Third Party
+      • DHS Advantage -Landlord/Broker
+      • DHS Income Savings Requirement
+      • DOF Parking - Address Update
+      • DOF Parking - DMV Clearance
+      • DOF Parking - Payment Issue
+      • DOF Parking - Request Copy
+      • DOF Parking - Request Status
+      • DOF Parking - Tax Exemption
+      • DOF Property - City Rebate
+      • DOF Property - Owner Issue
+      • DOF Property - Payment Issue
+      • DOF Property - Property Value
+      • DOF Property - RPIE Issue
+      • DOF Property - Reduction Issue
+      • DOF Property - Request Copy
+      • DOF Property - State Rebate
+      • Damaged Tree
+      • Dead Tree
+      • Derelict Bicycle
+      • Derelict Vehicle
+      • Derelict Vehicles
+      • Dirty Conditions
+      • Discipline and Suspension
+      • Disorderly Youth
+      • Drinking
+      • Drinking Water
+      • ELECTRIC
+      • Elder Abuse
+      • Electrical
+      • Elevator
+      • Emergency Response Team (ERT)
+      • Eviction
+      • FATF
+      • Ferry Complaint
+      • Ferry Inquiry
+      • Ferry Permit
+      • Food Establishment
+      • Food Poisoning
+      • For Hire Vehicle Complaint
+      • Forensic Engineering
+      • Forms
+      • Found Property
+      • GENERAL
+      • GENERAL CONSTRUCTION
+      • General Construction/Plumbing
+      • Graffiti
+      • HEAP Assistance
+      • HEATING
+      • HPD Literature Request
+      • Harboring Bees/Wasps
+      • Hazardous Material
+      • Hazardous Materials
+      • Health
+      • Highway Condition
+      • Highway Sign - Damaged
+      • Highway Sign - Dangling
+      • Highway Sign - Missing
+      • Home Care Provider Complaint
+      • Home Delivered Meal - Missed Delivery
+      • Home Delivered Meal Complaint
+      • Home Repair
+      • Homeless Encampment
+      • Housing - Low Income Senior
+      • Housing Options
+      • Illegal Animal Kept as Pet
+      • Illegal Animal Sold
+      • Illegal Fireworks
+      • Illegal Parking
+      • Illegal Tree Damage
+      • Indoor Air Quality
+      • Indoor Sewage
+      • Industrial Waste
+      • Interior Demo
+      • Investigations and Discipline (IAD)
+      • Lead
+      • Legal Services Provider Complaint
+      • Lifeguard
+      • Literature Request
+      • Litter Basket / Request
+      • Lost Property
+      • Maintenance or Facility
+      • Miscellaneous Categories
+      • Missed Collection (All Materials)
+      • Mold
+      • Municipal Parking Facility
+      • NONCONST
+      • NORC Complaint
+      • New Tree Request
+      • No Child Left Behind
+      • Noise
+      • Noise - Commercial
+      • Noise - Helicopter
+      • Noise - House of Worship
+      • Noise - Park
+      • Noise - Residential
+      • Noise - Street/Sidewalk
+      • Noise - Vehicle
+      • Noise Survey
+      • Non-Emergency Police Matter
+      • Non-Residential Heat
+      • OEM Disabled Vehicle
+      • OEM Literature Request
+      • Other Enforcement
+      • Overflowing Litter Baskets
+      • Overgrown Tree/Branches
+      • PAINT - PLASTER
+      • PAINT/PLASTER
+      • PLUMBING
+      • Panhandling
+      • Parent Leadership
+      • Parking Card
+      • Plant
+      • Plumbing
+      • Poison Ivy
+      • Portable Toilet
+      • Posting Advertisement
+      • Public Payphone Complaint
+      • Public Toilet
+      • Quality of Life
+      • Radioactive Material
+      • Recycling Enforcement
+      • Registration and Transfers
+      • Rodent
+      • Root/Sewer/Sidewalk Condition
+      • SCRIE
+      • Safety
+      • Sanitation Condition
+      • Scaffold Safety
+      • School Maintenance
+      • Senior Center Complaint
+      • Sewer
+      • Sidewalk Condition
+      • Smoking
+      • Snow
+      • Special Natural Area District (SNAD)
+      • Special Projects Inspection Team (SPIT)
+      • Squeegee
+      • Stalled Sites
+      • Street Condition
+      • Street Light Condition
+      • Street Sign - Damaged
+      • Street Sign - Dangling
+      • Street Sign - Missing
+      • Summer Camp
+      • Sweeping/Missed-Inadequate
+      • Tattooing
+      • Taxi Complaint
+      • Taxi Compliment
+      • Teaching/Learning/Instruction
+      • Traffic
+      • Traffic Signal Condition
+      • Traffic/Illegal Parking
+      • Trans Fat
+      • Transportation Provider Complaint
+      • Trapping Pigeon
+      • Tunnel Condition
+      • Unleashed Dog
+      • Unsanitary Animal Facility
+      • Unsanitary Animal Pvt Property
+      • Unsanitary Pigeon Condition
+      • Urinating in Public
+      • Utility Program
+      • Vacant Lot
+      • Vending
+      • Violation of Park Rules
+      • Water Conservation
+      • Water Maintenance
+      • Water Quality
+      • Water System
+      • Weatherization
+      • Window Guard
+      • X-Ray Machine/Equipment
 
 3. **Complaint Descriptor (Finer Detail)**
    - Contains additional details about the complaint.
-   - Provides supplemental context beyond the Complaint Type.
-   - You do not need to enumerate every possible descriptor value.
-
-**When building SQL query definitions, use:**
-- The derived **Complaint Category** for high-level grouping,
-- The raw **Complaint Type** for more precise filtering,
-- And the **Complaint Descriptor** for additional context when necessary.
+   - Don't use this field unless the user explicitly asks for it.
+   - This field must be used for filtering.
 
 ────────────────────────────
 # DEFINITIONS FOR SQL GENERATION
