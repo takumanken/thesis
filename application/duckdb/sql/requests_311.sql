@@ -23,14 +23,22 @@ SELECT
     "Agency" AS agency,
     "Agency Name" AS agency_name,
     CASE 
-        WHEN "Complaint Type" IN ('Building Condition', 'Building/Use', 'Street Condition', 'Street Light Condition', 'Street Sign - Damaged', 'Street Sign - Dangling', 'Street Sign - Missing', 'Public Toilet', 'Public Payphone Complaint') 
-            THEN 'Public Infrastructure & Facilities'
-        WHEN "Complaint Type" IN ('Air Quality', 'Indoor Air Quality', 'Asbestos', 'Hazardous Material', 'Hazardous Materials', 'Mold', 'Recycling Enforcement', 'Sanitation Condition', 'Water Conservation', 'Water Maintenance', 'Water Quality', 'Water System', 'Weatherization')
-            THEN 'Environmental & Sanitation'
-        WHEN "Complaint Type" IN ('Noise', 'Noise - Commercial', 'Noise - Helicopter', 'Noise - House of Worship', 'Noise - Park', 'Noise - Residential', 'Noise - Street/Sidewalk', 'Noise - Vehicle', 'Non-Residential Heat', 'HEATING')
-            THEN 'Public Safety & Health'
-        WHEN "Complaint Type" IN ('Broken Muni Meter', 'Broken Parking Meter', 'DOF Parking - Address Update', 'DOF Parking - DMV Clearance', 'DOF Parking - Payment Issue', 'DOF Parking - Request Copy', 'DOF Parking - Request Status', 'DOF Parking - Tax Exemption', 'Traffic', 'Traffic Signal Condition', 'Traffic/Illegal Parking', 'Taxi Complaint', 'Taxi Compliment') 
-            THEN 'Transportation & Traffic'
+        -- Essential services (high-frequency service issues)
+        WHEN "Complaint Type" IN ('HEATING', 'PLUMBING', 'ELECTRIC', 'Water System', 'Water Quality') 
+             THEN 'Essential Services'
+        -- Construction & Maintenance-related complaints
+        WHEN "Complaint Type" IN ('GENERAL CONSTRUCTION', 'General Construction/Plumbing', 'Building Condition', 'Building/Use', 'Street Condition', 'Street Light Condition', 'PAINT - PLASTER') 
+             THEN 'Construction & Maintenance'
+        -- Noise & Community Disturbance
+        WHEN "Complaint Type" IN ('Noise - Residential', 'Noise', 'Noise - Commercial', 'Noise - Helicopter', 'Noise - House of Worship', 'Noise - Street/Sidewalk', 'Noise - Vehicle', 'Noise Survey') 
+             THEN 'Community Noise'
+        -- Traffic & Parking issues
+        WHEN "Complaint Type" IN ('Broken Muni Meter', 'Broken Parking Meter', 'DOF Parking - Address Update', 'DOF Parking - DMV Clearance', 'DOF Parking - Payment Issue', 'DOF Parking - Request Copy', 'DOF Parking - Request Status', 'DOF Parking - Tax Exemption', 'Traffic', 'Traffic Signal Condition', 'Traffic/Illegal Parking', 'Taxi Complaint', 'Taxi Compliment')
+             THEN 'Traffic & Parking'
+        -- Environmental & Sanitation
+        WHEN "Complaint Type" IN ('Air Quality', 'Indoor Air Quality', 'Sanitation Condition', 'Water Conservation', 'Hazardous Material', 'Hazardous Materials') 
+             THEN 'Environmental & Sanitation'
+        -- Administrative & Regulatory
         WHEN "Complaint Type" IN (
                 'DHS Advantage - Tenant', 'DHS Advantage - Third Party', 'DHS Advantage -Landlord/Broker',
                 'DHS Income Savings Requirement', 'DOF Property - City Rebate', 'DOF Property - Owner Issue',
@@ -39,8 +47,8 @@ SELECT
                 'Registration and Transfers', 'Legal Services Provider Complaint', 'Consumer Complaint',
                 'Case Management Agency Complaint', 'Investigations and Discipline (IAD)'
              )
-            THEN 'Administrative & Regulatory'
-        ELSE 'Miscellaneous'
+             THEN 'Administrative & Regulatory'
+        ELSE 'Other'
     END AS complaint_category,
     "Complaint Type" AS complaint_type,
     "Descriptor" AS complaint_descriptor,
