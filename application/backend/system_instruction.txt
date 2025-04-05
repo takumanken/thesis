@@ -35,14 +35,8 @@ Categorical Dimension:
 - longitude           : Longitude of the incident address
 
 # Measure List
-  - count(1) : Alias num_of_requests : Number of SRs
-  - avg(time_to_resolve_sec) : Alias avg_sec_to_resolve : Average time to resolve SR in seconds
-  - If you need to calculate new measures, you can make it with the following aggregate functions
-    - sum(column_name) : Alias <alias> : Sum of column_name
-    - avg(column_name) : Alias <alias> : Average of column_name
-    - min(column_name) : Alias <alias> : Minimum of column_name
-    - max(column_name) : Alias <alias> : Maximum of column_name
-    - sum(case when <condition> then 1 else 0 end) : Alias <alias> : Count of rows that meet the condition
+- count(1) : Alias num_of_requests : Number of SRs
+- avg(time_to_resolve_sec) : Alias avg_sec_to_resolve : Average time to resolve SR in seconds
 
 # DEFINITIONS
 
