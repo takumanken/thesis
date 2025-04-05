@@ -2,7 +2,7 @@ CREATE OR REPLACE VIEW {object_name} AS
 SELECT
     "Unique Key" AS unique_key,
     "Status" AS status,
-    "Created Date" AS created_timestamp,
+    cast("Created Date" as timestamp) AS created_timestamp,
     cast(created_timestamp as date) AS created_date,
     date_trunc('week', created_timestamp) AS created_week,
     date_trunc('month', created_timestamp) AS created_month,
@@ -12,7 +12,7 @@ SELECT
     day(created_timestamp) AS created_day_datepart,
     hour(created_timestamp) AS created_hour_datepart,
     strftime('%a', created_timestamp) AS created_weekday_datepart,
-    "Closed Date" AS closed_timestamp,
+    cast("Closed Date" as timestamp) AS closed_timestamp,
     cast(closed_timestamp as date) AS closed_date,
     year(closed_timestamp) AS closed_year_datepart,
     month(closed_timestamp) AS closed_month_datepart,
@@ -222,6 +222,9 @@ SELECT
     END AS county,
     "Incident Zip" AS incident_zip,
     "Latitude" AS latitude,
-    "Longitude" AS longitude
+    "Longitude" AS longitude,
+    neighborhood_code AS neighborhood_code,
+    neighborhood_name AS neighborhood_name,
+    
 FROM
     read_parquet('{object_url}');

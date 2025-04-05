@@ -48,6 +48,7 @@ B. Categorical Dimension
 • incident_zip              : Incident zip code.
 • latitude                  : Latitude coordinate.
 • longitude                 : Longitude coordinate.
+• neighborhood_name         : Neighborhood name.
 
 ────────────────────────────
 II. MEASURE LIST
