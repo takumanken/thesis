@@ -5,11 +5,11 @@ import geopandas as gpd
 from shapely.geometry import Point
 
 # Load the GeoJSON file
-nta = gpd.read_file("data/geojson/2020_nyc_neighborhood_tabulation_areas_nta.geojson")
+nta = gpd.read_file("../frontend/assets/geojson/2020_nyc_neighborhood_tabulation_areas_nta.geojson")
 nta = nta.to_crs("EPSG:4326")
 
-# Save to Parquet
-nta.to_parquet("data/geojson/2020_nyc_neighborhood_tabulation_areas_nta.parquet")
+# Save the GeoJSON as a Parquet file
+nta.to_parquet("data/geo/2020_nyc_neighborhood_tabulation_areas_nta.parquet")
 
 # Load the spatial extension
 duckdb.sql("INSTALL spatial; LOAD spatial;")
@@ -21,7 +21,7 @@ duckdb.sql("""
             n.nta2020 AS neighborhood_code,
             n.ntaname AS neighborhood_name
         FROM read_csv_auto('data/requests_311/csv/*.csv') AS c
-        LEFT JOIN read_parquet('data/geojson/2020_nyc_neighborhood_tabulation_areas_nta.parquet') AS n
+        LEFT JOIN read_parquet('data/geo/2020_nyc_neighborhood_tabulation_areas_nta.parquet') AS n
           ON st_contains(
               n.geometry,
               st_point(c.Longitude::DOUBLE, c.Latitude::DOUBLE)
