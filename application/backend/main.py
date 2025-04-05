@@ -131,16 +131,21 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         return JSONResponse(status_code=500, content={"error": str(error)})
 
 def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
-    # Build expressions for dimensions:
-    # - Leave time dimensions as they are.
-    # - Wrap categorical dimensions using IFNULL(..., 'Unspecified').
-    dim_exprs = []
-    for dim in definition.time_dimension:
-        dim_exprs.append(dim)
-    for dim in definition.categorical_dimension:
-        dim_exprs.append(f"IFNULL({dim}, 'Unspecified') AS {dim}")
-    dims_clause = ", ".join(dim_exprs) if dim_exprs else ""
+    # Build SELECT expressions for dimensions.
+    select_dims = []
+    group_dims = []
     
+    # Use time dimensions directly.
+    for dim in definition.time_dimension:
+        select_dims.append(dim)
+        group_dims.append(dim)
+    
+    # For categorical dimensions, wrap with IFNULL and assign alias equal to the column name.
+    for dim in definition.categorical_dimension:
+        select_dims.append(f"IFNULL({dim}, 'Unspecified') AS {dim}")
+        group_dims.append(dim)
+    
+    dims_clause = ", ".join(select_dims) if select_dims else ""
     measures_clause = ", ".join([f"{m['expression']} AS {m['alias']}" for m in definition.measures])
     
     if dims_clause and measures_clause:
@@ -154,15 +159,16 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     
     if definition.pre_aggregation_filters:
         sql += f" WHERE {definition.pre_aggregation_filters}"
-    if dims_clause:
-        sql += f" GROUP BY {dims_clause}"
+    if group_dims:
+        group_clause = ", ".join(group_dims)
+        sql += f" GROUP BY {group_clause}"
     if definition.post_aggregation_filters:
         sql += f" HAVING {definition.post_aggregation_filters}"
     
     if definition.time_dimension and len(definition.time_dimension) > 0:
         sql += f" ORDER BY {definition.time_dimension[0]} ASC"
     elif definition.measures:
-        sql += f" ORDER BY {len(dim_exprs) + 1} DESC"
+        sql += f" ORDER BY {len(group_dims) + 1} DESC"
     
     sql += " LIMIT 1000;"
     return sql.strip()
