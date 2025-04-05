@@ -138,7 +138,7 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     for dim in definition.time_dimension:
         dim_exprs.append(dim)
     for dim in definition.categorical_dimension:
-        dim_exprs.append(f"IFNULL({dim}, 'Unspecified')")
+        dim_exprs.append(f"IFNULL({dim}, 'Unspecified') AS {dim}")
     dims_clause = ", ".join(dim_exprs) if dim_exprs else ""
     
     measures_clause = ", ".join([f"{m['expression']} AS {m['alias']}" for m in definition.measures])
