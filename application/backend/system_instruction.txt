@@ -5,9 +5,7 @@ You can only use the options from the dimension and measure list below to build 
 # Dimension List
 
 Time Dimension:
-- created_timestamp   : Timestamp SR was created
 - created_date        : Date SR was created
-- closed_timestamp    : Timestamp SR was closed
 - closed_date         : Date SR was closed
 
 Categorical Dimension:
