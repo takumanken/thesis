@@ -2,12 +2,34 @@ import { state } from "../state.js";
 import { CHART_DIMENSIONS } from "../constants.js";
 
 function renderGroupedBarChart(container) {
-  const dataset = state.dataset;
+  // Initialize local swap flag on container if not already set.
+  if (container.swapDimensions === undefined) {
+    container.swapDimensions = false;
+  }
+
+  // Clear previous content.
   container.innerHTML = "";
 
-  // Two dimensions are assumed: group (major) and subgroup (minor)
-  const groupKey = state.aggregationDefinition.dimensions[0]; // e.g. "neighborhood"
-  const subGroupKey = state.aggregationDefinition.dimensions[1]; // e.g. "complaint_type_large"
+  // Create and append a swap button.
+  const swapBtn = document.createElement("button");
+  swapBtn.textContent = "Swap Dimensions";
+  swapBtn.style.marginBottom = "10px";
+  swapBtn.addEventListener("click", () => {
+    container.swapDimensions = !container.swapDimensions;
+    renderGroupedBarChart(container);
+  });
+  container.appendChild(swapBtn);
+
+  const dataset = state.dataset;
+
+  // Two dimensions are assumed from the aggregation definition.
+  // Default: first dimension is category (group) and second is subcategory.
+  let groupKey = state.aggregationDefinition.dimensions[0]; // e.g. "neighborhood"
+  let subGroupKey = state.aggregationDefinition.dimensions[1]; // e.g. "complaint_type_large"
+  // Swap dimensions if flag is on.
+  if (container.swapDimensions) {
+    [groupKey, subGroupKey] = [subGroupKey, groupKey];
+  }
   const measure = state.aggregationDefinition.measures[0].alias; // e.g. "num_of_requests"
 
   const width = CHART_DIMENSIONS.width;
