@@ -8,7 +8,7 @@ You must only use the options provided in the lists below.
 ────────────────────────────
 I. DIMENSION LIST
 
-A. Time Dimension
+A. Time Related Dimension
 -----------------
 • Default:
    - created_week     : Week when the SR was created.
@@ -20,11 +20,21 @@ A. Time Dimension
    - closed_date      : Date when the SR was closed.
    - closed_month     : Month when the SR was closed.
    - closed_year      : Year when the SR was closed.
+   - created_year_datepart     : Year (from created date).
+   - created_month_datepart    : Month (from created date).
+   - created_day_datepart      : Day (from created date).
+   - created_hour_datepart     : Hour (from created date).
+   - created_weekday_datepart  : Weekday (from created date).
+   - closed_year_datepart      : Year (from closed date).
+   - closed_month_datepart     : Month (from closed date).
+   - closed_day_datepart       : Day (from closed date).
+   - closed_hour_datepart      : Hour (from closed date).
 
-B. Geo Dimension
+
+B. Geo Related Dimension
 ----------------
 • borough                   : Borough of the incident.
-• county                    : County
+• county                    : County of the incident.
 • location                  : Latitude and longitude of the incident
 • incident_zip              : Incident zip code
 • neighborhood_name         : Neighborhood name
@@ -33,15 +43,6 @@ C. Categorical Dimension
 ------------------------
 • unique_key                : Unique identifier of a Service Request.
 • status                    : Status of the SR.
-• created_year_datepart     : Year (from created date).
-• created_month_datepart    : Month (from created date).
-• created_day_datepart      : Day (from created date).
-• created_hour_datepart     : Hour (from created date).
-• created_weekday_datepart  : Weekday (from created date).
-• closed_year_datepart      : Year (from closed date).
-• closed_month_datepart     : Month (from closed date).
-• closed_day_datepart       : Day (from closed date).
-• closed_hour_datepart      : Hour (from closed date).
 • agency                    : Agency acronym.
 • agency_name               : Full agency name.
 • complaint_category        : Broad complaint category – use for grouping/filtering.
@@ -80,20 +81,10 @@ Only use complaint_type or complaint_descriptor for more granular detail when ex
 ────────────────────────────
 IV. DEFINITIONS FOR SQL GENERATION
 
-1. Time Dimension:
-   - One column representing time (date format).
-   - If multiple are available, select the best for trend analysis.
-   - Return an empty list if none exists.
-
-2. Categorical Dimension:
-   - All non-time and non-location related dimensions from the dataset.
-   - Typically includes identifiers, statuses, agency details, and complaint texts.
-   - Return an empty list if none exists.
-
-3. Geo Dimension:
-   - One column representing geographical information.
-   - If multiple are available, select the best for spatial analysis.
-   - Return an empty list if no geo-dimension exists.
+1. Dimension:
+   - A column or an expression used for grouping.
+   - Use the DuckDB SQL dialect and provide an alias when required.
+   - Return an empty list if no dimension exists.
 
 4. Measure:
    - A column or an expression used for aggregate calculations.
@@ -116,9 +107,7 @@ V. OUTPUT FORMAT
 Your output must be valid JSON in the following structure:
 
 {
-    "time_dimension": ["<time_dimension1>"],
-    "categorical_dimension": ["<categorical_dimension1>", "<categorical_dimension2>"],
-    "geo_dimension": ["<geo_dimension1>"],
+    "dimensions": ["<dimension1>", "<dimension2>", ...],
     "measures": [
         { "expression": "<measure1>", "alias": "<alias1>" },
         { "expression": "<measure2>", "alias": "<alias2>" }
@@ -136,9 +125,7 @@ Example 1:
 User Query: Show me how many service requests were created each month.
 Expected Output:
 {
-    "time_dimension": ["created_date"],
-    "categorical_dimension": [],
-    "geo_dimension": [],
+    "dimensions": ["created_date"],
     "measures": [
         { "expression": "count(1)", "alias": "num_of_requests" }
     ],
@@ -150,9 +137,7 @@ Example 2:
 User Query: List the street name, borough, and status for all open requests in Brooklyn.
 Expected Output:
 {
-    "time_dimension": [],
-    "categorical_dimension": ["street_name", "borough", "status"],
-    "geo_dimension": [],
+    "dimensions": ["street_name", "borough", "status"],
     "measures": [],
     "pre_aggregation_filters": "borough = 'BROOKLYN' AND status = 'Open'",
     "post_aggregation_filters": ""
@@ -162,9 +147,7 @@ Example 3:
 User Query: Show me the count of requests by neighborhood.
 Expected Output:
 {
-    "time_dimension": [],
-    "categorical_dimension": [],
-    "geo_dimension": ["neighborhood"],
+    "dimensions": ["neighborhood"],
     "measures": [
         { "expression": "count(1)", "alias": "num_of_requests" }
     ],
@@ -173,9 +156,9 @@ Expected Output:
 }
 
 ────────────────────────────
-ADDITIONAL GEO FILTER VALUES
+Values when filtering by dimensions:
 
-When filtering by geo dimensions, use the following actual values:
+If you need to filter by the following dimensions, use the values below:
 
 Borough:
   BRONX, BROOKLYN, MANHATTAN, QUEENS, STATEN ISLAND, Unspecified
@@ -183,15 +166,8 @@ Borough:
 Neighborhood_name:
   Allerton, Alley Pond Park, Annadale-Huguenot-Prince's Bay-Woodrow, Arden Heights-Rossville, Astoria (Central), Astoria (East)-Woodside (North), Astoria (North)-Ditmars-Steinway, Astoria Park, Auburndale, Baisley Park, Barren Island-Floyd Bennett Field, Bath Beach, Bay Ridge, Bay Terrace-Clearview, Bayside, Bedford Park, Bedford-Stuyvesant (East), Bedford-Stuyvesant (West), Bellerose, Belmont, Bensonhurst, Borough Park, Breezy Point-Belle Harbor-Rockaway Park-Broad Channel, Brighton Beach, Bronx Park, Brooklyn Heights, Brooklyn Navy Yard, Brownsville, Bushwick (East), Bushwick (West), Calvary & Mount Zion Cemeteries, Calvert Vaux Park, Cambria Heights, Canarsie, Canarsie Park & Pier, Carroll Gardens-Cobble Hill-Gowanus-Red Hook, Castle Hill-Unionport, Central Park, Chelsea-Hudson Yards, Chinatown-Two Bridges, Claremont Park, Claremont Village-Claremont (East), Clinton Hill, Co-op City, College Point, Concourse-Concourse Village, Coney Island-Sea Gate, Corona, Crotona Park, Crotona Park East, Crown Heights (North), Crown Heights (South), Cunningham Park, Cypress Hills, Douglaston-Little Neck, Downtown Brooklyn-DUMBO-Boerum Hill, Dyker Beach Park, Dyker Heights, East Elmhurst, East Flatbush-Erasmus, East Flatbush-Farragut, East Flatbush-Remsen Village, East Flatbush-Rugby, East Flushing, East Harlem (North), East Harlem (South), East Midtown-Turtle Bay, East New York (North), East New York-City Line, East New York-New Lots, East Village, East Williamsburg, Eastchester-Edenwald-Baychester, Elmhurst, Far Rockaway-Bayswater, Ferry Point Park-St. Raymond Cemetery, Financial District-Battery Park City, Flatbush, Flatbush (West)-Ditmas Park-Parkville, Flatlands, Flushing Meadows-Corona Park, Flushing-Willets Point, Fordham Heights, Forest Hills, Forest Park, Fort Greene, Fort Hamilton, Fort Totten, Fort Wadsworth, Fresh Meadows-Utopia, Freshkills Park (North), Freshkills Park (South), Glen Oaks-Floral Park-New Hyde Park, Glendale, Gramercy, Grasmere-Arrochar-South Beach-Dongan Hills, Gravesend (East)-Homecrest, Gravesend (South), Gravesend (West), Great Kills Park, Great Kills-Eltingville, Green-Wood Cemetery, Greenpoint, Greenwich Village, Hamilton Heights-Sugar Hill, Harlem (North), Harlem (South), Hell's Kitchen, Highbridge, Highbridge Park, Highland Park-Cypress Hills Cemeteries (North), Highland Park-Cypress Hills Cemeteries (South), Hollis, Holy Cross Cemetery, Howard Beach-Lindenwood, Hunts Point, Hutchinson, Metro Center, Inwood, Inwood Hill Park, Jackson Heights, Jacob Riis Park-Fort Tilden-Breezy Point Tip, Jamaica, Jamaica Bay (East), Jamaica Estates-Holliswood, Jamaica Hills-Briarwood, John F. Kennedy International Airport, Kensington, Kew Gardens, Kew Gardens Hills, Kingsbridge Heights-Van Cortlandt Village, Kingsbridge-Marble Hill, Kissena Park, LaGuardia Airport, Laurelton, Lincoln Terrace Park, Long Island City-Hunters Point, Longwood, Lower East Side, Madison, Manhattanville-West Harlem, Mapleton-Midwood (West), Marine Park-Mill Basin-Bergen Beach, Marine Park-Plumb Island, Mariner's Harbor-Arlington-Graniteville, Maspeth, McGuire Fields, Melrose, Middle Village, Middle Village Cemetery, Midtown South-Flatiron-Union Square, Midtown-Times Square, Midwood, Miller Field, Montefiore Cemetery, Morningside Heights, Morris Park, Morrisania, Mott Haven-Port Morris, Mount Eden-Claremont (West), Mount Hope, Mount Olivet & All Faiths Cemeteries, Murray Hill-Broadway, Flushing Murray Hill-Kips Bay, New Dorp-Midland Beach, New Springville-Willowbrook-Bulls Head-Travis, North Corona, Norwood, Oakland Gardens-Hollis Hills, Oakwood-Richmondtown, Ocean Hill, Old Astoria-Hallets Point, Ozone Park, Ozone Park (North), Park Slope, Parkchester, Pelham Bay Park, Pelham Bay-Country Club-City Island, Pelham Gardens, Pelham Parkway-Van Nest, Pomonok-Electchester-Hillcrest, Port Richmond, Prospect Heights, Prospect Lefferts Gardens-Wingate, Prospect Park, Queens Village, Queensboro Hill, Queensbridge-Ravenswood-Dutch Kills, Randall's Island, Rego Park, Richmond Hill, Ridgewood, Rikers Island, Riverdale-Spuyten Duyvil, Rockaway Beach-Arverne-Edgemere, Rockaway Community Park, Rosebank-Shore Acres-Park Hill, Rosedale, Sheepshead Bay-Manhattan Beach-Gerritsen Beach, Shirley Chisholm State Park, Snug Harbor, SoHo-Little Italy-Hudson Square, Soundview Park, Soundview-Bruckner-Bronx River, Soundview-Clason Point, South Jamaica, South Ozone Park, South Richmond Hill, South Williamsburg, Spring Creek Park, Spring Creek-Starrett City, Springfield Gardens (North)-Rochdale Village, Springfield Gardens (South)-Brookville, St. Albans, St. George-New Brighton, St. John Cemetery, St. Michael's Cemetery, Stuyvesant Town-Peter Cooper Village, Sunnyside, Sunnyside Yards (North), Sunnyside Yards (South), Sunset Park (Central), Sunset Park (East)-Borough Park (West), Sunset Park (West), The Battery-Governors Island-Ellis Island-Liberty Island, The Evergreens Cemetery, Throgs Neck-Schuylerville, Todt Hill-Emerson Hill-Lighthouse Hill-Manor Heights, Tompkinsville-Stapleton-Clifton-Fox Hills, Tottenville-Charleston, Tremont, Tribeca-Civic Center, United Nations, University Heights (North)-Fordham, University Heights (South)-Morris Heights, Upper East Side-Carnegie Hill, Upper East Side-Lenox Hill-Roosevelt Island, Upper East Side-Yorkville, Upper West Side (Central), Upper West Side-Lincoln Square, Upper West Side-Manhattan Valley, Van Cortlandt Park, Wakefield-Woodlawn, Washington Heights (North), Washington Heights (South), West Farms, West New Brighton-Silver Lake-Grymes Hill, West Village, Westchester Square, Westerleigh-Castleton Corners, Whitestone-Beechhurst, Williamsbridge-Olinville, Williamsburg, Windsor Terrace-South Slope, Woodhaven, Woodlawn Cemetery, Woodside, Yankee Stadium-Macombs Dam Park.
 
-────────────────────────────
-ADDITIONAL COMPLAINT FILTER VALUES
-
-When filtering by complaint dimensions, use the following actual values (ensure the value format is consistent):
-
 Complaint Category:
   PUBLIC INFRASTRUCTURE & FACILITIES, ENVIRONMENTAL & SANITATION, PUBLIC SAFETY & HEALTH, TRANSPORTATION & TRAFFIC, ADMINISTRATIVE & REGULATORY, MISCELLANEOUS
 
 Complaint Type:
   APPLIANCE, ATF, ADOPT-A-BASKET, AIR QUALITY, ALZHEIMER'S CARE, ANIMAL FACILITY - NO PERMIT, ANIMAL IN A PARK, ASBESTOS, BEST/SITE SAFETY, BEACH/POOL/SAUNA COMPLAINT, BENEFIT CARD REPLACEMENT, BEREAVEMENT SUPPORT GROUP, BIKE RACK CONDITION, BIKE/ROLLER/SKATE CHRONIC, BLOCKED DRIVEWAY, BOILERS, BOTTLED WATER, BRIDGE CONDITION, BROKEN MUNI METER, BROKEN PARKING METER, BUILDING CONDITION, BUILDING/USE, BUS STOP SHELTER COMPLAINT, BUS STOP SHELTER PLACEMENT, CONSTRUCTION, CALORIE LABELING, CASE MANAGEMENT AGENCY COMPLAINT, CITY VEHICLE PLACARD COMPLAINT, COLLECTION TRUCK NOISE, CONSTRUCTION SAFETY ENFORCEMENT, CONSUMER COMPLAINT, CRANES AND DERRICKS, CURB CONDITION, DCA / DOH NEW LICENSE APPLICATION REQUEST, DHS ADVANTAGE - TENANT, DHS ADVANTAGE - THIRD PARTY, DHS ADVANTAGE -LANDLORD/BROKER, DHS INCOME SAVINGS REQUIREMENT, DOF PARKING - ADDRESS UPDATE, DOF PARKING - DMV CLEARANCE, DOF PARKING - PAYMENT ISSUE, DOF PARKING - REQUEST COPY, DOF PARKING - REQUEST STATUS, DOF PARKING - TAX EXEMPTION, DOF PROPERTY - CITY REBATE, DOF PROPERTY - OWNER ISSUE, DOF PROPERTY - PAYMENT ISSUE, DOF PROPERTY - PROPERTY VALUE, DOF PROPERTY - RPIE ISSUE, DOF PROPERTY - REDUCTION ISSUE, DOF PROPERTY - REQUEST COPY, DOF PROPERTY - STATE REBATE, DAMAGED TREE, DEAD TREE, DERELICT BICYCLE, DERELICT VEHICLE, DERELICT VEHICLES, DIRTY CONDITIONS, DISCIPLINE AND SUSPENSION, DISORDERLY YOUTH, DRINKING, DRINKING WATER, ELECTRIC, ELDER ABUSE, ELECTRICAL, ELEVATOR, EMERGENCY RESPONSE TEAM (ERT), EVICTION, FATF, FERRY COMPLAINT, FERRY INQUIRY, FERRY PERMIT, FOOD ESTABLISHMENT, FOOD POISONING, FOR HIRE VEHICLE COMPLAINT, FORENSIC ENGINEERING, FORMS, FOUND PROPERTY, GENERAL, GENERAL CONSTRUCTION, GENERAL CONSTRUCTION/PLUMBING, GRAFFITI, HEAP ASSISTANCE, HEATING, HPD LITERATURE REQUEST, HARBORING BEES/WASPS, HAZARDOUS MATERIAL, HAZARDOUS MATERIALS, HEALTH, HIGHWAY CONDITION, HIGHWAY SIGN - DAMAGED, HIGHWAY SIGN - DANGLING, HIGHWAY SIGN - MISSING, HOME CARE PROVIDER COMPLAINT, HOME DELIVERED MEAL - MISSED DELIVERY, HOME DELIVERED MEAL COMPLAINT, HOME REPAIR, HOMELESS ENCAMPMENT, HOUSING - LOW INCOME SENIOR, HOUSING OPTIONS, ILLEGAL ANIMAL KEPT AS PET, ILLEGAL ANIMAL SOLD, ILLEGAL FIREWORKS, ILLEGAL PARKING, ILLEGAL TREE DAMAGE, INDOOR AIR QUALITY, INDOOR SEWAGE, INDUSTRIAL WASTE, INTERIOR DEMO, INVESTIGATIONS AND DISCIPLINE (IAD), LEAD, LEGAL SERVICES PROVIDER COMPLAINT, LIFEGUARD, LITERATURE REQUEST, LITTER BASKET / REQUEST, LOST PROPERTY, MAINTENANCE OR FACILITY, MISCELLANEOUS CATEGORIES, MISSED COLLECTION (ALL MATERIALS), MOLD, MUNICIPAL PARKING FACILITY, NONCONST, NORC COMPLAINT, NEW TREE REQUEST, NO CHILD LEFT BEHIND, NOISE, NOISE - COMMERCIAL, NOISE - HELICOPTER, NOISE - HOUSE OF WORSHIP, NOISE - PARK, NOISE - RESIDENTIAL, NOISE - STREET/SIDEWALK, NOISE - VEHICLE, NOISE SURVEY, NON-EMERGENCY POLICE MATTER, NON-RESIDENTIAL HEAT, OEM DISABLED VEHICLE, OEM LITERATURE REQUEST, OTHER ENFORCEMENT, OVERFLOWING LITTER BASKETS, OVERGROWN TREE/BRANCHES, PAINT - PLASTER, PAINT/PLASTER, PLUMBING, PANHANDLING, PARENT LEADERSHIP, PARKING CARD, PLANT, PLUMBING, POISON IVY, PORTABLE TOILET, POSTING ADVERTISEMENT, PUBLIC PAYPHONE COMPLAINT, PUBLIC TOILET, QUALITY OF LIFE, RADIOACTIVE MATERIAL, RECYCLING ENFORCEMENT, REGISTRATION AND TRANSFERS, RODENT, ROOT/SEWER/SIDEWALK CONDITION, SCRIE, SAFETY, SANITATION CONDITION, SCAFFOLD SAFETY, SCHOOL MAINTENANCE, SENIOR CENTER COMPLAINT, SEWER, SIDEWALK CONDITION, SMOKING, SNOW, SPECIAL NATURAL AREA DISTRICT (SNAD), SPECIAL PROJECTS INSPECTION TEAM (SPIT), SQUEEGEE, STALLED SITES, STREET CONDITION, STREET LIGHT CONDITION, STREET SIGN - DAMAGED, STREET SIGN - DANGLING, STREET SIGN - MISSING, SUMMER CAMP, SWEEPING/MISSED-INADEQUATE, TATTOOING, TAXI COMPLAINT, TAXI COMPLIMENT, TEACHING/LEARNING/INSTRUCTION, TRAFFIC, TRAFFIC SIGNAL CONDITION, TRAFFIC/ILLEGAL PARKING, TRANS FAT, TRANSPORTATION PROVIDER COMPLAINT, TRAPPING PIGEON, TUNNEL CONDITION, UNLEASHED DOG, UNSANITARY ANIMAL FACILITY, UNSANITARY ANIMAL PVT PROPERTY, UNSANITARY PIGEON CONDITION, URINATING IN PUBLIC, UTILITY PROGRAM, VACANT LOT, VENDING, VIOLATION OF PARK RULES, WATER CONSERVATION, WATER MAINTENANCE, WATER QUALITY, WATER SYSTEM, WEATHERIZATION, WINDOW GUARD, X-RAY MACHINE/EQUIPMENT
-
-────────────────────────────

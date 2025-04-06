@@ -278,20 +278,27 @@ function renderLineChart(container) {
 // -----------------------------
 function renderMap(container) {
   const dataset = state.dataset;
-  const geoDim = state.aggregationDefinition.geo_dimension[0]; // e.g., "borough" or "neighborhood_name"
+  const geoDim = state.aggregationDefinition.geo_dimension[0]; // "borough", "neighborhood_name", or "county"
   const measure = state.aggregationDefinition.measures[0].alias;
 
-  // Only support geo map for borough or neighborhood_name
-  if (!(geoDim === "borough" || geoDim === "neighborhood_name")) {
+  // Only support geo map for borough, neighborhood_name, or county.
+  if (!(geoDim === "borough" || geoDim === "neighborhood_name" || geoDim === "county")) {
     container.innerHTML = `<p>Geo dimension "${geoDim}" is not supported for map visualization.</p>`;
     return;
   }
 
   // Create a mapping from region to measure value.
-  // Convert dataset values to upper case if geo dimension is "borough".
   const aggregatedData = {};
   dataset.forEach((d) => {
-    const region = geoDim === "borough" ? d[geoDim].toUpperCase() : d[geoDim];
+    let region;
+    if (geoDim === "borough") {
+      region = d[geoDim].toUpperCase();
+    } else if (geoDim === "county") {
+      region = d[geoDim].toUpperCase();
+    } else {
+      // neighborhood_name
+      region = d[geoDim];
+    }
     if (region && region !== "Unspecified" && !aggregatedData.hasOwnProperty(region)) {
       aggregatedData[region] = +d[measure];
     }
@@ -306,19 +313,33 @@ function renderMap(container) {
   const height = CHART_DIMENSIONS.height || 600;
   const svg = d3.select(container).append("svg").attr("width", width).attr("height", height);
 
-  // Load the geojson file only for "borough" and "neighborhood_name"
+  // Load the geojson file.
   d3.json("assets/geojson/2020_nyc_neighborhood_tabulation_areas_nta.geojson").then((geojsonData) => {
     // Set up a projection and path generator.
     const projection = d3.geoMercator().fitSize([width, height], geojsonData);
     const path = d3.geoPath().projection(projection);
 
-    // For each feature, attach the measure value from aggregatedData.
+    // For county mapping, define a mapping from borough to county.
+    const countyMapping = {
+      BRONX: "BRONX",
+      BROOKLYN: "KINGS",
+      MANHATTAN: "NEW YORK",
+      QUEENS: "QUEENS",
+      "STATEN ISLAND": "RICHMOND",
+    };
+
+    // Attach the aggregated measure value to each geojson feature.
     geojsonData.features.forEach((feature) => {
       let regionName;
       if (geoDim === "borough") {
         regionName = feature.properties.boroname.toUpperCase();
       } else if (geoDim === "neighborhood_name") {
         regionName = feature.properties.ntaname;
+      } else if (geoDim === "county") {
+        // Derive county using the borough mapping.
+        regionName = countyMapping[feature.properties.boroname.toUpperCase()];
+        // Also store the county name in the feature for tooltip usage.
+        feature.properties.county = regionName;
       }
       feature.properties.aggValue = regionName && regionName !== "UNSPECIFIED" ? aggregatedData[regionName] || 0 : 0;
     });
@@ -331,12 +352,21 @@ function renderMap(container) {
       .append("path")
       .attr("d", path)
       .attr("fill", (d) => colorScale(d.properties.aggValue))
+      .attr("stroke", "#ffffff")
       .attr("stroke-width", 0.5);
 
     // Add a tooltip on mouseover.
     svg
       .selectAll("path")
       .on("mouseover", function (event, d) {
+        let displayName;
+        if (geoDim === "borough") {
+          displayName = d.properties.boroname;
+        } else if (geoDim === "county") {
+          displayName = d.properties.county + " County";
+        } else {
+          displayName = d.properties.ntaname;
+        }
         const tooltip = d3
           .select(container)
           .append("div")
@@ -344,10 +374,11 @@ function renderMap(container) {
           .style("position", "absolute")
           .style("background", "#fff")
           .style("padding", "5px")
-          .style("border", "1px solid #000").html(`<strong>${
-          geoDim === "borough" ? d.properties.boroname : d.properties.ntaname
-        }</strong><br>
-                 <strong>${measure}:</strong> ${d.properties.aggValue}`);
+          .style("border", "1px solid #000")
+          .html(
+            `<strong>${displayName}</strong><br>
+             <strong>${measure}:</strong> ${d.properties.aggValue}`
+          );
         tooltip.style("left", event.pageX + 5 + "px").style("top", event.pageY + 5 + "px");
       })
       .on("mouseout", function () {
@@ -355,16 +386,13 @@ function renderMap(container) {
       });
 
     // Add legend.
-    // Define legend dimensions.
     const legendWidth = 300;
     const legendHeight = 10;
     const legendX = width - legendWidth - 20;
     const legendY = height - 40;
 
-    // Append group for legend.
     const legend = svg.append("g").attr("class", "legend").attr("transform", `translate(${legendX}, ${legendY})`);
 
-    // Define gradient.
     const defs = svg.append("defs");
     const gradient = defs
       .append("linearGradient")
@@ -376,14 +404,12 @@ function renderMap(container) {
     gradient.append("stop").attr("offset", "0%").attr("stop-color", colorScale(0));
     gradient.append("stop").attr("offset", "100%").attr("stop-color", colorScale(maxVal));
 
-    // Draw legend rectangle filled with gradient.
     legend
       .append("rect")
       .attr("width", legendWidth)
       .attr("height", legendHeight)
       .style("fill", "url(#legend-gradient)");
 
-    // Create legend scale.
     const legendScale = d3.scaleLinear().domain([0, maxVal]).range([0, legendWidth]);
     const legendAxis = d3.axisBottom(legendScale).ticks(5);
 

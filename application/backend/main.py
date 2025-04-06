@@ -12,6 +12,7 @@ from google.genai import types
 import os
 import json
 import duckdb
+from typing import List, Dict
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -50,28 +51,38 @@ class PromptRequest(BaseModel):
     prompt: str
 
 class AggregationDefinition(BaseModel):
-    time_dimension: list[str]
-    categorical_dimension: list[str]
-    geo_dimension: list[str]
-    measures: list[dict]
-    pre_aggregation_filters: str
-    post_aggregation_filters: str
+    dimensions: List[str]
+    measures: List[Dict[str, str]]
+    pre_aggregation_filters: str = ""
+    post_aggregation_filters: str = ""
 
-    @property
-    def dimensions(self) -> list[str]:
-        return self.time_dimension + self.categorical_dimension + self.geo_dimension
+def classify_dimensions(dimensions: List[str]):
+    time_dims = {"created_week", "closed_week", "created_date", "created_month", "created_year", "closed_date", "closed_month", "closed_year"}
+    geo_dims = {"borough", "county", "location", "incident_zip", "neighborhood_name"}
+    time_dimension = []
+    geo_dimension = []
+    categorical_dimension = []
+    for dim in dimensions:
+        if dim in time_dims:
+            time_dimension.append(dim)
+        elif dim in geo_dims:
+            geo_dimension.append(dim)
+        else:
+            categorical_dimension.append(dim)
+    return time_dimension, geo_dimension, categorical_dimension
 
 # Add or update helper function to determine chart options
 def get_chart_options(agg_def: AggregationDefinition) -> tuple[str, list[str]]:
     ideal = "table"
     available = ["table"]
+    time_dimension, geo_dimension, categorical_dimension = classify_dimensions(agg_def.dimensions)
     if len(agg_def.measures) == 1 and len(agg_def.dimensions) == 1:
         available.append("bar_chart")
         ideal = "bar_chart"
-        if len(agg_def.time_dimension) == 1:
+        if len(time_dimension) == 1:
             available.append("line_chart")
             ideal = "line_chart"
-        elif len(agg_def.geo_dimension) == 1:
+        elif len(geo_dimension) == 1:
             available.append("map")
             ideal = "map"
     return ideal, available
@@ -94,8 +105,16 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         if not parsed_json:
             raise Exception("Aggregation definition not found in response.")
         
-        # Use single AggregationDefinition instance.
+        # Create AggregationDefinition instance.
         aggregation_definition = AggregationDefinition(**parsed_json)
+        time_dim, geo_dim, categorical_dim = classify_dimensions(aggregation_definition.dimensions)
+        agg_def_with_dims = {
+            **aggregation_definition.dict(),
+            "time_dimension": time_dim,
+            "geo_dimension": geo_dim,
+            "categorical_dimension": categorical_dim
+        }
+        aggregation_definition = AggregationDefinition(**agg_def_with_dims)
         sql = generate_sql(aggregation_definition, "requests_311")
         logger.info("Generated SQL: %s", sql)
         
@@ -103,7 +122,6 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         logger.info("SQL executed successfully. Result: %s", dataset)
         
         ideal_chart, available_charts = get_chart_options(aggregation_definition)
-        agg_def_with_dims = { **aggregation_definition.dict(), "dimensions": aggregation_definition.dimensions }
         
         return JSONResponse(content={
             "dataset": dataset,
@@ -119,21 +137,9 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         return JSONResponse(status_code=500, content={"error": str(error)})
 
 def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
-    # Build SELECT expressions for dimensions.
-    select_dims = []
-    group_dims = []
-    
-    # Add time dimension to select and group by clauses.
-    for dim in definition.time_dimension:
-        select_dims.append(dim)
-        group_dims.append(dim)
 
-    # For categorical & geo dimensions, wrap with COALESCE and assign alias equal to the column name.
-    for dim in definition.categorical_dimension + definition.geo_dimension:
-        select_dims.append(f"COALESCE({dim}, 'Unspecified') AS {dim}")
-        group_dims.append(dim)
-    
-    dims_clause = ", ".join(select_dims) if select_dims else ""
+    dims = definition.dimensions
+    dims_clause = ", ".join(dims) if dims else ""
     measures_clause = ", ".join([f"{m['expression']} AS {m['alias']}" for m in definition.measures])
     
     if dims_clause and measures_clause:
@@ -148,17 +154,19 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     if definition.pre_aggregation_filters:
         sql += f" WHERE {definition.pre_aggregation_filters}"
         
-    if group_dims:
-        group_clause = ", ".join([str(i) for i in range(1, len(group_dims) + 1)])
+    if dims:
+        group_clause = ", ".join(str(i) for i in range(1, len(dims) + 1))
         sql += f" GROUP BY {group_clause}"
         
     if definition.post_aggregation_filters:
         sql += f" HAVING {definition.post_aggregation_filters}"
     
-    if definition.time_dimension and len(definition.time_dimension) > 0:
-        sql += f" ORDER BY {definition.time_dimension[0]} ASC"
+    # Use safe lookup for time_dimension.
+    time_dimension = getattr(definition, "time_dimension", [])
+    if time_dimension:
+        sql += f" ORDER BY {time_dimension[0]} ASC"
     elif definition.measures:
-        sql += f" ORDER BY {len(group_dims) + 1} DESC"
+        sql += f" ORDER BY {definition.measures[0]['alias']} DESC"
     
     sql += " LIMIT 1000;"
     return sql.strip()

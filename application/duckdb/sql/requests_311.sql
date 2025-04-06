@@ -1,7 +1,7 @@
 CREATE OR REPLACE VIEW {object_name} AS
 SELECT
-    "Unique Key" AS unique_key,
-    "Status" AS status,
+    IFNULL("Unique Key", 'Unspecified') AS unique_key,
+    IFNULL("Status", 'Unspecified') AS status,
     cast("Created Date" as timestamp) AS created_timestamp,
     cast(created_timestamp as date) AS created_date,
     date_trunc('week', created_timestamp) AS created_week,
@@ -20,8 +20,8 @@ SELECT
     hour(closed_timestamp) AS closed_hour_datepart,
     strftime('%a', closed_timestamp) AS closed_weekday_datepart,
     datesub('second', created_timestamp, closed_timestamp) AS time_to_resolve_sec,
-    "Agency" AS agency,
-    "Agency Name" AS agency_name,
+    IFNULL("Agency", 'Unspecified') AS agency,
+    IFNULL("Agency Name", 'Unspecified') AS agency_name,
     CASE 
         WHEN "Complaint Type" IN (
             'HEATING',
@@ -203,26 +203,26 @@ SELECT
         ) THEN 'Administrative, Regulatory & Financial'
         ELSE 'Other'
     END AS complaint_category,
-    "Complaint Type" AS complaint_type,
-    "Descriptor" AS complaint_descriptor,
-    "Street Name" AS street_name,
+    IFNULL("Complaint Type", 'Unspecified') AS complaint_type,
+    IFNULL("Descriptor", 'Unspecified') AS complaint_descriptor,
+    IFNULL("Street Name", 'Unspecified') AS street_name,
     REGEXP_EXTRACT(
         "Incident Address",
         CONCAT('([0-9\\-]+) ', "Street Name"),
         1
     ) AS street_number,
-    "Borough" AS borough,
+    IFNULL("Borough", 'Unspecified') AS borough,
     CASE
-        WHEN "Borough" = 'MANHATTAN' THEN 'NEW YORK'
-        WHEN "Borough" = 'BROOKLYN' THEN 'KINGS'
-        WHEN "Borough" = 'QUEENS' THEN 'QUEENS'
-        WHEN "Borough" = 'BRONX' THEN 'BRONX'
-        WHEN "Borough" = 'STATEN ISLAND' THEN 'RICHMOND'
+        WHEN IFNULL("Borough", 'Unspecified') = 'MANHATTAN' THEN 'NEW YORK'
+        WHEN IFNULL("Borough", 'Unspecified') = 'BROOKLYN' THEN 'KINGS'
+        WHEN IFNULL("Borough", 'Unspecified') = 'QUEENS' THEN 'QUEENS'
+        WHEN IFNULL("Borough", 'Unspecified') = 'BRONX' THEN 'BRONX'
+        WHEN IFNULL("Borough", 'Unspecified') = 'STATEN ISLAND' THEN 'RICHMOND'
         ELSE 'Unspecified'
     END AS county,
-    "Incident Zip" AS incident_zip,
+    IFNULL("Incident Zip", 'Unspecified') AS incident_zip,
     "Location" AS location,
-    neighborhood_code AS neighborhood_code,
-    neighborhood_name AS neighborhood_name
+    IFNULL(neighborhood_code, 'Unspecified') AS neighborhood_code,
+    IFNULL(neighborhood_name, 'Unspecified') AS neighborhood_name
 FROM
     read_parquet('{object_url}');
