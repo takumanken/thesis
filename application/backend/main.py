@@ -52,6 +52,9 @@ class AggregationDefinition(BaseModel):
     measures: List[Dict[str, str]]
     pre_aggregation_filters: str = ""
     post_aggregation_filters: str = ""
+    time_dimension: List[str] = []
+    geo_dimension: List[str] = []
+    categorical_dimension: List[str] = []
 
 # Classify dimensions into time, geo, and categorical
 def classify_dimensions(dimensions: List[str]):
@@ -98,9 +101,8 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     if definition.post_aggregation_filters:
         sql += f" HAVING {definition.post_aggregation_filters}"
     # Order by first time dimension (asc) if available, else by first measure alias (desc)
-    time_dimension = getattr(definition, "time_dimension", [])
-    if time_dimension:
-        sql += f" ORDER BY {time_dimension[0]} ASC"
+    if definition.time_dimension:
+        sql += f" ORDER BY {definition.time_dimension[0]} ASC"
     elif definition.measures:
         sql += f" ORDER BY {definition.measures[0]['alias']} DESC"
     sql += " LIMIT 1000;"
@@ -137,24 +139,27 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         parsed_json = json.loads(json_text)
         if not parsed_json:
             raise Exception("Aggregation definition not found in response.")
-        aggregation_definition = AggregationDefinition(**parsed_json)
-        # Classify dimensions and update definition
-        time_dim, geo_dim, categorical_dim = classify_dimensions(aggregation_definition.dimensions)
-        agg_def_with_dims = {**aggregation_definition.dict(), "time_dimension": time_dim,
-                             "geo_dimension": geo_dim, "categorical_dimension": categorical_dim}
-        aggregation_definition = AggregationDefinition(**agg_def_with_dims)
+        # Create and update the aggregation definition in one instance
+        agg_def = AggregationDefinition(**parsed_json)
+        time_dim, geo_dim, categorical_dim = classify_dimensions(agg_def.dimensions)
+        agg_def = agg_def.copy(update={
+            "time_dimension": time_dim,
+            "geo_dimension": geo_dim,
+            "categorical_dimension": categorical_dim
+        })
+        logger.info("Aggregation definition updated: %s", agg_def.dict())
         
-        sql = generate_sql(aggregation_definition, "requests_311")
+        sql = generate_sql(agg_def, "requests_311")
         logger.info("Generated SQL: %s", sql)
         dataset = json.loads(execute_sql_in_duckDB(sql, DB_FILE_NAME))
         logger.info("SQL executed successfully. Result: %s", dataset)
         
-        ideal_chart, available_charts = get_chart_options(aggregation_definition)
+        ideal_chart, available_charts = get_chart_options(agg_def)
         return JSONResponse(content={
             "dataset": dataset,
             "fields": list(dataset[0].keys()) if dataset else [],
             "sql": sql,
-            "aggregation_definition": agg_def_with_dims,
+            "aggregation_definition": agg_def.dict(),
             "chart_type": ideal_chart,
             "available_chart_types": available_charts
         })
