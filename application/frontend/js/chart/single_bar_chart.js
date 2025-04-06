@@ -8,22 +8,46 @@ function renderBarChart(container) {
   const measure = state.aggregationDefinition.measures[0].alias;
 
   const width = CHART_DIMENSIONS.width;
-  const height = CHART_DIMENSIONS.height;
-  const margin = { top: 20, right: 20, bottom: 40, left: 200 };
+  const totalHeight = CHART_DIMENSIONS.height;
+  // Reserve top margin for fixed x-axis.
+  const margin = { top: 40, right: 20, bottom: 20, left: 200 };
 
-  // Define a fixed bar height.
+  // Fixed bar height.
   const barHeight = 25;
-  const totalChartHeight = margin.top + margin.bottom + barHeight * dataset.length;
+  const fullChartHeight = margin.top + margin.bottom + barHeight * dataset.length; // total height needed for bars
 
-  // Create a wrapper div with fixed height and enable scrolling.
-  const wrapper = document.createElement("div");
-  wrapper.style.width = width + "px";
-  wrapper.style.height = height + "px";
-  wrapper.style.overflowY = "auto";
-  container.appendChild(wrapper);
+  // Create a container div to hold both fixed x-axis and scrollable chart.
+  const chartContainer = document.createElement("div");
+  chartContainer.style.position = "relative";
+  chartContainer.style.width = width + "px";
+  chartContainer.style.height = totalHeight + "px";
+  container.appendChild(chartContainer);
 
-  // Append an SVG with the full chart height.
-  const svg = d3.select(wrapper).append("svg").attr("width", width).attr("height", totalChartHeight);
+  // Create a fixed div for the x-axis.
+  const xAxisDiv = document.createElement("div");
+  xAxisDiv.style.position = "absolute";
+  xAxisDiv.style.top = "0px";
+  xAxisDiv.style.left = "0px";
+  xAxisDiv.style.width = "100%";
+  xAxisDiv.style.height = margin.top + "px";
+  chartContainer.appendChild(xAxisDiv);
+
+  // Create a scrollable container for the bars and y-axis.
+  const scrollDiv = document.createElement("div");
+  scrollDiv.style.position = "absolute";
+  scrollDiv.style.top = margin.top + "px";
+  scrollDiv.style.left = "0px";
+  scrollDiv.style.width = "100%";
+  scrollDiv.style.height = totalHeight - margin.top + "px";
+  scrollDiv.style.overflowY = "auto";
+  chartContainer.appendChild(scrollDiv);
+
+  // Append an SVG to the scroll div for bars and y-axis.
+  const svg = d3
+    .select(scrollDiv)
+    .append("svg")
+    .attr("width", width)
+    .attr("height", fullChartHeight - margin.top);
 
   // X scale based on the measure values.
   const xMax = d3.max(dataset, (d) => d[measure]);
@@ -33,14 +57,14 @@ function renderBarChart(container) {
     .range([margin.left, width - margin.right])
     .nice();
 
-  // Y scale for all bars.
+  // Y scale for the bars.
   const y = d3
     .scaleBand()
     .domain(d3.range(dataset.length))
-    .range([margin.top, totalChartHeight - margin.bottom])
+    .range([0, fullChartHeight - margin.top - margin.bottom])
     .padding(0.1);
 
-  // Draw the bars.
+  // Draw the bars in the scrollable SVG.
   svg
     .selectAll("rect")
     .data(dataset)
@@ -51,22 +75,38 @@ function renderBarChart(container) {
     .attr("height", y.bandwidth())
     .attr("fill", "steelblue");
 
-  // Append x-axis at the bottom of the full chart.
+  // Add labels to each bar positioned to the right.
   svg
-    .append("g")
-    .attr("transform", `translate(0, ${totalChartHeight - margin.bottom})`)
-    .call(d3.axisBottom(x));
+    .selectAll("text.bar-label")
+    .data(dataset)
+    .join("text")
+    .attr("class", "bar-label")
+    .attr("x", (d) => x(d[measure]) + 5) // position label to the right of the bar
+    .attr("y", (d, i) => y(i) + y.bandwidth() / 2)
+    .attr("dy", "0.35em")
+    .attr("text-anchor", "start")
+    .attr("fill", "black")
+    .text((d) => d[measure]);
 
-  // Append y-axis on the left.
+  // Append y-axis in the scrollable SVG.
   svg
     .append("g")
-    .attr("transform", `translate(${margin.left}, 0)`)
+    .attr("transform", `translate(${margin.left},0)`)
     .call(
       d3
         .axisLeft(y)
         .tickFormat((d, i) => dataset[i][dimension])
         .tickSize(0)
     );
+
+  // Create an SVG in the fixed x-axis div.
+  const xAxisSvg = d3.select(xAxisDiv).append("svg").attr("width", width).attr("height", margin.top);
+
+  // Append the x-axis at the fixed position.
+  xAxisSvg
+    .append("g")
+    .attr("transform", `translate(0,${margin.top - 1})`)
+    .call(d3.axisTop(x));
 }
 
 export default renderBarChart;
