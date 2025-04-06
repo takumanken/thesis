@@ -202,9 +202,9 @@ SELECT
             'Vending'
         ) THEN 'Administrative, Regulatory & Financial'
         ELSE 'Other'
-    END AS complaint_category,
-    IFNULL("Complaint Type", 'Unspecified') AS complaint_type,
-    IFNULL("Descriptor", 'Unspecified') AS complaint_descriptor,
+    END AS complaint_type_large,
+    IFNULL("Complaint Type", 'Unspecified') AS complaint_type_middle,
+    IFNULL("Descriptor", 'Unspecified') AS complaint_type_detailed,
     IFNULL("Street Name", 'Unspecified') AS street_name,
     REGEXP_EXTRACT(
         "Incident Address",
