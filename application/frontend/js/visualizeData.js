@@ -1,6 +1,6 @@
 import { state } from "./state.js";
 import renderTable from "./chart/table.js";
-import renderBarChart from "./chart/bar_chart.js";
+import renderBarChart from "./chart/single_bar_chart.js";
 import renderLineChart from "./chart/line_chart.js";
 import renderMap from "./chart/map.js";
 
@@ -27,7 +27,7 @@ function visualizeData() {
     case "table":
       renderTable(container);
       break;
-    case "bar_chart":
+    case "single_bar_chart":
       renderBarChart(container);
       break;
     case "line_chart":

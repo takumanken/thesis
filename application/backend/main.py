@@ -76,8 +76,8 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[str, list[str]]:
     available = ["table"]
     time_dim, geo_dim, _ = classify_dimensions(agg_def.dimensions)
     if len(agg_def.measures) == 1 and len(agg_def.dimensions) == 1:
-        available.append("bar_chart")
-        ideal = "bar_chart"
+        available.append("single_bar_chart")
+        ideal = "single_bar_chart"
         if time_dim:
             available.append("line_chart")
             ideal = "line_chart"
