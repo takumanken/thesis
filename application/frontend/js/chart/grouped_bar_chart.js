@@ -25,7 +25,7 @@ function renderGroupedBarChart(container) {
     .sort((a, b) => d3.descending(a.sum, b.sum))
     .map((d) => d.key);
 
-  // Compute sorted unique subgroups based on total measure (desc)
+  // Compute sorted unique subgroups based on total measure (desc) - global ordering
   const subGroupSums = d3.rollup(
     dataset,
     (v) => d3.sum(v, (d) => d[measure]),
@@ -130,6 +130,22 @@ function renderGroupedBarChart(container) {
 
   // Append y-axis for groups (major dimension).
   svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(outerY).tickSize(0));
+
+  // Append legend for subgroups (minor dimension).
+  // The legend is positioned at the bottom right of the scrollable SVG.
+  const legend = svg
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", () => {
+      const legendHeight = sortedSubGroups.length * 20; // row height of 20
+      return `translate(${width - margin.right - 120}, ${fullChartHeight - margin.top - legendHeight - 10})`;
+    });
+
+  sortedSubGroups.forEach((d, i) => {
+    const legendRow = legend.append("g").attr("transform", `translate(0, ${i * 20})`);
+    legendRow.append("rect").attr("width", 18).attr("height", 18).attr("fill", color(d));
+    legendRow.append("text").attr("x", -5).attr("y", 9).attr("dy", "0.35em").attr("text-anchor", "end").text(d);
+  });
 
   // Create an SVG for the fixed x-axis.
   const xAxisSvg = d3.select(xAxisDiv).append("svg").attr("width", width).attr("height", margin.top);
