@@ -2,6 +2,7 @@ import { state } from "./state.js";
 import renderTable from "./chart/table.js";
 import renderBarChart from "./chart/single_bar_chart.js";
 import renderLineChart from "./chart/line_chart.js";
+import renderGroupedBarChart from "./chart/grouped_bar_chart.js";
 import renderMap from "./chart/map.js";
 
 // Clean up previous visualizations.
@@ -29,6 +30,9 @@ function visualizeData() {
       break;
     case "single_bar_chart":
       renderBarChart(container);
+      break;
+    case "grouped_bar_chart":
+      renderGroupedBarChart(container);
       break;
     case "line_chart":
       renderLineChart(container);
