@@ -223,6 +223,7 @@ SELECT
     IFNULL("Incident Zip", 'Unspecified') AS incident_zip,
     "Location" AS location,
     IFNULL(neighborhood_code, 'Unspecified') AS neighborhood_code,
-    IFNULL(neighborhood_name, 'Unspecified') AS neighborhood_name
+    IFNULL(neighborhood_name, 'Unspecified') AS neighborhood_name,
+    lower(complaint_type_middle) like '%noise%' AS is_noise_complaint,
 FROM
     read_parquet('{object_url}');
