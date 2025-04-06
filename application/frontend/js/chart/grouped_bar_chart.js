@@ -2,15 +2,67 @@ import { state } from "../state.js";
 import { CHART_DIMENSIONS } from "../constants.js";
 
 function renderGroupedBarChart(container) {
-  // Initialize local swap flag on container if not already set.
+  // Initialize and create UI elements
+  setupSwapButton(container);
+
+  const dataset = state.dataset;
+
+  // Extract and process dimensions
+  const { groupKey, subGroupKey, measure } = extractDimensions(container);
+
+  // Compute sorted groups and subgroups
+  const { sortedGroups, sortedSubGroups } = computeSortedGroups(dataset, groupKey, subGroupKey, measure);
+
+  // Setup chart parameters
+  const config = setupConfig();
+
+  // Create scales for the chart
+  const scales = createScales(sortedGroups, sortedSubGroups, dataset, measure, config);
+
+  // Setup chart structure and get references
+  const { chartContainer, xAxisDiv, scrollDiv, svg, xAxisSvg } = setupChartStructure(
+    container,
+    config.width,
+    config.totalHeight,
+    config.margin,
+    config.fullChartHeight
+  );
+
+  // Create color scale and tooltip
+  const color = createColorScale(sortedSubGroups);
+  const tooltip = createTooltip(container);
+
+  // Draw the chart elements
+  drawBars(
+    svg,
+    dataset,
+    scales.outerY,
+    scales.innerY,
+    scales.x,
+    config.margin,
+    groupKey,
+    subGroupKey,
+    measure,
+    color,
+    tooltip
+  );
+
+  // Add axes and legend
+  addYAxis(svg, scales.outerY, config.margin);
+  addXAxis(xAxisSvg, scales.x, config.margin);
+  addLegend(svg, sortedSubGroups, color, config.width, config.margin, config.fullChartHeight);
+}
+
+function setupSwapButton(container) {
+  // Initialize local swap flag on container
   if (container.swapDimensions === undefined) {
     container.swapDimensions = false;
   }
 
-  // Clear previous content.
+  // Clear previous content
   container.innerHTML = "";
 
-  // Create and append a swap button.
+  // Create and append a swap button
   const swapBtn = document.createElement("button");
   swapBtn.textContent = "Swap Dimensions";
   swapBtn.style.marginBottom = "10px";
@@ -19,30 +71,41 @@ function renderGroupedBarChart(container) {
     renderGroupedBarChart(container);
   });
   container.appendChild(swapBtn);
+}
 
-  const dataset = state.dataset;
-
-  // Two dimensions are assumed from the aggregation definition.
-  // Default: first dimension is category (group) and second is subcategory.
+function extractDimensions(container) {
+  // Extract dimensions from state
   let groupKey = state.aggregationDefinition.dimensions[0]; // e.g. "neighborhood"
   let subGroupKey = state.aggregationDefinition.dimensions[1]; // e.g. "complaint_type_large"
-  // Swap dimensions if flag is on.
+
+  // Swap dimensions if flag is on
   if (container.swapDimensions) {
     [groupKey, subGroupKey] = [subGroupKey, groupKey];
   }
+
   const measure = state.aggregationDefinition.measures[0].alias; // e.g. "num_of_requests"
 
+  return { groupKey, subGroupKey, measure };
+}
+
+function setupConfig() {
   const width = CHART_DIMENSIONS.width;
   const totalHeight = CHART_DIMENSIONS.height;
-  // Reserve top margin for fixed x-axis.
+  // Reserve top margin for fixed x-axis
   const margin = { top: 40, right: 20, bottom: 20, left: 200 };
+  const fullChartHeight = margin.top + margin.bottom + (totalHeight - margin.top - margin.bottom);
 
+  return { width, totalHeight, margin, fullChartHeight };
+}
+
+function computeSortedGroups(dataset, groupKey, subGroupKey, measure) {
   // Compute sorted unique groups based on total measure (desc)
   const groupSums = d3.rollup(
     dataset,
     (v) => d3.sum(v, (d) => d[measure]),
     (d) => d[groupKey]
   );
+
   const sortedGroups = Array.from(groupSums, ([key, sum]) => ({ key, sum }))
     .sort((a, b) => d3.descending(a.sum, b.sum))
     .map((d) => d.key);
@@ -53,39 +116,45 @@ function renderGroupedBarChart(container) {
     (v) => d3.sum(v, (d) => d[measure]),
     (d) => d[subGroupKey]
   );
+
   const sortedSubGroups = Array.from(subGroupSums, ([key, sum]) => ({ key, sum }))
     .sort((a, b) => d3.descending(a.sum, b.sum))
     .map((d) => d.key);
 
-  // Outer y-scale for groups.
+  return { sortedGroups, sortedSubGroups };
+}
+
+function createScales(sortedGroups, sortedSubGroups, dataset, measure, config) {
+  // Outer y-scale for groups
   const outerY = d3
     .scaleBand()
     .domain(sortedGroups)
-    .range([0, totalHeight - margin.top - margin.bottom])
+    .range([0, config.totalHeight - config.margin.top - config.margin.bottom])
     .padding(0.2);
 
-  // Inner y-scale for subgroups within each group.
+  // Inner y-scale for subgroups within each group
   const innerY = d3.scaleBand().domain(sortedSubGroups).range([0, outerY.bandwidth()]).padding(0.1);
 
-  // X scale based on measure values.
+  // X scale based on measure values
   const xMax = d3.max(dataset, (d) => d[measure]);
   const x = d3
     .scaleLinear()
     .domain([0, xMax])
-    .range([margin.left, width - margin.right])
+    .range([config.margin.left, config.width - config.margin.right])
     .nice();
 
-  // Define fullChartHeight for the SVG.
-  const fullChartHeight = margin.top + margin.bottom + (totalHeight - margin.top - margin.bottom);
+  return { outerY, innerY, x };
+}
 
-  // Create the main container that holds both fixed x-axis and a scrollable area.
+function setupChartStructure(container, width, totalHeight, margin, fullChartHeight) {
+  // Create the main container that holds both fixed x-axis and a scrollable area
   const chartContainer = document.createElement("div");
   chartContainer.style.position = "relative";
   chartContainer.style.width = width + "px";
   chartContainer.style.height = totalHeight + "px";
   container.appendChild(chartContainer);
 
-  // Create fixed container for the x-axis.
+  // Create fixed container for the x-axis
   const xAxisDiv = document.createElement("div");
   xAxisDiv.style.position = "absolute";
   xAxisDiv.style.top = "0px";
@@ -94,7 +163,7 @@ function renderGroupedBarChart(container) {
   xAxisDiv.style.height = margin.top + "px";
   chartContainer.appendChild(xAxisDiv);
 
-  // Create scrollable container for the bars and y-axis.
+  // Create scrollable container for the bars and y-axis
   const scrollDiv = document.createElement("div");
   scrollDiv.style.position = "absolute";
   scrollDiv.style.top = margin.top + "px";
@@ -104,18 +173,25 @@ function renderGroupedBarChart(container) {
   scrollDiv.style.overflowY = "auto";
   chartContainer.appendChild(scrollDiv);
 
-  // Append an SVG to the scrollable container.
+  // Append an SVG to the scrollable container
   const svg = d3
     .select(scrollDiv)
     .append("svg")
     .attr("width", width)
     .attr("height", fullChartHeight - margin.top);
 
-  // Define a color scale for subgroups.
-  const color = d3.scaleOrdinal(d3.schemeCategory10).domain(sortedSubGroups);
+  // Create an SVG for the fixed x-axis
+  const xAxisSvg = d3.select(xAxisDiv).append("svg").attr("width", width).attr("height", margin.top);
 
-  // Create a tooltip element.
-  const tooltip = d3
+  return { chartContainer, xAxisDiv, scrollDiv, svg, xAxisSvg };
+}
+
+function createColorScale(sortedSubGroups) {
+  return d3.scaleOrdinal(d3.schemeCategory10).domain(sortedSubGroups);
+}
+
+function createTooltip(container) {
+  return d3
     .select(container)
     .append("div")
     .attr("class", "tooltip")
@@ -125,8 +201,9 @@ function renderGroupedBarChart(container) {
     .style("padding", "5px")
     .style("border", "1px solid #ccc")
     .style("display", "none");
+}
 
-  // Draw the grouped bars.
+function drawBars(svg, dataset, outerY, innerY, x, margin, groupKey, subGroupKey, measure, color, tooltip) {
   svg
     .selectAll("rect")
     .data(dataset)
@@ -149,12 +226,20 @@ function renderGroupedBarChart(container) {
     .on("mouseout", function () {
       tooltip.style("display", "none");
     });
+}
 
-  // Append y-axis for groups (major dimension).
+function addYAxis(svg, outerY, margin) {
   svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(outerY).tickSize(0));
+}
 
-  // Append legend for subgroups (minor dimension).
-  // The legend is positioned at the bottom right of the scrollable SVG.
+function addXAxis(xAxisSvg, x, margin) {
+  xAxisSvg
+    .append("g")
+    .attr("transform", `translate(0,${margin.top - 1})`)
+    .call(d3.axisTop(x));
+}
+
+function addLegend(svg, sortedSubGroups, color, width, margin, fullChartHeight) {
   const legend = svg
     .append("g")
     .attr("class", "legend")
@@ -168,15 +253,6 @@ function renderGroupedBarChart(container) {
     legendRow.append("rect").attr("width", 18).attr("height", 18).attr("fill", color(d));
     legendRow.append("text").attr("x", -5).attr("y", 9).attr("dy", "0.35em").attr("text-anchor", "end").text(d);
   });
-
-  // Create an SVG for the fixed x-axis.
-  const xAxisSvg = d3.select(xAxisDiv).append("svg").attr("width", width).attr("height", margin.top);
-
-  // Append the x-axis at the top.
-  xAxisSvg
-    .append("g")
-    .attr("transform", `translate(0,${margin.top - 1})`)
-    .call(d3.axisTop(x));
 }
 
 export default renderGroupedBarChart;
