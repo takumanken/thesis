@@ -4,12 +4,25 @@ import { CHART_DIMENSIONS } from "../constants.js";
 function renderLineChart(container) {
   const dataset = state.dataset;
   container.innerHTML = "";
+
+  // Get the primary time dimension.
   const timeDimension = state.aggregationDefinition.time_dimension[0];
   const measure = state.aggregationDefinition.measures[0].alias;
-  const categoricalDimension = state.aggregationDefinition.categorical_dimension?.[0] || null;
+
+  // Look for an additional grouping dimension (either categorical or geo).
+  let groupDimension = null;
+  if (
+    state.aggregationDefinition.categorical_dimension &&
+    state.aggregationDefinition.categorical_dimension.length > 0
+  ) {
+    groupDimension = state.aggregationDefinition.categorical_dimension[0];
+  } else if (state.aggregationDefinition.geo_dimension && state.aggregationDefinition.geo_dimension.length > 0) {
+    groupDimension = state.aggregationDefinition.geo_dimension[0];
+  }
 
   const parseTime = d3.timeParse("%Y-%m-%d");
-  const data = dataset.map((d) => ({ ...d, parsedTime: parseTime(d[timeDimension]) }));
+  // Parse time and filter invalid records.
+  const data = dataset.map((d) => ({ ...d, parsedTime: parseTime(d[timeDimension]) })).filter((d) => d.parsedTime);
 
   const margin = { top: 20, right: 20, bottom: 70, left: 70 };
   const width = CHART_DIMENSIONS.width - margin.left - margin.right;
@@ -23,31 +36,43 @@ function renderLineChart(container) {
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
+  // X scale uses the full time extent.
   const x = d3
     .scaleTime()
     .domain(d3.extent(data, (d) => d.parsedTime))
     .range([0, width]);
+
+  // Y scale for the measure values.
   const y = d3
     .scaleLinear()
     .domain([0, d3.max(data, (d) => d[measure])])
     .range([height, 0]);
+
+  // Line generator function.
   const lineGenerator = d3
     .line()
+    .curve(d3.curveMonotoneX)
     .x((d) => x(d.parsedTime))
     .y((d) => y(d[measure]));
 
-  if (categoricalDimension) {
-    const groupedData = d3.group(data, (d) => d[categoricalDimension]);
+  if (groupDimension) {
+    // Group data according to the additional dimension.
+    const groupedData = d3.group(data, (d) => d[groupDimension]);
     const color = d3.scaleOrdinal(d3.schemeCategory10).domain(Array.from(groupedData.keys()));
+
+    // For each group, sort the values by parsedTime and draw a line.
     groupedData.forEach((values, key) => {
+      const validValues = values.sort((a, b) => a.parsedTime - b.parsedTime);
       svg
         .append("path")
-        .datum(values)
+        .datum(validValues)
         .attr("fill", "none")
         .attr("stroke", color(key))
         .attr("stroke-width", 2)
         .attr("d", lineGenerator);
     });
+
+    // Create legend for groups.
     const legend = svg
       .selectAll(".legend")
       .data(Array.from(groupedData.keys()))
@@ -55,12 +80,14 @@ function renderLineChart(container) {
       .append("g")
       .attr("class", "legend")
       .attr("transform", (d, i) => `translate(0,${i * 20})`);
+
     legend
       .append("rect")
       .attr("x", width - 18)
       .attr("width", 18)
       .attr("height", 18)
       .style("fill", color);
+
     legend
       .append("text")
       .attr("x", width - 24)
@@ -69,15 +96,17 @@ function renderLineChart(container) {
       .style("text-anchor", "end")
       .text((d) => d);
   } else {
+    // When there is only a time dimension, sort data globally and draw a single line.
     svg
       .append("path")
-      .datum(data)
+      .datum(data.sort((a, b) => a.parsedTime - b.parsedTime))
       .attr("fill", "none")
       .attr("stroke", "steelblue")
       .attr("stroke-width", 2)
       .attr("d", lineGenerator);
   }
 
+  // Append x-axis.
   svg
     .append("g")
     .attr("transform", `translate(0, ${height})`)
@@ -88,6 +117,7 @@ function renderLineChart(container) {
     .attr("transform", "rotate(-45)")
     .style("text-anchor", "end");
 
+  // Append y-axis.
   svg.append("g").call(d3.axisLeft(y));
 }
 
