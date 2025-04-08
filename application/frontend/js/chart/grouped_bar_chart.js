@@ -13,11 +13,11 @@ function renderGroupedBarChart(container) {
   // Compute sorted groups and subgroups
   const { sortedGroups, sortedSubGroups } = computeSortedGroups(dataset, groupKey, subGroupKey, measure);
 
-  // Setup chart parameters
-  const config = setupConfig();
+  // Setup chart parameters with group and subgroup info
+  const config = setupConfig(sortedGroups, sortedSubGroups, dataset, groupKey, subGroupKey);
 
-  // Create scales for the chart
-  const scales = createScales(sortedGroups, sortedSubGroups, dataset, measure, config);
+  // Create scales for the chart with the new parameters
+  const scales = createScales(sortedGroups, sortedSubGroups, dataset, measure, config, groupKey, subGroupKey);
 
   // Setup chart structure and get references
   const { chartContainer, xAxisDiv, scrollDiv, svg, xAxisSvg } = setupChartStructure(
@@ -32,7 +32,7 @@ function renderGroupedBarChart(container) {
   const color = createColorScale(sortedSubGroups);
   const tooltip = createTooltip(container);
 
-  // Draw the chart elements
+  // Draw the chart elements with the updated positioning
   drawBars(
     svg,
     dataset,
@@ -44,11 +44,12 @@ function renderGroupedBarChart(container) {
     subGroupKey,
     measure,
     color,
-    tooltip
+    tooltip,
+    scales.groupPositions
   );
 
-  // Add axes and legend
-  addYAxis(svg, scales.outerY, config.margin);
+  // Add axes and legend with custom positioning
+  addYAxis(svg, scales.outerY, sortedGroups, scales.groupPositions, config);
   addXAxis(xAxisSvg, scales.x, config.margin);
   addLegend(svg, sortedSubGroups, color, config.width, config.margin, config.fullChartHeight);
 }
@@ -88,14 +89,44 @@ function extractDimensions(container) {
   return { groupKey, subGroupKey, measure };
 }
 
-function setupConfig() {
+function setupConfig(sortedGroups, sortedSubGroups, dataset, groupKey, subGroupKey) {
   const width = CHART_DIMENSIONS.width;
   const totalHeight = CHART_DIMENSIONS.height;
   // Reserve top margin for fixed x-axis
   const margin = { top: 40, right: 20, bottom: 20, left: 200 };
-  const fullChartHeight = margin.top + margin.bottom + (totalHeight - margin.top - margin.bottom);
 
-  return { width, totalHeight, margin, fullChartHeight };
+  // Set a fixed height for each subgroup bar
+  const subGroupBarHeight = 10;
+  const groupPadding = 20; // Space between groups
+
+  // Calculate total chart height based on the number of subgroups in each group
+  let fullChartHeight = margin.top + margin.bottom;
+
+  // For each group, calculate its height based on the number of subgroups it contains
+  const groupHeights = {};
+  sortedGroups.forEach((group) => {
+    // Count how many subgroups appear in this group
+    const subGroupsInThisGroup = new Set();
+    dataset
+      .filter((d) => d[groupKey] === group)
+      .forEach((d) => {
+        subGroupsInThisGroup.add(d[subGroupKey]);
+      });
+
+    const groupHeight = subGroupsInThisGroup.size * subGroupBarHeight + groupPadding;
+    groupHeights[group] = groupHeight;
+    fullChartHeight += groupHeight;
+  });
+
+  return {
+    width,
+    totalHeight,
+    margin,
+    subGroupBarHeight,
+    groupPadding,
+    groupHeights,
+    fullChartHeight,
+  };
 }
 
 function computeSortedGroups(dataset, groupKey, subGroupKey, measure) {
@@ -124,16 +155,28 @@ function computeSortedGroups(dataset, groupKey, subGroupKey, measure) {
   return { sortedGroups, sortedSubGroups };
 }
 
-function createScales(sortedGroups, sortedSubGroups, dataset, measure, config) {
-  // Outer y-scale for groups
+function createScales(sortedGroups, sortedSubGroups, dataset, measure, config, groupKey, subGroupKey) {
+  // Calculate positions for each group
+  let currentPosition = 0;
+  const groupPositions = {};
+
+  sortedGroups.forEach((group) => {
+    groupPositions[group] = currentPosition;
+    currentPosition += config.groupHeights[group];
+  });
+
+  // Outer y-scale for groups - custom positions based on varying heights
   const outerY = d3
-    .scaleBand()
+    .scaleOrdinal()
     .domain(sortedGroups)
-    .range([0, config.totalHeight - config.margin.top - config.margin.bottom])
-    .padding(0.2);
+    .range(sortedGroups.map((group) => groupPositions[group]));
 
   // Inner y-scale for subgroups within each group
-  const innerY = d3.scaleBand().domain(sortedSubGroups).range([0, outerY.bandwidth()]).padding(0.1);
+  const innerY = d3
+    .scaleBand()
+    .domain(sortedSubGroups)
+    .range([0, d3.max(Object.values(config.groupHeights)) - config.groupPadding])
+    .padding(0.1);
 
   // X scale based on measure values
   const xMax = d3.max(dataset, (d) => d[measure]);
@@ -143,7 +186,7 @@ function createScales(sortedGroups, sortedSubGroups, dataset, measure, config) {
     .range([config.margin.left, config.width - config.margin.right])
     .nice();
 
-  return { outerY, innerY, x };
+  return { outerY, innerY, x, groupPositions };
 }
 
 function setupChartStructure(container, width, totalHeight, margin, fullChartHeight) {
@@ -203,13 +246,26 @@ function createTooltip(container) {
     .style("display", "none");
 }
 
-function drawBars(svg, dataset, outerY, innerY, x, margin, groupKey, subGroupKey, measure, color, tooltip) {
+function drawBars(
+  svg,
+  dataset,
+  outerY,
+  innerY,
+  x,
+  margin,
+  groupKey,
+  subGroupKey,
+  measure,
+  color,
+  tooltip,
+  groupPositions
+) {
   svg
     .selectAll("rect")
     .data(dataset)
     .join("rect")
     .attr("x", margin.left)
-    .attr("y", (d) => outerY(d[groupKey]) + innerY(d[subGroupKey]))
+    .attr("y", (d) => groupPositions[d[groupKey]] + innerY(d[subGroupKey]))
     .attr("width", (d) => x(d[measure]) - margin.left)
     .attr("height", innerY.bandwidth())
     .attr("fill", (d) => color(d[subGroupKey]))
@@ -228,8 +284,26 @@ function drawBars(svg, dataset, outerY, innerY, x, margin, groupKey, subGroupKey
     });
 }
 
-function addYAxis(svg, outerY, margin) {
-  svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(outerY).tickSize(0));
+function addYAxis(svg, outerY, sortedGroups, groupPositions, config) {
+  // Create a custom axis that places labels at the center of each group
+  const yAxis = (g) => {
+    g.attr("transform", `translate(${config.margin.left},0)`)
+      .call((g) => {
+        sortedGroups.forEach((group) => {
+          const yPos = groupPositions[group] + config.groupHeights[group] / 2;
+          g.append("text")
+            .attr("x", -10)
+            .attr("y", yPos)
+            .attr("text-anchor", "end")
+            .attr("dominant-baseline", "middle")
+            .text(group);
+        });
+      })
+      .call((g) => g.select(".domain").remove())
+      .call((g) => g.selectAll(".tick line").remove());
+  };
+
+  svg.append("g").call(yAxis);
 }
 
 function addXAxis(xAxisSvg, x, margin) {
