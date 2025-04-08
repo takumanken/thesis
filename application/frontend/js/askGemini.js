@@ -19,6 +19,8 @@ export async function askGemini() {
   });
 
   const result = await response.json();
+
+  // Important: Convert snake_case from backend to camelCase for frontend
   state.update({
     fields: result.fields,
     dataset: result.dataset,
@@ -26,6 +28,7 @@ export async function askGemini() {
     sql: result.sql,
     chartType: result.chart_type,
     availableChartTypes: result.available_chart_types,
+    textResponse: result.text_response, // Add this line
   });
 
   updateChartTypeDropdown();

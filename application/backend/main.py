@@ -209,55 +209,92 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         json_text = response.candidates[0].content.parts[0].text
         logger.info(f"[{request_id}] Raw Gemini response:\n{json_text}")
         
-        # Parse JSON response
-        if json_text.startswith("```json"):
-            json_text = json_text.replace("```json", "").replace("```", "").strip()
-            logger.debug(f"[{request_id}] Extracted JSON from code block")
-
-        # Parse the response
         try:
-            parsed_json = json.loads(json_text)
-            logger.debug(f"[{request_id}] Successfully parsed JSON response")
+            is_json_response = json_text.strip().startswith("{") or "```json" in json_text
+            
+            # Clean up JSON formatting if it's in a code block
+            if "```json" in json_text:
+                json_text = json_text.split("```json")[1].split("```")[0].strip()
+                logger.debug(f"[{request_id}] Extracted JSON from code block")
+            
+            if is_json_response:
+                # Try to parse as JSON
+                parsed_json = json.loads(json_text)
+                logger.debug(f"[{request_id}] Successfully parsed JSON response")
+                
+                # Continue with normal data processing
+                agg_def = AggregationDefinition(**parsed_json)
+                time_dim, geo_dim, categorical_dim = classify_dimensions(agg_def.dimensions)
+                agg_def = agg_def.copy(update={
+                    "time_dimension": time_dim,
+                    "geo_dimension": geo_dim,
+                    "categorical_dimension": categorical_dim
+                })
+                logger.info(f"[{request_id}] Aggregation definition: {agg_def.dict()}")
+                
+                # Generate and execute SQL
+                sql = generate_sql(agg_def, "requests_311")
+                logger.info(f"[{request_id}] Generated SQL: {sql}")
+                
+                dataset_json = execute_sql_in_duckDB(sql, DB_FILE_NAME)
+                dataset = json.loads(dataset_json)
+                logger.info(f"[{request_id}] Query returned {len(dataset)} records")
+                
+                # Determine visualization options
+                ideal_chart, available_charts = get_chart_options(agg_def)
+                
+                # Prepare normal data response
+                response_payload = {
+                    "dataset": dataset,
+                    "fields": list(dataset[0].keys()) if dataset else [],
+                    "sql": sql,
+                    "aggregation_definition": agg_def.dict(),
+                    "chart_type": ideal_chart,
+                    "available_chart_types": available_charts,
+                    "text_response": None  # Explicitly set to None for data responses
+                }
+            else:
+                # Handle as text response
+                logger.info(f"[{request_id}] Received text response instead of JSON")
+                response_payload = {
+                    "dataset": [],
+                    "fields": [],
+                    "sql": "",
+                    "aggregation_definition": {
+                        "dimensions": [],
+                        "measures": [],
+                        "pre_aggregation_filters": "",
+                        "post_aggregation_filters": "",
+                        "time_dimension": [],
+                        "geo_dimension": [],
+                        "categorical_dimension": []
+                    },
+                    "chart_type": "text",
+                    "available_chart_types": ["text"],
+                    "text_response": json_text
+                }
         except json.JSONDecodeError as e:
-            logger.error(f"[{request_id}] JSON parse error: {str(e)}")
-            logger.error(f"[{request_id}] Raw JSON text: {json_text[:200]}...")
-            raise Exception(f"Failed to parse JSON response: {str(e)}")
+            # JSON parsing error - treat as text response
+            logger.warning(f"[{request_id}] JSON parse error: {str(e)}")
+            logger.warning(f"[{request_id}] Raw text: {json_text[:200]}...")
             
-        if not parsed_json:
-            logger.error(f"[{request_id}] Empty JSON response from Gemini")
-            raise Exception("Aggregation definition not found in response.")
-            
-        # Create and update the aggregation definition
-        logger.info(f"[{request_id}] Creating aggregation definition")
-        agg_def = AggregationDefinition(**parsed_json)
-        time_dim, geo_dim, categorical_dim = classify_dimensions(agg_def.dimensions)
-        agg_def = agg_def.copy(update={
-            "time_dimension": time_dim,
-            "geo_dimension": geo_dim,
-            "categorical_dimension": categorical_dim
-        })
-        logger.info(f"[{request_id}] Aggregation definition: {agg_def.dict()}")
-        
-        # Generate and execute SQL
-        sql = generate_sql(agg_def, "requests_311")
-        logger.info(f"[{request_id}] Generated SQL: {sql}")
-        
-        dataset_json = execute_sql_in_duckDB(sql, DB_FILE_NAME)
-        dataset = json.loads(dataset_json)
-        logger.info(f"[{request_id}] Query returned {len(dataset)} records")
-        
-        # Determine visualization options
-        ideal_chart, available_charts = get_chart_options(agg_def)
-        
-        # Prepare response
-        response_payload = {
-            "dataset": dataset,
-            "fields": list(dataset[0].keys()) if dataset else [],
-            "sql": sql,
-            "aggregation_definition": agg_def.dict(),
-            "chart_type": ideal_chart,
-            "available_chart_types": available_charts
-        }
+            response_payload = {
+                "dataset": [],
+                "fields": [],
+                "sql": "",
+                "aggregation_definition": {
+                    "dimensions": [],
+                    "measures": [],
+                    "pre_aggregation_filters": "",
+                    "post_aggregation_filters": "",
+                    "time_dimension": [],
+                    "geo_dimension": [],
+                    "categorical_dimension": []
+                },
+                "chart_type": "text",
+                "available_chart_types": ["text"],
+                "text_response": json_text
+            }
         
         total_elapsed = time.time() - start_time
         logger.info(f"[{request_id}] Request processed successfully in {total_elapsed:.2f}s")
