@@ -11,7 +11,7 @@ function renderHeatMap(container) {
 
   // Extract data from state
   const dataset = state.dataset;
-  const geoDim = state.aggregationDefinition.geo_dimension[0]; // location field
+  const geoDim = state.aggregationDefinition.geoDimension[0]; // location field
   const measure = state.aggregationDefinition.measures[0].alias;
 
   // Process data for visualization

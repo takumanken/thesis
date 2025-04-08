@@ -3,7 +3,7 @@ import { CHART_DIMENSIONS } from "../constants.js";
 
 function renderMap(container) {
   const dataset = state.dataset;
-  const geoDim = state.aggregationDefinition.geo_dimension[0];
+  const geoDim = state.aggregationDefinition.geoDimension[0];
   const measure = state.aggregationDefinition.measures[0].alias;
 
   // Validate geo dimension

@@ -35,18 +35,15 @@ function renderLineChart(container) {
 
 // Extract dimensions and measure from state
 function extractDimensions() {
-  const timeDimension = state.aggregationDefinition.time_dimension[0];
+  const timeDimension = state.aggregationDefinition.timeDimension[0];
   const measure = state.aggregationDefinition.measures[0].alias;
 
   // Look for an additional grouping dimension (either categorical or geo)
   let groupDimension = null;
-  if (
-    state.aggregationDefinition.categorical_dimension &&
-    state.aggregationDefinition.categorical_dimension.length > 0
-  ) {
-    groupDimension = state.aggregationDefinition.categorical_dimension[0];
-  } else if (state.aggregationDefinition.geo_dimension && state.aggregationDefinition.geo_dimension.length > 0) {
-    groupDimension = state.aggregationDefinition.geo_dimension[0];
+  if (state.aggregationDefinition.categoricalDimension && state.aggregationDefinition.categoricalDimension.length > 0) {
+    groupDimension = state.aggregationDefinition.categoricalDimension[0];
+  } else if (state.aggregationDefinition.geoDimension && state.aggregationDefinition.geoDimension.length > 0) {
+    groupDimension = state.aggregationDefinition.geoDimension[0];
   }
 
   return { timeDimension, measure, groupDimension };

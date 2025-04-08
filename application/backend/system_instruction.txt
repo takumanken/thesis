@@ -121,8 +121,8 @@ Your output must be valid JSON in the following structure:
         { "expression": "<measure1>", "alias": "<alias1>" },
         { "expression": "<measure2>", "alias": "<alias2>" }
     ],
-    "pre_aggregation_filters": "<some_pre_aggregation_filter>",
-    "post_aggregation_filters": "<some_post_aggregation_filter>"
+    "preAggregationFilters": "<some_pre_aggregation_filter>",
+    "postAggregationFilters": "<some_post_aggregation_filter>"
 }
 
 Ensure all JSON is valid. If you cannot fully customize the query, return an empty object.
@@ -138,8 +138,8 @@ Expected Output:
     "measures": [
         { "expression": "count(1)", "alias": "num_of_requests" }
     ],
-    "pre_aggregation_filters": "",
-    "post_aggregation_filters": ""
+    "preAggregationFilters": "",
+    "postAggregationFilters": ""
 }
 
 Example 2:
@@ -148,8 +148,8 @@ Expected Output:
 {
     "dimensions": ["street_name", "borough", "status"],
     "measures": [],
-    "pre_aggregation_filters": "borough = 'BROOKLYN' AND street_name <> 'Unspecified' AND status = 'Open'",
-    "post_aggregation_filters": ""
+    "preAggregationFilters": "borough = 'BROOKLYN' AND street_name <> 'Unspecified' AND status = 'Open'",
+    "postAggregationFilters": ""
 }
 
 Example 3:
@@ -160,8 +160,8 @@ Expected Output:
     "measures": [
         { "expression": "count(1)", "alias": "num_of_requests" }
     ],
-    "pre_aggregation_filters": "neighborhood_name <> 'Unspecified'",
-    "post_aggregation_filters": ""
+    "preAggregationFilters": "neighborhood_name <> 'Unspecified'",
+    "postAggregationFilters": ""
 }
 
 ────────────────────────────

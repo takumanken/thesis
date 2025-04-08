@@ -69,11 +69,11 @@ class PromptRequest(BaseModel):
 class AggregationDefinition(BaseModel):
     dimensions: List[str]
     measures: List[Dict[str, str]]
-    pre_aggregation_filters: str = ""
-    post_aggregation_filters: str = ""
-    time_dimension: List[str] = []
-    geo_dimension: List[str] = []
-    categorical_dimension: List[str] = []
+    preAggregationFilters: str = ""
+    postAggregationFilters: str = ""
+    timeDimension: List[str] = []
+    geoDimension: List[str] = []
+    categoricalDimension: List[str] = []
 
 # Classify dimensions into time, geo, and categorical
 def classify_dimensions(dimensions: List[str]):
@@ -93,10 +93,9 @@ def classify_dimensions(dimensions: List[str]):
 
 # Determine chart options based on dimensions and measures
 def get_chart_options(agg_def: AggregationDefinition) -> tuple[str, list[str]]:
-    logger.debug(f"Determining chart options for: {agg_def.dict()}")
+    time_dim, geo_dim, _ = classify_dimensions(agg_def.dimensions)
     ideal = "table"
     available = ["table"]
-    time_dim, geo_dim, _ = classify_dimensions(agg_def.dimensions)
     
     if len(agg_def.measures) == 1:
         if len(agg_def.dimensions) == 1:
@@ -134,21 +133,21 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     select_clause = f"{dims_clause}, {measures_clause}" if dims_clause and measures_clause else (dims_clause or measures_clause)
     sql = f"SELECT {select_clause} FROM {table_name}"
     
-    if definition.pre_aggregation_filters:
-        sql += f" WHERE {definition.pre_aggregation_filters}"
-        logger.debug(f"Added pre-aggregation filters: {definition.pre_aggregation_filters}")
+    if definition.preAggregationFilters:
+        sql += f" WHERE {definition.preAggregationFilters}"
+        logger.debug(f"Added pre-aggregation filters: {definition.preAggregationFilters}")
     
     if dims:
         group_clause = ", ".join(str(i) for i in range(1, len(dims) + 1))
         sql += f" GROUP BY {group_clause}"
     
-    if definition.post_aggregation_filters:
-        sql += f" HAVING {definition.post_aggregation_filters}"
-        logger.debug(f"Added post-aggregation filters: {definition.post_aggregation_filters}")
+    if definition.postAggregationFilters:
+        sql += f" HAVING {definition.postAggregationFilters}"
+        logger.debug(f"Added post-aggregation filters: {definition.postAggregationFilters}")
     
     # Order by first time dimension (asc) if available, else by first measure alias (desc)
-    if definition.time_dimension:
-        sql += f" ORDER BY {definition.time_dimension[0]} ASC"
+    if definition.timeDimension:
+        sql += f" ORDER BY {definition.timeDimension[0]} ASC"
     elif definition.measures:
         sql += f" ORDER BY {definition.measures[0]['alias']} DESC"
     
@@ -226,9 +225,9 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                 agg_def = AggregationDefinition(**parsed_json)
                 time_dim, geo_dim, categorical_dim = classify_dimensions(agg_def.dimensions)
                 agg_def = agg_def.copy(update={
-                    "time_dimension": time_dim,
-                    "geo_dimension": geo_dim,
-                    "categorical_dimension": categorical_dim
+                    "timeDimension": time_dim,
+                    "geoDimension": geo_dim,
+                    "categoricalDimension": categorical_dim
                 })
                 logger.info(f"[{request_id}] Aggregation definition: {agg_def.dict()}")
                 
@@ -248,10 +247,10 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                     "dataset": dataset,
                     "fields": list(dataset[0].keys()) if dataset else [],
                     "sql": sql,
-                    "aggregation_definition": agg_def.dict(),
-                    "chart_type": ideal_chart,
-                    "available_chart_types": available_charts,
-                    "text_response": None  # Explicitly set to None for data responses
+                    "aggregationDefinition": agg_def.dict(),
+                    "chartType": ideal_chart,
+                    "availableChartTypes": available_charts,
+                    "textResponse": None
                 }
             else:
                 # Handle as text response
@@ -260,18 +259,18 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                     "dataset": [],
                     "fields": [],
                     "sql": "",
-                    "aggregation_definition": {
+                    "aggregationDefinition": {
                         "dimensions": [],
                         "measures": [],
-                        "pre_aggregation_filters": "",
-                        "post_aggregation_filters": "",
-                        "time_dimension": [],
-                        "geo_dimension": [],
-                        "categorical_dimension": []
+                        "preAggregationFilters": "",
+                        "postAggregationFilters": "",
+                        "timeDimension": [],
+                        "geoDimension": [],
+                        "categoricalDimension": []
                     },
-                    "chart_type": "text",
-                    "available_chart_types": ["text"],
-                    "text_response": json_text
+                    "chartType": "text",
+                    "availableChartTypes": ["text"],
+                    "textResponse": json_text
                 }
         except json.JSONDecodeError as e:
             # JSON parsing error - treat as text response
@@ -282,18 +281,18 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                 "dataset": [],
                 "fields": [],
                 "sql": "",
-                "aggregation_definition": {
+                "aggregationDefinition": {
                     "dimensions": [],
                     "measures": [],
-                    "pre_aggregation_filters": "",
-                    "post_aggregation_filters": "",
-                    "time_dimension": [],
-                    "geo_dimension": [],
-                    "categorical_dimension": []
+                    "preAggregationFilters": "",
+                    "postAggregationFilters": "",
+                    "timeDimension": [],
+                    "geoDimension": [],
+                    "categoricalDimension": []
                 },
-                "chart_type": "text",
-                "available_chart_types": ["text"],
-                "text_response": json_text
+                "chartType": "text",
+                "availableChartTypes": ["text"],
+                "textResponse": json_text
             }
         
         total_elapsed = time.time() - start_time
