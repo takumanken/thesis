@@ -40,6 +40,11 @@ B. Geo Related Dimension
 • neighborhood_name         : Neighborhood name.
   NOTE: When using any of these dimensions, exclude records where the value is "Unspecified" unless the query explicitly asks for them.
 
+  ADDITIONAL INSTRUCTIONS:
+  - If the user asks "where (in NYC)" without specifying any region, default to using "neighborhood_name" as the geo dimension and "number of requests" as the measure.
+  - If the user specifies a certain area name (e.g., "where in East Village" or "where in Bronx" or "show me the detailed/exact location"), use "location" as the geo dimension along with "number of requests" as the measure.
+  - Do not use "street_name" or "street_number" unless the user explicitly specifies them in the query.
+
 C. Categorical Dimension
 ------------------------
 • unique_key                : Unique identifier of a Service Request.
