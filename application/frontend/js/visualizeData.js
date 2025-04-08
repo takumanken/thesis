@@ -3,7 +3,7 @@ import renderTable from "./chart/table.js";
 import renderBarChart from "./chart/single_bar_chart.js";
 import renderLineChart from "./chart/line_chart.js";
 import renderGroupedBarChart from "./chart/grouped_bar_chart.js";
-import renderMap from "./chart/map.js";
+import renderChoroplethMap from "./chart/choropleth_map.js";
 
 // Clean up previous visualizations.
 function cleanupVisualization(container) {
@@ -37,8 +37,8 @@ function visualizeData() {
     case "line_chart":
       renderLineChart(container);
       break;
-    case "map":
-      renderMap(container);
+    case "choropleth_map":
+      renderChoroplethMap(container);
       break;
     default:
       container.innerHTML = `<p>Chart type "${chartType}" is not supported.</p>`;

@@ -86,8 +86,8 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[str, list[str]]:
             available.append("line_chart")
             ideal = "line_chart"
         if geo_dim and len(agg_def.dimensions) == 1:
-            available.append("map")
-            ideal = "map"
+            available.append("choropleth_map")
+            ideal = "choropleth_map"
     return ideal, available
 
 # Generate SQL from the aggregation definition
