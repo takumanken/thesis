@@ -221,37 +221,58 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                 parsed_json = json.loads(json_text)
                 logger.debug(f"[{request_id}] Successfully parsed JSON response")
                 
-                # Continue with normal data processing
-                agg_def = AggregationDefinition(**parsed_json)
-                time_dim, geo_dim, categorical_dim = classify_dimensions(agg_def.dimensions)
-                agg_def = agg_def.copy(update={
-                    "timeDimension": time_dim,
-                    "geoDimension": geo_dim,
-                    "categoricalDimension": categorical_dim
-                })
-                logger.info(f"[{request_id}] Aggregation definition: {agg_def.dict()}")
-                
-                # Generate and execute SQL
-                sql = generate_sql(agg_def, "requests_311")
-                logger.info(f"[{request_id}] Generated SQL: {sql}")
-                
-                dataset_json = execute_sql_in_duckDB(sql, DB_FILE_NAME)
-                dataset = json.loads(dataset_json)
-                logger.info(f"[{request_id}] Query returned {len(dataset)} records")
-                
-                # Determine visualization options
-                ideal_chart, available_charts = get_chart_options(agg_def)
-                
-                # Prepare normal data response
-                response_payload = {
-                    "dataset": dataset,
-                    "fields": list(dataset[0].keys()) if dataset else [],
-                    "sql": sql,
-                    "aggregationDefinition": agg_def.dict(),
-                    "chartType": ideal_chart,
-                    "availableChartTypes": available_charts,
-                    "textResponse": None
-                }
+                # Check if this is a text response in JSON format
+                if "textResponse" in parsed_json:
+                    logger.info(f"[{request_id}] Received textResponse in JSON format")
+                    response_payload = {
+                        "dataset": [],
+                        "fields": [],
+                        "sql": "",
+                        "aggregationDefinition": {
+                            "dimensions": [],
+                            "measures": [],
+                            "preAggregationFilters": "",
+                            "postAggregationFilters": "",
+                            "timeDimension": [],
+                            "geoDimension": [],
+                            "categoricalDimension": []
+                        },
+                        "chartType": "text",
+                        "availableChartTypes": ["text"],
+                        "textResponse": parsed_json["textResponse"]
+                    }
+                else:
+                    # Continue with normal data processing for aggregation definitions
+                    agg_def = AggregationDefinition(**parsed_json)
+                    time_dim, geo_dim, categorical_dim = classify_dimensions(agg_def.dimensions)
+                    agg_def = agg_def.copy(update={
+                        "timeDimension": time_dim,
+                        "geoDimension": geo_dim,
+                        "categoricalDimension": categorical_dim
+                    })
+                    logger.info(f"[{request_id}] Aggregation definition: {agg_def.dict()}")
+                    
+                    # Generate and execute SQL
+                    sql = generate_sql(agg_def, "requests_311")
+                    logger.info(f"[{request_id}] Generated SQL: {sql}")
+                    
+                    dataset_json = execute_sql_in_duckDB(sql, DB_FILE_NAME)
+                    dataset = json.loads(dataset_json)
+                    logger.info(f"[{request_id}] Query returned {len(dataset)} records")
+                    
+                    # Determine visualization options
+                    ideal_chart, available_charts = get_chart_options(agg_def)
+                    
+                    # Prepare normal data response
+                    response_payload = {
+                        "dataset": dataset,
+                        "fields": list(dataset[0].keys()) if dataset else [],
+                        "sql": sql,
+                        "aggregationDefinition": agg_def.dict(),
+                        "chartType": ideal_chart,
+                        "availableChartTypes": available_charts,
+                        "textResponse": None
+                    }
             else:
                 # Handle as text response
                 logger.info(f"[{request_id}] Received text response instead of JSON")
