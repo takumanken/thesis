@@ -26,9 +26,6 @@ function renderHeatMap(container) {
   const map = setupLeafletMap(mapContainer);
   addHeatLayer(map, points);
   fitMapToPoints(map, points);
-
-  // Add visual context elements
-  addColorLegend(container, points);
 }
 
 /**
@@ -127,64 +124,6 @@ function fitMapToPoints(map, points) {
     padding: [50, 50],
     maxZoom: 15, // Avoid zooming in too far
   });
-}
-
-/**
- * Create a color scale based on data values
- */
-function createColorScale(points) {
-  const minVal = d3.min(points, (d) => d.value) || 0;
-  const maxVal = d3.max(points, (d) => d.value) || 1;
-
-  return d3.scaleSequential(d3.interpolateOrRd).domain([minVal, maxVal]);
-}
-
-/**
- * Add color legend to explain the heatmap gradient
- */
-function addColorLegend(container, points) {
-  if (points.length === 0) return;
-
-  const minVal = d3.min(points, (d) => d.value) || 0;
-  const maxVal = d3.max(points, (d) => d.value) || 1;
-  const colorScale = createColorScale(points);
-
-  // Create legend container
-  const legendContainer = document.createElement("div");
-  legendContainer.className = "heatmap-legend";
-  legendContainer.style.marginTop = "10px";
-  container.appendChild(legendContainer);
-
-  // Create SVG for the legend
-  const legendSvg = d3.select(legendContainer).append("svg").attr("width", 300).attr("height", 50);
-
-  // Create gradient definition
-  const gradient = legendSvg
-    .append("defs")
-    .append("linearGradient")
-    .attr("id", "legend-gradient")
-    .attr("x1", "0%")
-    .attr("x2", "100%")
-    .attr("y1", "0%")
-    .attr("y2", "0%");
-
-  gradient.append("stop").attr("offset", "0%").attr("stop-color", colorScale(minVal));
-
-  gradient.append("stop").attr("offset", "100%").attr("stop-color", colorScale(maxVal));
-
-  // Add colored rectangle using the gradient
-  legendSvg
-    .append("rect")
-    .attr("x", 10)
-    .attr("y", 10)
-    .attr("width", 280)
-    .attr("height", 20)
-    .style("fill", "url(#legend-gradient)");
-
-  // Add min and max value labels
-  legendSvg.append("text").attr("x", 10).attr("y", 40).attr("text-anchor", "start").text(minVal);
-
-  legendSvg.append("text").attr("x", 290).attr("y", 40).attr("text-anchor", "end").text(maxVal);
 }
 
 // Export functions with consistent naming
