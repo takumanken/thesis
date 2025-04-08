@@ -5,16 +5,13 @@ export const state = {
   aggregationDefinition: {},
   chartType: "table",
   availableChartTypes: ["table"],
-  textResponse: null,
+  // Function to update the state – it uses Object.assign to copy properties.
+  update(newData) {
+    Object.assign(this, newData);
 
-  // Update method keeps consistent structure
-  update(data) {
-    this.dataset = data.dataset || [];
-    this.fields = data.fields || [];
-    this.aggregationDefinition = data.aggregation_definition || {};
-    this.sql = data.sql || "";
-    this.chartType = data.chartType || "table";
-    this.availableChartTypes = data.availableChartTypes || ["table"];
-    this.textResponse = data.textResponse || null;
+    const chartTypeSelector = document.getElementById("chartTypeSelector");
+    if (chartTypeSelector) {
+      chartTypeSelector.value = this.chartType || "table";
+    }
   },
 };

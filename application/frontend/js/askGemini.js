@@ -26,7 +26,6 @@ export async function askGemini() {
     sql: result.sql,
     chartType: result.chart_type,
     availableChartTypes: result.available_chart_types,
-    textResponse: result.text_response,
   });
 
   updateChartTypeDropdown();
