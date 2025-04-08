@@ -5,6 +5,7 @@ import renderLineChart from "./chart/line_chart.js";
 import renderGroupedBarChart from "./chart/grouped_bar_chart.js";
 import renderChoroplethMap from "./chart/choropleth_map.js";
 import renderPointMap from "./chart/heat_map.js";
+import renderTextResponse from "./chart/text_response.js";
 
 // Clean up previous visualizations.
 function cleanupVisualization(container) {
@@ -43,6 +44,9 @@ function visualizeData() {
       break;
     case "heat_map":
       renderPointMap(container);
+      break;
+    case "text":
+      renderTextResponse(container);
       break;
     default:
       container.innerHTML = `<p>Chart type "${chartType}" is not supported.</p>`;
