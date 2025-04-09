@@ -20,8 +20,22 @@ SELECT
     hour(closed_timestamp) AS closed_hour_datepart,
     strftime('%a', closed_timestamp) AS closed_weekday_datepart,
     datesub('second', created_timestamp, closed_timestamp) AS time_to_resolve_sec,
-    IFNULL("Agency", 'Unspecified') AS agency,
     IFNULL("Agency Name", 'Unspecified') AS agency_name,
+    CASE
+        WHEN agency_name = 'Department of Housing Preservation and Development' THEN 'Housing'
+        WHEN agency_name = 'Department of Transportation' THEN 'Transportation'
+        WHEN agency_name = 'New York City Police Department' THEN 'Public Safety'
+        WHEN agency_name = 'Department of Sanitation' THEN 'Sanitation'
+        WHEN agency_name = 'Department of Environmental Protection' THEN 'Environmental'
+        WHEN agency_name = 'Department of Buildings' THEN 'Building'
+        WHEN agency_name = 'Department of Parks and Recreation' THEN 'Parks & Recreation'
+        WHEN agency_name = 'Department of Health and Mental Hygiene' THEN 'Health'
+        WHEN agency_name = 'DHS Advantage Programs' THEN 'Human Services'
+        WHEN agency_name = 'Taxi and Limousine Commission' THEN 'Transportation'
+        WHEN agency_name = 'Department of Consumer and Worker Protection' THEN 'Consumer Affairs'
+        WHEN agency_name LIKE 'School - %' THEN 'Schools'
+        ELSE 'Others'
+    END AS agency_category,
     CASE 
         WHEN "Complaint Type" IN (
             'HEATING',
@@ -224,6 +238,7 @@ SELECT
     "Location" AS location,
     IFNULL(neighborhood_code, 'Unspecified') AS neighborhood_code,
     IFNULL(neighborhood_name, 'Unspecified') AS neighborhood_name,
-    lower(complaint_type_middle) like '%noise%' AS is_noise_complaint,
+    IFNULL("Community Board", 'Unspecified') AS community_board,
+    LOWER(complaint_type_middle) like '%noise%' AS is_noise_complaint,
 FROM
     read_parquet('{object_url}');

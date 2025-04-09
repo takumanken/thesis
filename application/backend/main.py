@@ -45,15 +45,38 @@ PUBLIC_BUCKET_URL = "https://pub-cb6e94f4490c42b9b0c520e8116fb9b7.r2.dev/"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 DB_FILE_NAME = "nyc_open_data.db"
 SYSTEM_INSTRUCTION_FILE = "system_instruction.txt"
+FILTER_VALUES_DIR = "filter_values"
 
-logger.info(f"Loading system instructions from: {SYSTEM_INSTRUCTION_FILE}")
-try:
-    with open(SYSTEM_INSTRUCTION_FILE, "r") as file:
-        system_instruction = file.read()
-    logger.debug(f"System instructions loaded, length: {len(system_instruction)} chars")
-except Exception as e:
-    logger.error(f"Failed to load system instructions: {str(e)}")
-    raise
+# Load system instruction template
+with open(SYSTEM_INSTRUCTION_FILE, "r") as f:
+    system_instruction_template = f.read()
+
+# Load filter values from JSON files
+with open(os.path.join(FILTER_VALUES_DIR, "boroughs.json"), "r") as f:
+    borough_values = json.dumps(json.load(f)["boroughs"])
+
+with open(os.path.join(FILTER_VALUES_DIR, "neighborhoods.json"), "r") as f:
+    neighborhood_values = json.dumps(json.load(f)["neighborhoods"])
+
+with open(os.path.join(FILTER_VALUES_DIR, "complaint_types.json"), "r") as f:
+    complaint_types = json.load(f)
+    complaint_type_large_values = json.dumps(complaint_types["complaint_type_large"])
+    complaint_type_middle_values = json.dumps(complaint_types["complaint_type_middle"])
+
+# Add loading of agency_category values
+with open(os.path.join(FILTER_VALUES_DIR, "agency_category.json"), "r") as f:
+    agency_category_values = json.dumps(json.load(f)["agency_category"])
+
+# Format system instructions with the filter values
+system_instruction = system_instruction_template.format(
+    borough_values=borough_values,
+    neighborhood_values=neighborhood_values,
+    complaint_type_large_values=complaint_type_large_values,
+    complaint_type_middle_values=complaint_type_middle_values,
+    agency_category_values=agency_category_values
+)
+
+logger.debug(f"System instructions formatted, length: {len(system_instruction)} chars")
 
 if not GEMINI_API_KEY:
     logger.error("GEMINI_API_KEY environment variable not set")
