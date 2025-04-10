@@ -24,11 +24,11 @@ export async function askGemini() {
   state.update({
     fields: result.fields,
     dataset: result.dataset,
-    aggregationDefinition: result.aggregationDefinition, // Already using camelCase
+    aggregationDefinition: result.aggregationDefinition,
     sql: result.sql,
-    chartType: result.chartType, // Changed from result.chart_type
-    availableChartTypes: result.availableChartTypes, // Changed from result.available_chart_types
-    textResponse: result.textResponse, // Changed from result.text_response
+    chartType: result.chartType,
+    availableChartTypes: result.availableChartTypes,
+    textResponse: result.textResponse,
   });
 
   updateChartTypeDropdown();

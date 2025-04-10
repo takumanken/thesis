@@ -3,10 +3,11 @@ import renderTable from "./chart/table.js";
 import renderBarChart from "./chart/single_bar_chart.js";
 import renderLineChart from "./chart/line_chart.js";
 import renderGroupedBarChart from "./chart/grouped_bar_chart.js";
-import renderStackedBarChart from "./chart/stacked_bar_chart.js"; // Add this import
+import renderStackedBarChart from "./chart/stacked_bar_chart.js";
 import renderChoroplethMap from "./chart/choropleth_map.js";
 import renderPointMap from "./chart/heat_map.js";
 import renderTextResponse from "./chart/text_response.js";
+import renderTreemap from "./chart/treemap.js";
 
 // Clean up previous visualizations.
 function cleanupVisualization(container) {
@@ -51,6 +52,7 @@ function visualizeData() {
     line_chart: renderLineChart,
     choropleth_map: renderChoroplethMap,
     heat_map: renderPointMap,
+    treemap: renderTreemap,
   };
 
   const renderer = renderers[state.chartType];

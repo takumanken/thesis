@@ -123,14 +123,16 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[str, list[str]]:
     if len(agg_def.measures) == 1:
         if len(agg_def.dimensions) == 1:
             available.append("single_bar_chart")
+            available.append("treemap")
             ideal = "single_bar_chart"
-            logger.debug("Single dimension detected: adding single_bar_chart")
+            logger.debug("Single dimension detected: adding single_bar_chart and treemap")
         if len(agg_def.dimensions) == 2:
             available.append("grouped_bar_chart")
             available.append("stacked_bar_chart")
             available.append("stacked_bar_chart_100")
+            available.append("treemap")
             ideal = "stacked_bar_chart"
-            logger.debug("Two dimensions detected: adding grouped_bar_chart and stacked_bar_chart options")
+            logger.debug("Two dimensions detected: adding grouped_bar_chart, stacked_bar_chart and treemap options")
         if time_dim and len(agg_def.dimensions) <= 2:
             available.append("line_chart")
             ideal = "line_chart"

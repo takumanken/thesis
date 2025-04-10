@@ -15,6 +15,25 @@ export const chartStyles = {
   // Colors
   colors: d3.schemeCategory10,
 
+  // Tooltip creation
+  createTooltip(container = "body") {
+    return d3.select(container).append("div").attr("class", "tooltip").call(this.applyTooltipStyles);
+  },
+
+  // Show tooltip with content
+  showTooltip(tooltip, event, content) {
+    tooltip
+      .html(content)
+      .style("left", event.pageX + 12 + "px")
+      .style("top", event.pageY - 28 + "px")
+      .style("opacity", 0.95);
+  },
+
+  // Hide tooltip
+  hideTooltip(tooltip) {
+    tooltip.style("opacity", 0);
+  },
+
   // Tooltip styling
   applyTooltipStyles(tooltip) {
     return tooltip
@@ -22,8 +41,8 @@ export const chartStyles = {
       .style("pointer-events", "none")
       .style("background", "white")
       .style("color", "#333")
-      .style("font-family", this.fontFamily)
-      .style("font-size", this.fontSize.tooltip)
+      .style("font-family", chartStyles.fontFamily)
+      .style("font-size", chartStyles.fontSize.tooltip)
       .style("padding", "8px 10px")
       .style("border", "1px solid #ddd")
       .style("border-radius", "4px")
@@ -32,31 +51,15 @@ export const chartStyles = {
       .style("opacity", "0");
   },
 
-  // Common tooltip show/hide behavior
-  showTooltip(tooltip, event, html) {
-    tooltip
-      .html(html)
-      .style("left", `${event.pageX + 12}px`)
-      .style("top", `${event.pageY - 28}px`)
-      .transition()
-      .duration(200)
-      .style("opacity", "0.95");
-  },
-
-  hideTooltip(tooltip) {
-    tooltip.transition().duration(300).style("opacity", "0");
-  },
-
-  // Axis styling
+  // Apply axis styles
   applyAxisStyles(selection) {
-    selection.selectAll(".domain").style("color", "#888");
-    selection.selectAll(".tick line").style("color", "#d1d1d1");
+    selection.selectAll(".domain").style("stroke", "#888");
+    selection.selectAll(".tick line").style("stroke", "#d1d1d1");
     selection
       .selectAll(".tick text")
-      .style("font-family", this.fontFamily)
+      .style("fill", "#333")
       .style("font-size", this.fontSize.tick)
-      .style("color", "#333");
-
+      .style("font-family", this.fontFamily);
     return selection;
   },
 
@@ -74,15 +77,5 @@ export const chartStyles = {
   // Create and return a consistent color scale
   getColorScale(domain) {
     return d3.scaleOrdinal(this.colors).domain(domain);
-  },
-
-  // Create tooltip with consistent styling
-  createTooltip(container) {
-    return this.applyTooltipStyles(
-      d3
-        .select(container || "body")
-        .append("div")
-        .attr("class", "chart-tooltip")
-    );
   },
 };
