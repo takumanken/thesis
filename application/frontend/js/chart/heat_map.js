@@ -1,113 +1,131 @@
 import { state } from "../state.js";
 import { CHART_DIMENSIONS } from "../constants.js";
-import { chartStyles } from "./utils/chartStyles.js"; // Import the styles
 
+/**
+ * Main function to render a heatmap from location data
+ */
 function renderHeatMap(container) {
+  // Clear container and get configuration
   container.innerHTML = "";
+  const { width, height } = CHART_DIMENSIONS;
 
-  const { xDimension, yDimension, measure } = extractDimensions();
+  // Extract data from state
   const dataset = state.dataset;
+  const geoDim = state.aggregationDefinition.geoDimension[0]; // location field
+  const measure = state.aggregationDefinition.measures[0].alias;
 
-  const { margin, width, height, svg } = setupChart(container);
-  const { x, y, colorScale, xLabels, yLabels } = createScales(dataset, xDimension, yDimension, measure, width, height);
+  // Process data for visualization
+  const points = processLocationData(dataset, geoDim, measure);
+  if (points.length === 0) {
+    container.innerHTML = "<p>No valid location data available to display.</p>";
+    return;
+  }
 
-  // Create tooltip using shared style
-  const tooltip = chartStyles.createTooltip("body");
-
-  // Draw cells
-  svg
-    .selectAll()
-    .data(dataset)
-    .enter()
-    .append("rect")
-    .attr("x", (d) => x(d[xDimension]))
-    .attr("y", (d) => y(d[yDimension]))
-    .attr("width", x.bandwidth())
-    .attr("height", y.bandwidth())
-    .style("fill", (d) => colorScale(d[measure]))
-    .on("mouseover", function (event, d) {
-      chartStyles.showTooltip(
-        tooltip,
-        event,
-        `
-        <strong>${xDimension}:</strong> ${d[xDimension]}<br>
-        <strong>${yDimension}:</strong> ${d[yDimension]}<br>
-        <strong>${measure}:</strong> ${d[measure].toLocaleString()}
-        `
-      );
-    })
-    .on("mouseout", () => chartStyles.hideTooltip(tooltip));
-
-  // Add axes with consistent styling
-  svg
-    .append("g")
-    .attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(x))
-    .call((g) => chartStyles.applyAxisStyles(g));
-
-  svg
-    .append("g")
-    .call(d3.axisLeft(y))
-    .call((g) => chartStyles.applyAxisStyles(g));
-
-  // Add color scale legend if needed
-  addColorLegend(svg, colorScale, width, margin);
+  // Setup and render map
+  const mapContainer = createMapContainer(container, width, height);
+  const map = setupLeafletMap(mapContainer);
+  addHeatLayer(map, points);
+  fitMapToPoints(map, points);
 }
 
-function addColorLegend(svg, colorScale, width, margin) {
-  const legendWidth = 20;
-  const legendHeight = 200;
+/**
+ * Process raw data into point data with coordinates and values
+ */
+function processLocationData(dataset, geoDim, measure) {
+  const points = [];
 
-  // Create gradient for the legend
-  const defs = svg.append("defs");
-  const linearGradient = defs
-    .append("linearGradient")
-    .attr("id", "color-legend-gradient")
-    .attr("x1", "0%")
-    .attr("y1", "0%")
-    .attr("x2", "0%")
-    .attr("y2", "100%");
+  dataset.forEach((record) => {
+    const locationStr = record[geoDim];
 
-  // Add color stops
-  const domain = colorScale.domain();
-  const min = domain[0];
-  const max = domain[domain.length - 1];
-  const range = colorScale.range();
+    if (!locationStr || locationStr === "Unspecified") return;
 
-  range.forEach((color, i) => {
-    const offset = `${(i * 100) / (range.length - 1)}%`;
-    linearGradient.append("stop").attr("offset", offset).attr("stop-color", color);
+    // Extract coordinates from string format: "(lat, lng)"
+    const coordMatch = locationStr.match(/\(([^,]+),\s*([^)]+)\)/);
+    if (!coordMatch || coordMatch.length !== 3) return;
+
+    const lat = parseFloat(coordMatch[1]);
+    const lng = parseFloat(coordMatch[2]);
+
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    points.push({
+      lat,
+      lng,
+      value: +record[measure] || 0,
+    });
   });
 
-  // Create the legend rectangle
-  const legend = svg.append("g").attr("transform", `translate(${width - margin.right + 30}, ${margin.top})`);
-
-  legend
-    .append("rect")
-    .attr("width", legendWidth)
-    .attr("height", legendHeight)
-    .style("fill", "url(#color-legend-gradient)");
-
-  // Add scale ticks
-  const scale = d3.scaleLinear().domain([max, min]).range([0, legendHeight]);
-
-  const axis = d3.axisRight(scale).ticks(5);
-
-  legend
-    .append("g")
-    .attr("transform", `translate(${legendWidth}, 0)`)
-    .call(axis)
-    .call((g) => chartStyles.applyAxisStyles(g));
-
-  // Add legend title
-  legend
-    .append("text")
-    .attr("x", 0)
-    .attr("y", -10)
-    .style("font-family", chartStyles.fontFamily)
-    .style("font-size", chartStyles.fontSize.axisLabel)
-    .text("Value");
+  return points;
 }
 
+/**
+ * Create a container element for the Leaflet map
+ */
+function createMapContainer(container, width, height) {
+  const mapContainer = document.createElement("div");
+  mapContainer.id = "leaflet-map";
+  mapContainer.style.width = `${width}px`;
+  mapContainer.style.height = `${height}px`;
+  container.appendChild(mapContainer);
+
+  return mapContainer;
+}
+
+/**
+ * Initialize the Leaflet map with appropriate base layer
+ */
+function setupLeafletMap(mapContainer) {
+  // Create map centered on NYC
+  const map = L.map(mapContainer.id).setView([40.7128, -74.006], 10);
+
+  // Add a minimal light-colored tile layer
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: "abcd",
+    maxZoom: 20,
+  }).addTo(map);
+
+  return map;
+}
+
+/**
+ * Add heatmap layer to the map using point data
+ */
+function addHeatLayer(map, points) {
+  // Convert points to heatmap format [lat, lng, intensity]
+  const heatData = points.map((point) => [point.lat, point.lng, point.value]);
+
+  // Create and add heatmap layer with custom settings
+  L.heatLayer(heatData, {
+    radius: 8, // Size of each point's influence
+    blur: 10, // Smoothing effect
+    maxZoom: 18, // Maximum zoom level for heatmap
+    gradient: {
+      0: "yellow",
+      0.5: "lime",
+      0.75: "yellow",
+      1.0: "red",
+    },
+  }).addTo(map);
+}
+
+/**
+ * Adjust map viewport to fit all data points
+ */
+function fitMapToPoints(map, points) {
+  if (points.length === 0) return;
+
+  // Create bounds that contain all points
+  const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]));
+
+  // Fit map to these bounds with some padding
+  map.fitBounds(bounds, {
+    padding: [50, 50],
+    maxZoom: 15, // Avoid zooming in too far
+  });
+}
+
+// Export functions with consistent naming
 export default renderHeatMap;
 export { renderHeatMap as renderHeatmap };
