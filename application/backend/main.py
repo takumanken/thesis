@@ -98,76 +98,68 @@ class AggregationDefinition(BaseModel):
     geoDimension: List[str] = []
     categoricalDimension: List[str] = []
 
-# Classify dimensions into time, geo, and categorical
-def classify_dimensions(dimensions: List[str]):
-    logger.debug(f"Classifying dimensions: {dimensions}")
-    time_keys = {"created_week", "closed_week", "created_date", "created_month", "created_year", "closed_date", "closed_month", "closed_year"}
-    geo_keys = {"borough", "county", "location", "incident_zip", "neighborhood_name"}
-    time_dim, geo_dim, cat_dim = [], [], []
-    for d in dimensions:
-        if d in time_keys:
-            time_dim.append(d)
-        elif d in geo_keys:
-            geo_dim.append(d)
-        else:
-            cat_dim.append(d)
-    logger.debug(f"Classification result - Time: {time_dim}, Geo: {geo_dim}, Categorical: {cat_dim}")
-    return time_dim, geo_dim, cat_dim
+# Updated classify_dimensions function
+def classify_dimensions(dimensions: list[str]) -> tuple[list[str], list[str], list[str]]:
+    """
+    Classify dimensions into time, geo, and categorical dimensions.
+    """
+    time_dimensions = [
+        "created_week", "closed_week", "created_date", "closed_date",
+        "created_month", "closed_month", "created_year", "closed_year",
+        "created_year_datepart", "created_month_datepart", "created_day_datepart",
+        "created_hour_datepart", "created_weekday_datepart",
+        "closed_year_datepart", "closed_month_datepart", "closed_day_datepart",
+        "closed_hour_datepart"
+    ]
+    geo_dimensions = ["borough", "county", "location", "incident_zip", "neighborhood_name"]
+    categorical_dimensions = [
+        "unique_key", "status", "agency_category", "agency_name",
+        "complaint_type_large", "complaint_type_middle", "complaint_type_detailed",
+        "is_noise_complaint", "descriptor", "street_name", "street_number", "community_board"
+    ]
 
-# Updated chart options function with measure additivity check
+    time_dim = [dim for dim in dimensions if dim in time_dimensions]
+    geo_dim = [dim for dim in dimensions if dim in geo_dimensions]
+    categorical_dim = [dim for dim in dimensions if dim in categorical_dimensions]
+
+    return time_dim, geo_dim, categorical_dim
+
+# Updated chart options function with time dimension logic
 def get_chart_options(agg_def: AggregationDefinition) -> tuple[str, list[str]]:
     time_dim, geo_dim, _ = classify_dimensions(agg_def.dimensions)
     ideal = "table"
     available = ["table"]
-    
+
     if len(agg_def.measures) == 1:
-        # Check if the measure is additive based on its alias
         measure_alias = agg_def.measures[0].get("alias", "")
         is_additive_measure = measure_alias != "avg_days_to_resolve"
-        
+
         logger.debug(f"Measure '{measure_alias}' is {'additive' if is_additive_measure else 'non-additive'}")
-        
-        # Base chart availability on dimensions
+
         if len(agg_def.dimensions) == 1:
             available.append("single_bar_chart")
-            
-            # Only allow treemap for additive measures
-            if is_additive_measure:
+            if is_additive_measure and not time_dim:
                 available.append("treemap")
-                
             ideal = "single_bar_chart"
-            logger.debug("Single dimension detected: adding single_bar_chart" + 
-                        (" and treemap" if is_additive_measure else ""))
-                        
+
         if len(agg_def.dimensions) == 2:
             available.append("grouped_bar_chart")
-            
-            # Only allow stacked charts and treemap for additive measures
             if is_additive_measure:
                 available.append("stacked_bar_chart")
                 available.append("stacked_bar_chart_100")
-                available.append("treemap")
-                ideal = "stacked_bar_chart"
-            else:
-                ideal = "grouped_bar_chart"
-                
-            logger.debug(f"Two dimensions detected with {'additive' if is_additive_measure else 'non-additive'} measure")
-            
-        if time_dim and len(agg_def.dimensions) <= 2:
+                if not time_dim:
+                    available.append("treemap")
+            ideal = "stacked_bar_chart" if is_additive_measure else "grouped_bar_chart"
+
+        if time_dim:
             available.append("line_chart")
             ideal = "line_chart"
             logger.debug("Time dimension detected: adding line_chart")
-            
+
         if geo_dim and len(agg_def.dimensions) == 1:
             available.append("choropleth_map")
             ideal = "choropleth_map"
-            logger.debug("Geo dimension detected: adding choropleth_map")
-            
-        if geo_dim == ["location"] and len(agg_def.dimensions) == 1 and is_additive_measure:
-            available.append("heat_map")
-            ideal = "heat_map"
-            logger.debug("Location dimension detected with additive measure: adding heat_map")
-    
+
     logger.info(f"Chart options - Ideal: {ideal}, Available: {available}")
     return ideal, available
 
