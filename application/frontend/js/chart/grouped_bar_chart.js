@@ -210,36 +210,34 @@ function createScales(sortedGroups, sortedSubGroups, dataset, measure, config, g
   return { outerY, innerY, x, groupPositions, groupPositionsArray };
 }
 
+// In setupChartStructure function of grouped_bar_chart.js
 function setupChartStructure(container, width, totalHeight, margin, fullChartHeight) {
-  // Adjust width if container is .chart-area
-  const isChartArea = container.className === "chart-area";
-  const adjustedWidth = width;
-
-  // Create the main container that holds both fixed x-axis and a scrollable area
+  // Create the main container
   const chartContainer = document.createElement("div");
   chartContainer.style.position = "relative";
-  chartContainer.style.width = "100%"; // Use 100% of parent (which is already sized)
+  chartContainer.style.width = "100%";
   chartContainer.style.height = totalHeight + "px";
   container.appendChild(chartContainer);
 
-  // Create fixed container for the x-axis
+  // Fixed header for x-axis
   const xAxisDiv = document.createElement("div");
   xAxisDiv.style.position = "absolute";
-  xAxisDiv.style.top = "0px";
-  xAxisDiv.style.left = "0px";
+  xAxisDiv.style.top = "0";
   xAxisDiv.style.width = "100%";
   xAxisDiv.style.height = margin.top + "px";
+  xAxisDiv.style.zIndex = "2";
   chartContainer.appendChild(xAxisDiv);
 
-  // Create scrollable container for the bars and y-axis
+  // Scrollable content area - ADJUST THIS LINE:
   const scrollDiv = document.createElement("div");
   scrollDiv.style.position = "absolute";
-  scrollDiv.style.top = margin.top + "px";
-  scrollDiv.style.left = "0px";
+  scrollDiv.style.top = margin.top - 1 + "px"; // Move up by 1px to remove gap
   scrollDiv.style.width = "100%";
   scrollDiv.style.height = totalHeight - margin.top + "px";
   scrollDiv.style.overflowY = "auto";
   chartContainer.appendChild(scrollDiv);
+
+  // Rest of the function remains the same...
 
   // Append an SVG to the scrollable container
   const svg = d3

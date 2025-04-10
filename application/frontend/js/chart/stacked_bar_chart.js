@@ -120,15 +120,16 @@ function setupChartElements(container, sortedGroups) {
   xAxisDiv.style.position = "absolute";
   xAxisDiv.style.top = "0";
   xAxisDiv.style.width = "100%";
-  xAxisDiv.style.height = margin.top + 30 + "px"; // Increase height to accommodate label
+  xAxisDiv.style.height = margin.top + "px";
+  xAxisDiv.style.zIndex = "2"; // Ensure it's above the scroll area
   chartContainer.appendChild(xAxisDiv);
 
-  // Scrollable chart area
+  // Scrollable chart area - ADJUST THIS LINE:
   const scrollDiv = document.createElement("div");
   scrollDiv.style.position = "absolute";
-  scrollDiv.style.top = margin.top + 30 + "px"; // Match the new xAxisDiv height
+  scrollDiv.style.top = margin.top - 1 + "px"; // Move up by 1px to remove gap
   scrollDiv.style.width = "100%";
-  scrollDiv.style.height = height - margin.top - 30 + "px"; // Adjust this too
+  scrollDiv.style.height = height - margin.top + "px";
   scrollDiv.style.overflowY = "auto";
   chartContainer.appendChild(scrollDiv);
 
