@@ -1,5 +1,6 @@
 import { state } from "../state.js";
 import { CHART_DIMENSIONS } from "../constants.js";
+import { createLegend } from "./utils/legendUtil.js";
 
 function renderLineChart(container) {
   // Clear container and extract data
@@ -13,7 +14,17 @@ function renderLineChart(container) {
   const data = prepareData(dataset, timeDimension);
 
   // Set up chart
-  const { margin, width, height, svg } = setupChart(container);
+  let chartArea = container;
+
+  // If we have grouping, create legend first
+  if (groupDimension) {
+    const groupedData = d3.group(data, (d) => d[groupDimension]);
+    const color = d3.scaleOrdinal(d3.schemeCategory10).domain(Array.from(groupedData.keys()));
+    const legendResult = createLegend(container, Array.from(groupedData.keys()), color);
+    chartArea = legendResult.chartArea;
+  }
+
+  const { margin, width, height, svg } = setupChart(chartArea);
 
   // Create scales
   const { x, y } = createScales(data, measure, width, height);
@@ -23,7 +34,8 @@ function renderLineChart(container) {
 
   // Draw lines based on grouping
   if (groupDimension) {
-    drawGroupedLines(svg, data, groupDimension, lineGenerator, width);
+    // We've already created the legend, just draw the lines
+    drawGroupedLinesNoLegend(svg, data, groupDimension, lineGenerator);
   } else {
     drawSingleLine(svg, data, lineGenerator);
   }
@@ -58,13 +70,17 @@ function prepareData(dataset, timeDimension) {
 // Set up chart container and SVG
 function setupChart(container) {
   const margin = { top: 20, right: 20, bottom: 70, left: 70 };
-  const width = CHART_DIMENSIONS.width - margin.left - margin.right;
+
+  // Since container might be the original container or the chartArea,
+  // adjust the width for the chartArea case
+  const isChartArea = container.className === "chart-area";
+  const width = (isChartArea ? CHART_DIMENSIONS.width * 0.8 : CHART_DIMENSIONS.width) - margin.left - margin.right;
   const height = CHART_DIMENSIONS.height - margin.top - margin.bottom;
 
   const svg = d3
     .select(container)
     .append("svg")
-    .attr("width", width + margin.left + margin.right)
+    .attr("width", "100%")
     .attr("height", height + margin.top + margin.bottom)
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
@@ -98,8 +114,8 @@ function createLineGenerator(x, y, measure) {
     .y((d) => y(d[measure]));
 }
 
-// Draw lines for grouped data
-function drawGroupedLines(svg, data, groupDimension, lineGenerator, width) {
+// Draw lines for grouped data without legend creation
+function drawGroupedLinesNoLegend(svg, data, groupDimension, lineGenerator) {
   // Group data according to the additional dimension
   const groupedData = d3.group(data, (d) => d[groupDimension]);
   const color = d3.scaleOrdinal(d3.schemeCategory10).domain(Array.from(groupedData.keys()));
@@ -115,35 +131,6 @@ function drawGroupedLines(svg, data, groupDimension, lineGenerator, width) {
       .attr("stroke-width", 2)
       .attr("d", lineGenerator);
   });
-
-  // Create legend for groups
-  createLegend(svg, groupedData, color, width);
-}
-
-// Create legend for the grouped lines
-function createLegend(svg, groupedData, color, width) {
-  const legend = svg
-    .selectAll(".legend")
-    .data(Array.from(groupedData.keys()))
-    .enter()
-    .append("g")
-    .attr("class", "legend")
-    .attr("transform", (d, i) => `translate(0,${i * 20})`);
-
-  legend
-    .append("rect")
-    .attr("x", width - 18)
-    .attr("width", 18)
-    .attr("height", 18)
-    .style("fill", color);
-
-  legend
-    .append("text")
-    .attr("x", width - 24)
-    .attr("y", 9)
-    .attr("dy", ".35em")
-    .style("text-anchor", "end")
-    .text((d) => d);
 }
 
 // Draw a single line for non-grouped data

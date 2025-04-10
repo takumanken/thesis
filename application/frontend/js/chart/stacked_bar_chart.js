@@ -1,5 +1,6 @@
 import { state } from "../state.js";
 import { CHART_DIMENSIONS } from "../constants.js";
+import { createLegend } from "./utils/legendUtil.js";
 
 function renderStackedBarChart(container, isPercentage = false) {
   // Setup UI and extract data
@@ -8,12 +9,20 @@ function renderStackedBarChart(container, isPercentage = false) {
   // Prepare data for visualization
   const { groupKey, stackKey, measure, stackData, sortedGroups, sortedStacks } = prepareData(container, isPercentage);
 
+  // Create color scale
+  const color = d3.scaleOrdinal().domain(sortedStacks).range(d3.schemeCategory10);
+
+  // Create legend and get chart area
+  const { chartArea } = createLegend(container, sortedStacks, color);
+
   // Create chart container and elements
-  const { svg, xAxisSvg, config } = setupChartElements(container, sortedGroups);
+  const { svg, xAxisSvg, config } = setupChartElements(chartArea, sortedGroups);
 
   // Create scales and draw chart
   const { x, y } = createScales(sortedGroups, stackData, config, isPercentage);
-  drawChart(svg, xAxisSvg, x, y, stackData, sortedStacks, config, groupKey, stackKey, measure, isPercentage);
+
+  // Draw chart
+  drawChart(svg, xAxisSvg, x, y, stackData, sortedStacks, config, groupKey, stackKey, measure, isPercentage, color);
 }
 
 // Setup UI elements like swap button
@@ -88,9 +97,10 @@ function prepareData(container, isPercentage) {
 
 // Setup chart structure
 function setupChartElements(container, sortedGroups) {
-  const width = CHART_DIMENSIONS.width;
+  // Use 100% of the provided container (which is already sized to 80%)
+  const width = CHART_DIMENSIONS.width * 0.8;
   const height = CHART_DIMENSIONS.height;
-  const margin = { top: 40, right: 150, bottom: 60, left: 200 };
+  const margin = { top: 40, right: 20, bottom: 60, left: 200 };
 
   // Calculate full chart height based on number of groups
   const barHeight = 30;
@@ -100,7 +110,7 @@ function setupChartElements(container, sortedGroups) {
   // Create container elements
   const chartContainer = document.createElement("div");
   chartContainer.style.position = "relative";
-  chartContainer.style.width = width + "px";
+  chartContainer.style.width = "100%";
   chartContainer.style.height = height + "px";
   container.appendChild(chartContainer);
 
@@ -160,14 +170,24 @@ function createScales(sortedGroups, stackData, config, isPercentage) {
 }
 
 // Draw the chart with all elements
-function drawChart(svg, xAxisSvg, x, y, stackData, sortedStacks, config, groupKey, stackKey, measure, isPercentage) {
+function drawChart(
+  svg,
+  xAxisSvg,
+  x,
+  y,
+  stackData,
+  sortedStacks,
+  config,
+  groupKey,
+  stackKey,
+  measure,
+  isPercentage,
+  color
+) {
   // Create stack generator
   const stack = d3.stack().keys(sortedStacks).order(d3.stackOrderNone).offset(d3.stackOffsetNone);
 
   const stackedData = stack(stackData);
-
-  // Color scale
-  const color = d3.scaleOrdinal().domain(sortedStacks).range(d3.schemeCategory10);
 
   // Create tooltip
   const tooltip = d3
@@ -230,30 +250,6 @@ function drawChart(svg, xAxisSvg, x, y, stackData, sortedStacks, config, groupKe
         .style("top", event.pageY - 28 + "px");
     })
     .on("mouseout", () => tooltip.transition().duration(500).style("opacity", 0));
-
-  // Add legend
-  const legend = svg.append("g").attr("transform", `translate(${config.width - config.margin.right + 30}, 20)`);
-
-  sortedStacks.forEach((value, i) => {
-    const entry = legend.append("g").attr("transform", `translate(0, ${i * 20})`);
-
-    entry
-      .append("rect")
-      .attr("width", 15)
-      .attr("height", 15)
-      .attr("fill", color(value))
-      .attr("stroke", "#000")
-      .attr("stroke-width", 0.5);
-
-    entry
-      .append("text")
-      .attr("x", 20)
-      .attr("y", 7.5)
-      .attr("dy", "0.35em")
-      .attr("text-anchor", "start")
-      .style("font-size", "12px")
-      .text(value);
-  });
 }
 
 // Export the main rendering function

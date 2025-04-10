@@ -1,5 +1,6 @@
 import { state } from "../state.js";
 import { CHART_DIMENSIONS } from "../constants.js";
+import { createLegend } from "./utils/legendUtil.js";
 
 function renderGroupedBarChart(container) {
   // Initialize and create UI elements
@@ -13,6 +14,12 @@ function renderGroupedBarChart(container) {
   // Compute sorted groups and subgroups
   const { sortedGroups, sortedSubGroups } = computeSortedGroups(dataset, groupKey, subGroupKey, measure);
 
+  // Create color scale
+  const color = createColorScale(sortedSubGroups);
+
+  // Create legend and get chart area
+  const { chartArea } = createLegend(container, sortedSubGroups, color);
+
   // Setup chart parameters with group and subgroup info
   const config = setupConfig(sortedGroups, sortedSubGroups, dataset, groupKey, subGroupKey);
 
@@ -21,16 +28,15 @@ function renderGroupedBarChart(container) {
 
   // Setup chart structure and get references
   const { chartContainer, xAxisDiv, scrollDiv, svg, xAxisSvg } = setupChartStructure(
-    container,
+    chartArea, // Use chartArea instead of container
     config.width,
     config.totalHeight,
     config.margin,
     config.fullChartHeight
   );
 
-  // Create color scale and tooltip
-  const color = createColorScale(sortedSubGroups);
-  const tooltip = createTooltip(container);
+  // Create tooltip
+  const tooltip = createTooltip(chartArea); // Use chartArea instead of container
 
   // Draw the chart elements with the updated positioning
   drawBars(
@@ -48,10 +54,9 @@ function renderGroupedBarChart(container) {
     scales.groupPositions
   );
 
-  // Add axes and legend with custom positioning
+  // Add axes (but no legend)
   addYAxis(svg, scales.outerY, sortedGroups, scales.groupPositions, config);
   addXAxis(xAxisSvg, scales.x, config.margin);
-  addLegend(svg, sortedSubGroups, color, config.width, config.margin, config.fullChartHeight);
 }
 
 function setupSwapButton(container) {
@@ -60,10 +65,7 @@ function setupSwapButton(container) {
     container.swapDimensions = false;
   }
 
-  // Clear previous content
-  container.innerHTML = "";
-
-  // Create and append a swap button
+  // Create swap button
   const swapBtn = document.createElement("button");
   swapBtn.textContent = "Swap Dimensions";
   swapBtn.style.marginBottom = "10px";
@@ -71,6 +73,9 @@ function setupSwapButton(container) {
     container.swapDimensions = !container.swapDimensions;
     renderGroupedBarChart(container);
   });
+
+  // Clear existing content and add button
+  container.innerHTML = "";
   container.appendChild(swapBtn);
 }
 
@@ -90,8 +95,15 @@ function extractDimensions(container) {
 }
 
 function setupConfig(sortedGroups, sortedSubGroups, dataset, groupKey, subGroupKey) {
-  const width = CHART_DIMENSIONS.width;
+  // Get base dimensions
+  const baseWidth = CHART_DIMENSIONS.width;
   const totalHeight = CHART_DIMENSIONS.height;
+
+  // Adjust width for legend if we're using the chartArea
+  const width = document.querySelector(".chart-area")
+    ? baseWidth * 0.8 // If using legend, use 80% of width
+    : baseWidth; // Otherwise use full width
+
   // Reserve top margin for fixed x-axis
   const margin = { top: 40, right: 20, bottom: 20, left: 200 };
 
@@ -190,10 +202,14 @@ function createScales(sortedGroups, sortedSubGroups, dataset, measure, config, g
 }
 
 function setupChartStructure(container, width, totalHeight, margin, fullChartHeight) {
+  // Adjust width if container is .chart-area
+  const isChartArea = container.className === "chart-area";
+  const adjustedWidth = width;
+
   // Create the main container that holds both fixed x-axis and a scrollable area
   const chartContainer = document.createElement("div");
   chartContainer.style.position = "relative";
-  chartContainer.style.width = width + "px";
+  chartContainer.style.width = "100%"; // Use 100% of parent (which is already sized)
   chartContainer.style.height = totalHeight + "px";
   container.appendChild(chartContainer);
 
@@ -311,22 +327,6 @@ function addXAxis(xAxisSvg, x, margin) {
     .append("g")
     .attr("transform", `translate(0,${margin.top - 1})`)
     .call(d3.axisTop(x));
-}
-
-function addLegend(svg, sortedSubGroups, color, width, margin, fullChartHeight) {
-  const legend = svg
-    .append("g")
-    .attr("class", "legend")
-    .attr("transform", () => {
-      const legendHeight = sortedSubGroups.length * 20; // row height of 20
-      return `translate(${width - margin.right - 120}, ${fullChartHeight - margin.top - legendHeight - 10})`;
-    });
-
-  sortedSubGroups.forEach((d, i) => {
-    const legendRow = legend.append("g").attr("transform", `translate(0, ${i * 20})`);
-    legendRow.append("rect").attr("width", 18).attr("height", 18).attr("fill", color(d));
-    legendRow.append("text").attr("x", -5).attr("y", 9).attr("dy", "0.35em").attr("text-anchor", "end").text(d);
-  });
 }
 
 export default renderGroupedBarChart;
