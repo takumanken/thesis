@@ -1,6 +1,7 @@
 import { state } from "../state.js";
 import { CHART_DIMENSIONS } from "../constants.js";
 import { createLegend } from "./utils/legendUtil.js";
+import { chartStyles } from "./utils/chartStyles.js"; // Import the styles
 
 function renderGroupedBarChart(container) {
   // Initialize and create UI elements
@@ -51,7 +52,7 @@ function renderGroupedBarChart(container) {
     measure,
     color,
     tooltip,
-    scales.groupPositions
+    scales.groupPositionsArray // Use array format here
   );
 
   // Add axes (but no legend)
@@ -169,11 +170,19 @@ function computeSortedGroups(dataset, groupKey, subGroupKey, measure) {
 
 function createScales(sortedGroups, sortedSubGroups, dataset, measure, config, groupKey, subGroupKey) {
   // Calculate positions for each group
-  let currentPosition = 0;
+  let currentPosition = config.margin.top;
   const groupPositions = {};
+  // Create an array format for D3 to use
+  const groupPositionsArray = [];
 
   sortedGroups.forEach((group) => {
     groupPositions[group] = currentPosition;
+    // Add entry to array with proper format
+    groupPositionsArray.push({
+      group: group,
+      position: currentPosition,
+      height: config.groupHeights[group],
+    });
     currentPosition += config.groupHeights[group];
   });
 
@@ -198,7 +207,7 @@ function createScales(sortedGroups, sortedSubGroups, dataset, measure, config, g
     .range([config.margin.left, config.width - config.margin.right])
     .nice();
 
-  return { outerY, innerY, x, groupPositions };
+  return { outerY, innerY, x, groupPositions, groupPositionsArray };
 }
 
 function setupChartStructure(container, width, totalHeight, margin, fullChartHeight) {
@@ -249,19 +258,12 @@ function createColorScale(sortedSubGroups) {
   return d3.scaleOrdinal(d3.schemeCategory10).domain(sortedSubGroups);
 }
 
+// Fix the createTooltip function to use chartStyles:
 function createTooltip(container) {
-  return d3
-    .select(container)
-    .append("div")
-    .attr("class", "tooltip")
-    .style("position", "absolute")
-    .style("pointer-events", "none")
-    .style("background", "#fff")
-    .style("padding", "5px")
-    .style("border", "1px solid #ccc")
-    .style("display", "none");
+  return chartStyles.createTooltip(container);
 }
 
+// Update the drawBars function to handle the array correctly:
 function drawBars(
   svg,
   dataset,
@@ -274,59 +276,73 @@ function drawBars(
   measure,
   color,
   tooltip,
-  groupPositions
+  groupPositionsArray
 ) {
+  // Draw bars with consistent styling
   svg
+    .append("g")
+    .selectAll("g")
+    .data(groupPositionsArray) // Use the array format
+    .join("g")
+    .attr("transform", (d) => `translate(0, ${d.position})`)
     .selectAll("rect")
-    .data(dataset)
+    .data((d) => {
+      const groupData = dataset.filter((item) => item[groupKey] === d.group);
+      return groupData.map((item) => ({
+        [groupKey]: item[groupKey],
+        [subGroupKey]: item[subGroupKey],
+        [measure]: item[measure],
+        yPos: innerY(item[subGroupKey]),
+      }));
+    })
     .join("rect")
+    .attr("y", (d) => d.yPos)
     .attr("x", margin.left)
-    .attr("y", (d) => groupPositions[d[groupKey]] + innerY(d[subGroupKey]))
     .attr("width", (d) => x(d[measure]) - margin.left)
     .attr("height", innerY.bandwidth())
     .attr("fill", (d) => color(d[subGroupKey]))
     .on("mouseover", function (event, d) {
-      tooltip
-        .style("display", "block")
-        .html(`${groupKey}: ${d[groupKey]}<br>${subGroupKey}: ${d[subGroupKey]}<br>${measure}: ${d[measure]}`)
-        .style("left", event.pageX + 10 + "px")
-        .style("top", event.pageY + 10 + "px");
+      chartStyles.showTooltip(
+        tooltip,
+        event,
+        `
+        <strong>${groupKey}:</strong> ${d[groupKey]}<br>
+        <strong>${subGroupKey}:</strong> ${d[subGroupKey]}<br>
+        <strong>${measure}:</strong> ${d[measure].toLocaleString()}
+      `
+      );
     })
-    .on("mousemove", function (event) {
-      tooltip.style("left", event.pageX + 10 + "px").style("top", event.pageY + 10 + "px");
-    })
-    .on("mouseout", function () {
-      tooltip.style("display", "none");
-    });
+    .on("mouseout", () => chartStyles.hideTooltip(tooltip));
 }
 
 function addYAxis(svg, outerY, sortedGroups, groupPositions, config) {
-  // Create a custom axis that places labels at the center of each group
-  const yAxis = (g) => {
-    g.attr("transform", `translate(${config.margin.left},0)`)
-      .call((g) => {
-        sortedGroups.forEach((group) => {
-          const yPos = groupPositions[group] + config.groupHeights[group] / 2;
-          g.append("text")
-            .attr("x", -10)
-            .attr("y", yPos)
-            .attr("text-anchor", "end")
-            .attr("dominant-baseline", "middle")
-            .text(group);
-        });
-      })
-      .call((g) => g.select(".domain").remove())
-      .call((g) => g.selectAll(".tick line").remove());
-  };
+  // Add y-axis with consistent styling
+  const yAxis = svg.append("g").attr("class", "y-axis").attr("transform", `translate(${config.margin.left}, 0)`);
 
-  svg.append("g").call(yAxis);
+  // Add group labels
+  yAxis
+    .selectAll(".group-label")
+    .data(sortedGroups)
+    .join("text")
+    .attr("class", "group-label")
+    .attr("x", -10)
+    .attr("y", (d) => groupPositions[d] + config.groupHeights[d] / 2)
+    .attr("text-anchor", "end")
+    .attr("dominant-baseline", "middle")
+    .text((d) => d)
+    .style("font-family", chartStyles.fontFamily)
+    .style("font-size", chartStyles.fontSize.axisLabel);
+
+  return yAxis;
 }
 
 function addXAxis(xAxisSvg, x, margin) {
+  // Create x-axis with consistent styling
   xAxisSvg
     .append("g")
     .attr("transform", `translate(0,${margin.top - 1})`)
-    .call(d3.axisTop(x));
+    .call(d3.axisTop(x))
+    .call((g) => chartStyles.applyAxisStyles(g)); // Apply shared axis styling
 }
 
 export default renderGroupedBarChart;

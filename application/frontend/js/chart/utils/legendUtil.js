@@ -1,3 +1,5 @@
+import { chartStyles } from "./chartStyles.js";
+
 /**
  * Creates a legend beside the chart in a fixed layout
  * @param {HTMLElement} container - The parent container
@@ -44,7 +46,9 @@ export function createLegend(container, items, colorScale) {
 
     // Label
     const label = document.createElement("span");
-    label.style.fontSize = "12px";
+    label.style.fontSize = chartStyles.fontSize.legend;
+    label.style.fontFamily = chartStyles.fontFamily;
+    label.style.color = "#333";
     label.textContent = item;
 
     itemDiv.appendChild(colorBox);

@@ -1,6 +1,7 @@
 import { state } from "../state.js";
 import { CHART_DIMENSIONS } from "../constants.js";
 import { createLegend } from "./utils/legendUtil.js";
+import { chartStyles } from "./utils/chartStyles.js"; // Import the styles
 
 function renderStackedBarChart(container, isPercentage = false) {
   // Setup UI and extract data
@@ -119,22 +120,26 @@ function setupChartElements(container, sortedGroups) {
   xAxisDiv.style.position = "absolute";
   xAxisDiv.style.top = "0";
   xAxisDiv.style.width = "100%";
-  xAxisDiv.style.height = margin.top + "px";
+  xAxisDiv.style.height = margin.top + 30 + "px"; // Increase height to accommodate label
   chartContainer.appendChild(xAxisDiv);
 
   // Scrollable chart area
   const scrollDiv = document.createElement("div");
   scrollDiv.style.position = "absolute";
-  scrollDiv.style.top = margin.top + "px";
+  scrollDiv.style.top = margin.top + 30 + "px"; // Match the new xAxisDiv height
   scrollDiv.style.width = "100%";
-  scrollDiv.style.height = height - margin.top + "px";
+  scrollDiv.style.height = height - margin.top - 30 + "px"; // Adjust this too
   scrollDiv.style.overflowY = "auto";
   chartContainer.appendChild(scrollDiv);
 
   // Create SVGs
   const svg = d3.select(scrollDiv).append("svg").attr("width", width).attr("height", fullChartHeight);
 
-  const xAxisSvg = d3.select(xAxisDiv).append("svg").attr("width", width).attr("height", margin.top);
+  const xAxisSvg = d3
+    .select(xAxisDiv)
+    .append("svg")
+    .attr("width", width)
+    .attr("height", margin.top + 30);
 
   const config = { width, height, margin, fullChartHeight };
   return { svg, xAxisSvg, config };
@@ -186,36 +191,33 @@ function drawChart(
 ) {
   // Create stack generator
   const stack = d3.stack().keys(sortedStacks).order(d3.stackOrderNone).offset(d3.stackOffsetNone);
-
   const stackedData = stack(stackData);
 
-  // Create tooltip
-  const tooltip = d3
-    .select("body")
-    .append("div")
-    .attr("class", "d3-tooltip")
-    .style("position", "absolute")
-    .style("background-color", "white")
-    .style("border", "1px solid #ddd")
-    .style("border-radius", "5px")
-    .style("padding", "10px")
-    .style("opacity", 0);
+  // Create tooltip using the shared styles
+  const tooltip = chartStyles.createTooltip("body");
 
-  // Draw axes
-  svg.append("g").attr("class", "y-axis").attr("transform", `translate(${config.margin.left},0)`).call(d3.axisLeft(y));
+  // Draw y-axis with consistent styling
+  svg
+    .append("g")
+    .attr("class", "y-axis")
+    .attr("transform", `translate(${config.margin.left},0)`)
+    .call(d3.axisLeft(y))
+    .call((g) => chartStyles.applyAxisStyles(g));
 
+  // Draw x-axis with consistent styling (matching grouped bar chart)
   xAxisSvg
     .append("g")
     .attr("class", "x-axis")
-    .attr("transform", `translate(0,${config.margin.top})`)
+    .attr("transform", `translate(0,${config.margin.top - 1})`) // Match grouped bar chart's positioning
     .call(
       d3
-        .axisBottom(x)
+        .axisTop(x) // Use axisTop like grouped bar chart instead of axisBottom
         .ticks(5)
         .tickFormat((d) => (isPercentage ? d + "%" : d))
-    );
+    )
+    .call((g) => chartStyles.applyAxisStyles(g));
 
-  // Draw bars
+  // Draw bars with consistent tooltip behavior
   svg
     .append("g")
     .selectAll("g")
@@ -236,20 +238,19 @@ function drawChart(
       const total = d.data._total || d3.sum(sortedStacks, (s) => d.data[s] || 0);
       const pct = isPercentage ? d.data[stackValue] : (value / total) * 100;
 
-      tooltip.transition().duration(200).style("opacity", 0.9);
-      tooltip
-        .html(
-          `
+      // Use the shared tooltip behavior
+      chartStyles.showTooltip(
+        tooltip,
+        event,
+        `
         <strong>${groupKey}:</strong> ${groupValue}<br>
         <strong>${stackKey}:</strong> ${stackValue}<br>
         <strong>${measure}:</strong> ${value.toLocaleString()}<br>
         <strong>Percentage:</strong> ${pct.toFixed(1)}%
       `
-        )
-        .style("left", event.pageX + 10 + "px")
-        .style("top", event.pageY - 28 + "px");
+      );
     })
-    .on("mouseout", () => tooltip.transition().duration(500).style("opacity", 0));
+    .on("mouseout", () => chartStyles.hideTooltip(tooltip));
 }
 
 // Export the main rendering function
