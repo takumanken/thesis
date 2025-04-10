@@ -4,22 +4,29 @@ import { createLegend } from "./utils/legendUtil.js";
 import { chartStyles } from "./utils/chartStyles.js"; // Import the styles
 
 function renderGroupedBarChart(container) {
-  // Initialize and create UI elements
-  setupSwapButton(container);
+  // Clear main container
+  container.innerHTML = "";
+
+  // Create a dedicated controls container that won't be cleared
+  const controlsDiv = document.createElement("div");
+  controlsDiv.className = "chart-controls";
+  container.appendChild(controlsDiv);
+
+  // Create flexible container for legend and chart
+  const flexContainer = document.createElement("div");
+  flexContainer.className = "chart-flex-container";
+  container.appendChild(flexContainer);
+
+  // Add swap button to controls div (won't be cleared later)
+  addSwapButton(controlsDiv, container);
 
   const dataset = state.dataset;
-
-  // Extract and process dimensions
   const { groupKey, subGroupKey, measure } = extractDimensions(container);
-
-  // Compute sorted groups and subgroups
   const { sortedGroups, sortedSubGroups } = computeSortedGroups(dataset, groupKey, subGroupKey, measure);
-
-  // Create color scale
   const color = createColorScale(sortedSubGroups);
 
   // Create legend and get chart area
-  const { chartArea } = createLegend(container, sortedSubGroups, color);
+  const { chartArea } = createLegend(flexContainer, sortedSubGroups, color);
 
   // Setup chart parameters with group and subgroup info
   const config = setupConfig(sortedGroups, sortedSubGroups, dataset, groupKey, subGroupKey);
@@ -58,6 +65,23 @@ function renderGroupedBarChart(container) {
   // Add axes (but no legend)
   addYAxis(svg, scales.outerY, sortedGroups, scales.groupPositions, config);
   addXAxis(xAxisSvg, scales.x, config.margin);
+}
+
+// Simple function that ONLY adds the button without clearing
+function addSwapButton(controlsDiv, parentContainer) {
+  // Initialize swap flag on the main container
+  parentContainer.swapDimensions = parentContainer.swapDimensions || false;
+
+  const swapBtn = document.createElement("button");
+  swapBtn.textContent = "Swap Dimensions";
+  swapBtn.className = "chart-button";
+
+  swapBtn.addEventListener("click", () => {
+    parentContainer.swapDimensions = !parentContainer.swapDimensions;
+    renderGroupedBarChart(parentContainer);
+  });
+
+  controlsDiv.appendChild(swapBtn);
 }
 
 function setupSwapButton(container) {

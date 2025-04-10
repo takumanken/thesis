@@ -4,8 +4,21 @@ import { createLegend } from "./utils/legendUtil.js";
 import { chartStyles } from "./utils/chartStyles.js"; // Import the styles
 
 function renderStackedBarChart(container, isPercentage = false) {
-  // Setup UI and extract data
-  setupUI(container);
+  // Clear main container
+  container.innerHTML = "";
+
+  // Create a dedicated controls container that won't be cleared
+  const controlsDiv = document.createElement("div");
+  controlsDiv.className = "chart-controls";
+  container.appendChild(controlsDiv);
+
+  // Create flexible container for legend and chart
+  const flexContainer = document.createElement("div");
+  flexContainer.className = "chart-flex-container";
+  container.appendChild(flexContainer);
+
+  // Add swap button to controls div (won't be cleared later)
+  addSwapButton(controlsDiv, container, isPercentage);
 
   // Prepare data for visualization
   const { groupKey, stackKey, measure, stackData, sortedGroups, sortedStacks } = prepareData(container, isPercentage);
@@ -14,7 +27,7 @@ function renderStackedBarChart(container, isPercentage = false) {
   const color = d3.scaleOrdinal().domain(sortedStacks).range(d3.schemeCategory10);
 
   // Create legend and get chart area
-  const { chartArea } = createLegend(container, sortedStacks, color);
+  const { chartArea } = createLegend(flexContainer, sortedStacks, color);
 
   // Create chart container and elements
   const { svg, xAxisSvg, config } = setupChartElements(chartArea, sortedGroups);
@@ -26,24 +39,24 @@ function renderStackedBarChart(container, isPercentage = false) {
   drawChart(svg, xAxisSvg, x, y, stackData, sortedStacks, config, groupKey, stackKey, measure, isPercentage, color);
 }
 
-// Setup UI elements like swap button
-function setupUI(container) {
-  // Initialize swap flag
-  container.swapDimensions = container.swapDimensions || false;
-  container.innerHTML = "";
+// Simple function that ONLY adds the button without clearing
+function addSwapButton(controlsDiv, parentContainer, isPercentage) {
+  // Initialize swap flag on the main container
+  parentContainer.swapDimensions = parentContainer.swapDimensions || false;
 
-  // Create swap button
   const swapBtn = document.createElement("button");
   swapBtn.textContent = "Swap Dimensions";
-  swapBtn.style.marginBottom = "10px";
+  swapBtn.className = "chart-button";
+
   swapBtn.addEventListener("click", () => {
-    container.swapDimensions = !container.swapDimensions;
-    renderStackedBarChart(container, state.chartType === "stacked_bar_chart_100");
+    parentContainer.swapDimensions = !parentContainer.swapDimensions;
+    renderStackedBarChart(parentContainer, isPercentage);
   });
-  container.appendChild(swapBtn);
+
+  controlsDiv.appendChild(swapBtn);
 }
 
-// Process data for visualization
+// Process data for visualization (keep this function largely the same)
 function prepareData(container, isPercentage) {
   const dataset = state.dataset;
 

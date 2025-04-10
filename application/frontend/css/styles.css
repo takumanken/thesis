@@ -4,3 +4,20 @@
     font-family: 'Arial', sans-serif;
     font-size: 12px;
 }
+
+.chart-controls {
+  margin-bottom: 10px;
+}
+
+.chart-button {
+  padding: 6px 12px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.chart-flex-container {
+  display: flex;
+  width: 100%;
+}
