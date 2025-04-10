@@ -84,18 +84,19 @@ A. Agency Hierarchy
 B. Complaint Type Hierarchy
 -------------------------
 1. Complaint Type Large (Primary/Default)
-   - Use this for general complaint categorization
-   - Contains broad categories like: {complaint_type_large_values}
-   - ALWAYS default to this unless more detail is explicitly requested
+   - Use this for general complaint categorization.
+   - Contains broad categories like: {complaint_type_large_values}.
+   - ALWAYS default to this unless more detail is explicitly requested or specific complaints are mentioned.
 
-2. Complaint Type Middle (Secondary/Optional)
-   - Use ONLY when higher resolution is explicitly requested
-   - Contains specific complaints like: {complaint_type_middle_values}
-   - Do not use unless the query specifically asks for detailed complaint types
+2. Complaint Type Middle (Secondary/Specific)
+   - Use this when the user wants to filter out specific complaints (e.g., "rodents", "air quality").
+   - Contains specific complaints like: {complaint_type_middle_values}.
+   - Actively prioritize this over `complaint_type_large` when filtering for specific complaint types.
+   - Example: If the user asks for "rodent complaints," use `complaint_type_middle = 'Rodent'` instead of `complaint_type_large`.
 
 3. Complaint Type Detailed (Tertiary/Rare)
-   - Use ONLY when the most detailed breakdown is explicitly requested
-   - Only use if user specifically asks for "most detailed" or "granular" complaint information
+   - Use ONLY when the most detailed breakdown is explicitly requested.
+   - Only use if the user specifically asks for "most detailed" or "granular" complaint information.
 
 C. Geographic Guidelines
 ----------------------
