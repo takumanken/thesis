@@ -3,6 +3,7 @@ import renderTable from "./chart/table.js";
 import renderBarChart from "./chart/single_bar_chart.js";
 import renderLineChart from "./chart/line_chart.js";
 import renderGroupedBarChart from "./chart/grouped_bar_chart.js";
+import renderStackedBarChart from "./chart/stacked_bar_chart.js"; // Add this import
 import renderChoroplethMap from "./chart/choropleth_map.js";
 import renderPointMap from "./chart/heat_map.js";
 import renderTextResponse from "./chart/text_response.js";
@@ -45,6 +46,8 @@ function visualizeData() {
     table: renderTable,
     single_bar_chart: renderBarChart,
     grouped_bar_chart: renderGroupedBarChart,
+    stacked_bar_chart: renderStackedBarChart,
+    stacked_bar_chart_100: renderStackedBarChart,
     line_chart: renderLineChart,
     choropleth_map: renderChoroplethMap,
     heat_map: renderPointMap,

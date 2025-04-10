@@ -127,8 +127,10 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[str, list[str]]:
             logger.debug("Single dimension detected: adding single_bar_chart")
         if len(agg_def.dimensions) == 2:
             available.append("grouped_bar_chart")
-            ideal = "grouped_bar_chart"
-            logger.debug("Two dimensions detected: adding grouped_bar_chart")
+            available.append("stacked_bar_chart")
+            available.append("stacked_bar_chart_100")
+            ideal = "stacked_bar_chart"
+            logger.debug("Two dimensions detected: adding grouped_bar_chart and stacked_bar_chart options")
         if time_dim and len(agg_def.dimensions) <= 2:
             available.append("line_chart")
             ideal = "line_chart"
