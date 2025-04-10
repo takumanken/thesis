@@ -114,37 +114,59 @@ def classify_dimensions(dimensions: List[str]):
     logger.debug(f"Classification result - Time: {time_dim}, Geo: {geo_dim}, Categorical: {cat_dim}")
     return time_dim, geo_dim, cat_dim
 
-# Determine chart options based on dimensions and measures
+# Updated chart options function with measure additivity check
 def get_chart_options(agg_def: AggregationDefinition) -> tuple[str, list[str]]:
     time_dim, geo_dim, _ = classify_dimensions(agg_def.dimensions)
     ideal = "table"
     available = ["table"]
     
     if len(agg_def.measures) == 1:
+        # Check if the measure is additive based on its alias
+        measure_alias = agg_def.measures[0].get("alias", "")
+        is_additive_measure = measure_alias != "avg_days_to_resolve"
+        
+        logger.debug(f"Measure '{measure_alias}' is {'additive' if is_additive_measure else 'non-additive'}")
+        
+        # Base chart availability on dimensions
         if len(agg_def.dimensions) == 1:
             available.append("single_bar_chart")
-            available.append("treemap")
+            
+            # Only allow treemap for additive measures
+            if is_additive_measure:
+                available.append("treemap")
+                
             ideal = "single_bar_chart"
-            logger.debug("Single dimension detected: adding single_bar_chart and treemap")
+            logger.debug("Single dimension detected: adding single_bar_chart" + 
+                        (" and treemap" if is_additive_measure else ""))
+                        
         if len(agg_def.dimensions) == 2:
             available.append("grouped_bar_chart")
-            available.append("stacked_bar_chart")
-            available.append("stacked_bar_chart_100")
-            available.append("treemap")
-            ideal = "stacked_bar_chart"
-            logger.debug("Two dimensions detected: adding grouped_bar_chart, stacked_bar_chart and treemap options")
+            
+            # Only allow stacked charts and treemap for additive measures
+            if is_additive_measure:
+                available.append("stacked_bar_chart")
+                available.append("stacked_bar_chart_100")
+                available.append("treemap")
+                ideal = "stacked_bar_chart"
+            else:
+                ideal = "grouped_bar_chart"
+                
+            logger.debug(f"Two dimensions detected with {'additive' if is_additive_measure else 'non-additive'} measure")
+            
         if time_dim and len(agg_def.dimensions) <= 2:
             available.append("line_chart")
             ideal = "line_chart"
             logger.debug("Time dimension detected: adding line_chart")
+            
         if geo_dim and len(agg_def.dimensions) == 1:
             available.append("choropleth_map")
             ideal = "choropleth_map"
             logger.debug("Geo dimension detected: adding choropleth_map")
-        if geo_dim == ["location"] and len(agg_def.dimensions) == 1:
+            
+        if geo_dim == ["location"] and len(agg_def.dimensions) == 1 and is_additive_measure:
             available.append("heat_map")
             ideal = "heat_map"
-            logger.debug("Location dimension detected: adding heat_map")
+            logger.debug("Location dimension detected with additive measure: adding heat_map")
     
     logger.info(f"Chart options - Ideal: {ideal}, Available: {available}")
     return ideal, available
