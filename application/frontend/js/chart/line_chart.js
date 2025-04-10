@@ -147,7 +147,19 @@ function renderLineChart(container) {
   if (groupDimension) {
     const uniqueGroups = [...new Set(processedData.map((d) => d[groupDimension]))];
     const colorScale = chartStyles.getColorScale(uniqueGroups);
-    drawGroupedLines(svg, processedData, groupDimension, lineGenerator, tooltip, measure, colorScale);
+
+    // Add timeDimension parameter to the function call
+    drawGroupedLines(
+      svg,
+      processedData,
+      groupDimension,
+      lineGenerator,
+      tooltip,
+      measure,
+      colorScale,
+      timeDimension,
+      isNumericTime
+    );
 
     // Don't recreate the legend if it exists
     if (!container.querySelector(".chart-legend")) {
@@ -228,7 +240,17 @@ function createLineGenerator(x, y, measure) {
 }
 
 // Draw grouped lines with tooltips
-function drawGroupedLines(svg, data, groupDimension, lineGenerator, tooltip, measure, colorScale) {
+function drawGroupedLines(
+  svg,
+  data,
+  groupDimension,
+  lineGenerator,
+  tooltip,
+  measure,
+  colorScale,
+  timeDimension,
+  isNumericTimeCheck
+) {
   const groupedData = d3.group(data, (d) => d[groupDimension]);
 
   groupedData.forEach((values, key) => {
@@ -266,8 +288,8 @@ function drawGroupedLines(svg, data, groupDimension, lineGenerator, tooltip, mea
         tooltip
           .html(
             `${key}<br>
-           ${timeDimension}: ${timeLabel}<br>
-           ${measure}: ${d3.format(".2f")(+d[measure])}`
+             ${timeDimension}: ${timeLabel}<br>
+             ${measure}: ${d3.format(".2f")(+d[measure])}`
           )
           .style("left", event.pageX + 10 + "px")
           .style("top", event.pageY - 28 + "px");
