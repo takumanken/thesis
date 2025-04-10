@@ -1,133 +1,193 @@
 import { state } from "../state.js";
 import { CHART_DIMENSIONS } from "../constants.js";
-import { chartStyles } from "./utils/chartStyles.js"; // Import the styles
 
-async function renderChoroplethMap(container) {
-  container.innerHTML = "";
-
-  const { geoDimension, measure } = extractDimensions();
+function renderMap(container) {
   const dataset = state.dataset;
+  const geoDim = state.aggregationDefinition.geoDimension[0];
+  const measure = state.aggregationDefinition.measures[0].alias;
 
-  // Set up dimensions
-  const width = CHART_DIMENSIONS.width;
-  const height = CHART_DIMENSIONS.height;
-  const margin = { top: 30, right: 80, bottom: 30, left: 30 };
+  // Validate geo dimension
+  if (!isValidGeoDimension(geoDim)) {
+    container.innerHTML = `<p>Geo dimension "${geoDim}" is not supported for map visualization.</p>`;
+    return;
+  }
 
-  // Create SVG
-  const svg = d3.select(container).append("svg").attr("width", width).attr("height", height);
+  // Process data
+  const aggregatedData = aggregateDataByRegion(dataset, geoDim, measure);
 
-  // Create tooltip using shared style
-  const tooltip = chartStyles.createTooltip("body");
+  // Set up chart parameters
+  const { width, height, maxVal, colorScale } = setupChartParameters(aggregatedData);
 
-  // Load GeoJSON data
-  const geoData = await loadGeoData(geoDimension);
+  // Create SVG container
+  const svg = createSvgContainer(container, width, height);
 
-  // Create color scale
-  const colorScale = d3
-    .scaleQuantize()
-    .domain([0, d3.max(dataset, (d) => d[measure])])
-    .range(d3.schemeBlues[9]);
-
-  // Set up projection and path generator
-  const projection = d3
-    .geoMercator()
-    .fitSize([width - margin.left - margin.right, height - margin.top - margin.bottom], geoData);
-
-  const path = d3.geoPath().projection(projection);
-
-  // Create map container
-  const mapG = svg.append("g").attr("transform", `translate(${margin.left}, ${margin.top})`);
-
-  // Create map features
-  mapG
-    .selectAll("path")
-    .data(geoData.features)
-    .join("path")
-    .attr("d", path)
-    .attr("fill", (d) => {
-      const regionData = dataset.find((item) => item[geoDimension] === d.properties.name);
-      return regionData ? colorScale(regionData[measure]) : "#ccc";
-    })
-    .attr("stroke", "#fff")
-    .attr("stroke-width", 0.5)
-    .on("mouseover", function (event, d) {
-      const regionData = dataset.find((item) => item[geoDimension] === d.properties.name);
-      const value = regionData ? regionData[measure] : "No data";
-
-      d3.select(this).attr("stroke", "#000").attr("stroke-width", 1);
-
-      chartStyles.showTooltip(
-        tooltip,
-        event,
-        `
-        <strong>${geoDimension}:</strong> ${d.properties.name}<br>
-        <strong>${measure}:</strong> ${value.toLocaleString()}
-        `
-      );
-    })
-    .on("mouseout", function () {
-      d3.select(this).attr("stroke", "#fff").attr("stroke-width", 0.5);
-
-      chartStyles.hideTooltip(tooltip);
-    });
-
-  // Add color legend
-  addColorLegend(svg, colorScale, width, margin);
+  // Load and render map
+  loadGeoJsonAndRender(svg, container, geoDim, aggregatedData, width, height, maxVal, colorScale, measure);
 }
 
-function addColorLegend(svg, colorScale, width, margin) {
-  // Similar to heatmap legend but using the quantized scale
-  const legendWidth = 20;
-  const legendHeight = 200;
+// Check if the geo dimension is supported
+function isValidGeoDimension(geoDim) {
+  return geoDim === "borough" || geoDim === "neighborhood_name" || geoDim === "county";
+}
 
-  const legend = svg.append("g").attr("transform", `translate(${width - margin.right + 30}, ${margin.top})`);
+// Aggregate data by region
+function aggregateDataByRegion(dataset, geoDim, measure) {
+  const aggregatedData = {};
 
-  // Get scale steps
-  const domain = colorScale.domain();
-  const range = colorScale.range();
-  const step = (domain[1] - domain[0]) / range.length;
+  dataset.forEach((d) => {
+    let region;
+    if (geoDim === "borough" || geoDim === "county") {
+      region = d[geoDim].toUpperCase();
+    } else {
+      region = d[geoDim];
+    }
 
-  // Add color rectangles
-  range.forEach((color, i) => {
-    legend
-      .append("rect")
-      .attr("y", i * (legendHeight / range.length))
-      .attr("width", legendWidth)
-      .attr("height", legendHeight / range.length)
-      .style("fill", color)
-      .style("stroke", "#fff")
-      .style("stroke-width", 0.5);
-
-    // Add value label
-    const value = domain[0] + i * step;
-    legend
-      .append("text")
-      .attr("x", legendWidth + 5)
-      .attr("y", i * (legendHeight / range.length) + legendHeight / range.length / 2)
-      .attr("dy", "0.35em")
-      .style("font-family", chartStyles.fontFamily)
-      .style("font-size", chartStyles.fontSize.tick)
-      .text(Math.round(value).toLocaleString());
+    if (region && region !== "Unspecified" && !(region in aggregatedData)) {
+      aggregatedData[region] = +d[measure];
+    }
   });
 
-  // Add one more value for the top of the scale
-  legend
-    .append("text")
-    .attr("x", legendWidth + 5)
-    .attr("y", legendHeight)
-    .attr("dy", "0.35em")
-    .style("font-family", chartStyles.fontFamily)
-    .style("font-size", chartStyles.fontSize.tick)
-    .text(Math.round(domain[1]).toLocaleString());
-
-  // Add legend title
-  legend
-    .append("text")
-    .attr("x", 0)
-    .attr("y", -10)
-    .style("font-family", chartStyles.fontFamily)
-    .style("font-size", chartStyles.fontSize.axisLabel)
-    .text(state.aggregationDefinition.measures[0].alias);
+  return aggregatedData;
 }
 
-export default renderChoroplethMap;
+// Setup chart parameters
+function setupChartParameters(aggregatedData) {
+  const width = CHART_DIMENSIONS.width || 800;
+  const height = CHART_DIMENSIONS.height || 600;
+  const maxVal = d3.max(Object.values(aggregatedData));
+  const colorScale = d3.scaleSequential(d3.interpolateOrRd).domain([0, maxVal]);
+
+  return { width, height, maxVal, colorScale };
+}
+
+// Create SVG container
+function createSvgContainer(container, width, height) {
+  return d3.select(container).append("svg").attr("width", width).attr("height", height);
+}
+
+// Load GeoJSON and render map
+function loadGeoJsonAndRender(svg, container, geoDim, aggregatedData, width, height, maxVal, colorScale, measure) {
+  d3.json("assets/geojson/2020_nyc_neighborhood_tabulation_areas_nta.geojson").then((geojsonData) => {
+    // Setup projection
+    const { projection, path } = setupProjection(geojsonData, width, height);
+
+    // Process features
+    processFeatures(geojsonData, geoDim, aggregatedData);
+
+    // Render map paths
+    renderPaths(svg, geojsonData, path, colorScale);
+
+    // Add tooltip interaction
+    addTooltipInteraction(svg, container, geoDim, measure);
+
+    // Add legend
+    addLegend(svg, width, height, colorScale, maxVal);
+  });
+}
+
+// Setup map projection
+function setupProjection(geojsonData, width, height) {
+  const projection = d3.geoMercator().fitSize([width, height], geojsonData);
+  const path = d3.geoPath().projection(projection);
+
+  return { projection, path };
+}
+
+// Process GeoJSON features
+function processFeatures(geojsonData, geoDim, aggregatedData) {
+  const countyMapping = {
+    BRONX: "BRONX",
+    BROOKLYN: "KINGS",
+    MANHATTAN: "NEW YORK",
+    QUEENS: "QUEENS",
+    "STATEN ISLAND": "RICHMOND",
+  };
+
+  geojsonData.features.forEach((feature) => {
+    let regionName;
+    if (geoDim === "borough") {
+      regionName = feature.properties.boroname.toUpperCase();
+    } else if (geoDim === "neighborhood_name") {
+      regionName = feature.properties.ntaname;
+    } else if (geoDim === "county") {
+      regionName = countyMapping[feature.properties.boroname.toUpperCase()];
+      feature.properties.county = regionName;
+    }
+
+    feature.properties.aggValue = regionName && regionName !== "UNSPECIFIED" ? aggregatedData[regionName] || 0 : 0;
+  });
+}
+
+// Render map paths
+function renderPaths(svg, geojsonData, path, colorScale) {
+  svg
+    .selectAll("path")
+    .data(geojsonData.features)
+    .enter()
+    .append("path")
+    .attr("d", path)
+    .attr("fill", (d) => colorScale(d.properties.aggValue))
+    .attr("stroke", "#ffffff")
+    .attr("stroke-width", 0.5);
+}
+
+// Add tooltip interaction
+function addTooltipInteraction(svg, container, geoDim, measure) {
+  svg
+    .selectAll("path")
+    .on("mouseover", function (event, d) {
+      let displayName;
+      if (geoDim === "borough") {
+        displayName = d.properties.boroname;
+      } else if (geoDim === "county") {
+        displayName = d.properties.county + " County";
+      } else {
+        displayName = d.properties.ntaname;
+      }
+
+      const tooltip = d3
+        .select(container)
+        .append("div")
+        .attr("class", "tooltip")
+        .style("position", "absolute")
+        .style("background", "#fff")
+        .style("padding", "5px")
+        .style("border", "1px solid #000")
+        .html(`<strong>${displayName}</strong><br><strong>${measure}:</strong> ${d.properties.aggValue}`);
+
+      tooltip.style("left", event.pageX + 5 + "px").style("top", event.pageY + 5 + "px");
+    })
+    .on("mouseout", () => {
+      d3.select(container).select(".tooltip").remove();
+    });
+}
+
+// Add color scale legend
+function addLegend(svg, width, height, colorScale, maxVal) {
+  const legendWidth = 300;
+  const legendHeight = 10;
+  const legendX = width - legendWidth - 20;
+  const legendY = height - 40;
+
+  const legend = svg.append("g").attr("class", "legend").attr("transform", `translate(${legendX}, ${legendY})`);
+
+  const defs = svg.append("defs");
+  const gradient = defs
+    .append("linearGradient")
+    .attr("id", "legend-gradient")
+    .attr("x1", "0%")
+    .attr("y1", "0%")
+    .attr("x2", "100%")
+    .attr("y2", "0%");
+
+  gradient.append("stop").attr("offset", "0%").attr("stop-color", colorScale(0));
+  gradient.append("stop").attr("offset", "100%").attr("stop-color", colorScale(maxVal));
+
+  legend.append("rect").attr("width", legendWidth).attr("height", legendHeight).style("fill", "url(#legend-gradient)");
+
+  const legendScale = d3.scaleLinear().domain([0, maxVal]).range([0, legendWidth]);
+  const legendAxis = d3.axisBottom(legendScale).ticks(5);
+  legend.append("g").attr("transform", `translate(0, ${legendHeight})`).call(legendAxis);
+}
+
+export default renderMap;
