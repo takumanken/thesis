@@ -1,5 +1,6 @@
 import { state } from "../state.js";
 import { CHART_DIMENSIONS } from "../constants.js";
+import { chartStyles } from "./utils/chartStyles.js";
 
 // Main function that orchestrates the rendering process
 function renderBarChart(container) {
@@ -21,8 +22,11 @@ function renderBarChart(container) {
   // Create scales
   const scales = createScales(dataset, measure, config.margin, config.width, config.fullChartHeight);
 
+  // Create tooltip using shared style
+  const tooltip = chartStyles.createTooltip();
+
   // Draw elements
-  drawBars(svg, dataset, scales.x, scales.y, measure, config.margin);
+  drawBars(svg, dataset, scales.x, scales.y, measure, config.margin, dimension, tooltip);
   addBarLabels(svg, dataset, scales.x, scales.y, measure);
   addYAxis(svg, scales.y, dataset, dimension, config.margin);
   addXAxis(xAxisSvg, scales.x, config.margin);
@@ -99,8 +103,8 @@ function createScales(dataset, measure, margin, width, fullChartHeight) {
   return { x, y };
 }
 
-// Draw the bars
-function drawBars(svg, dataset, x, y, measure, margin) {
+// Draw the bars with tooltip
+function drawBars(svg, dataset, x, y, measure, margin, dimension, tooltip) {
   svg
     .selectAll("rect")
     .data(dataset)
@@ -109,10 +113,20 @@ function drawBars(svg, dataset, x, y, measure, margin) {
     .attr("y", (d, i) => y(i))
     .attr("width", (d) => x(d[measure]) - margin.left)
     .attr("height", y.bandwidth())
-    .attr("fill", "steelblue");
+    .attr("fill", "steelblue")
+    .on("mouseover", function (event, d) {
+      // Use shared tooltip style
+      chartStyles.showTooltip(
+        tooltip,
+        event,
+        `<strong>${dimension}:</strong> ${d[dimension]}<br>
+         <strong>${measure}:</strong> ${d[measure].toLocaleString()}`
+      );
+    })
+    .on("mouseout", () => chartStyles.hideTooltip(tooltip));
 }
 
-// Add labels to the bars
+// Add labels to the bars - update with consistent font styling
 function addBarLabels(svg, dataset, x, y, measure) {
   svg
     .selectAll("text.bar-label")
@@ -123,13 +137,15 @@ function addBarLabels(svg, dataset, x, y, measure) {
     .attr("y", (d, i) => y(i) + y.bandwidth() / 2)
     .attr("dy", "0.35em")
     .attr("text-anchor", "start")
-    .attr("fill", "black")
+    .attr("fill", "#333")
+    .style("font-family", chartStyles.fontFamily)
+    .style("font-size", chartStyles.fontSize.axisLabel)
     .text((d) => d[measure]);
 }
 
-// Add the y-axis
+// Add the y-axis with consistent styling
 function addYAxis(svg, y, dataset, dimension, margin) {
-  svg
+  const axis = svg
     .append("g")
     .attr("transform", `translate(${margin.left},0)`)
     .call(
@@ -138,14 +154,20 @@ function addYAxis(svg, y, dataset, dimension, margin) {
         .tickFormat((d, i) => dataset[i][dimension])
         .tickSize(0)
     );
+
+  // Apply shared axis styling
+  chartStyles.applyAxisStyles(axis);
 }
 
-// Add the x-axis
+// Add the x-axis with consistent styling
 function addXAxis(xAxisSvg, x, margin) {
-  xAxisSvg
+  const axis = xAxisSvg
     .append("g")
     .attr("transform", `translate(0,${margin.top - 1})`)
     .call(d3.axisTop(x));
+
+  // Apply shared axis styling
+  chartStyles.applyAxisStyles(axis);
 }
 
 export default renderBarChart;
