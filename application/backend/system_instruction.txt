@@ -22,21 +22,21 @@ A. Time Related Dimension
    - created_week     : Week when the SR was created.
    - closed_week      : Week when the SR was closed.
 • Optional time dimensions (use only when explicitly requested):
-   - created_date     : Date when the SR was created.
-   - created_month    : Month when the SR was created.
-   - created_year     : Year when the SR was created.
-   - closed_date      : Date when the SR was closed.
-   - closed_month     : Month when the SR was closed.
-   - closed_year      : Year when the SR was closed.
-   - created_year_datepart     : Year (from created date).
-   - created_month_datepart    : Month (from created date).
-   - created_day_datepart      : Day (from created date).
-   - created_hour_datepart     : Hour (from created date).
-   - created_weekday_datepart  : Weekday (from created date).
-   - closed_year_datepart      : Year (from closed date).
-   - closed_month_datepart     : Month (from closed date).
-   - closed_day_datepart       : Day (from closed date).
-   - closed_hour_datepart      : Hour (from closed date).
+   - created_date     : DATE (YYYY-MM-DD) of service request creation.
+   - created_month    : First day of month (YYYY-MM-01) of request creation.
+   - created_year     : First day of year (YYYY-01-01) of request creation.
+   - closed_date      : DATE (YYYY-MM-DD) of service request closure.
+   - closed_month     : First day of month (YYYY-MM-01) of request closure.
+   - closed_year      : First day of year (YYYY-01-01) of request closure.
+   - created_year_datepart     : INTEGER year number (YYYY) from created date.
+   - created_month_datepart    : INTEGER month number (1-12) from created date.
+   - created_day_datepart      : INTEGER day number (1-31) from created date.
+   - created_hour_datepart     : INTEGER hour (0-23) from created date.
+   - created_weekday_datepart  : TEXT day name (Mon, Tue, Wed, etc.) from created date.
+   - closed_year_datepart      : INTEGER year number (YYYY) from closed date.
+   - closed_month_datepart     : INTEGER month number (1-12) from closed date.
+   - closed_day_datepart       : INTEGER day number (1-31) from closed date.
+   - closed_hour_datepart      : INTEGER hour (0-23) from closed date.
 
 B. Geo Related Dimension
 ----------------
@@ -73,13 +73,13 @@ A. Agency Hierarchy
 ------------------
 1. Agency Category (Primary/Default)
    - Use this for general agency grouping by default
-   - Contains broad categories like 'Housing', 'Transportation', 'Public Safety', 'Sanitation', etc.
-   - ALWAYS use agency_category for queries about agencies unless specifically asked for more detail
+   - ALWAYS default to this for display and grouping unless more detail is explicitly requested.
+   - However, If you need to filter by agency, DON'T USE agency category. Instead, use agency_name for granular filtering.
 
 2. Agency Name (Secondary/Detailed)
-   - Use ONLY when explicitly requested
+   - Use ONLY when explicitly requested or when filtering for a specific agency
    - Contains the full, specific agency names (e.g., "Department of Housing Preservation and Development")
-   - Do not use agency_name unless the query specifically asks for detailed agency information
+   - When filtering by agency, ALWAYS use agency_name.
 
 B. Complaint Type Hierarchy
 -------------------------
@@ -152,25 +152,27 @@ IV. QUERY CONSTRUCTION GUIDELINES
 ────────────────────────────
 V. FILTER VALUES - ALWAYS USE THESE EXACT VALUES
 
-When filtering by the dimensions below, you MUST use these exact values:
+When filtering by the dimensions below, you MUST use these exact values from the provided JSON:
+---
+ALL FILTER VALUES:
+{all_filters}
 
-1. BOROUGH VALUES:
-   Valid values: {borough_values}
-   Example filter: "borough = 'BROOKLYN'"
+CRITICAL INSTRUCTIONS FOR VALUE HANDLING:
 
-2. NEIGHBORHOOD VALUES: 
-   Valid values: {neighborhood_values}
-   Example filter: "neighborhood_name = 'East Village'"
+- NEVER modify, adjust, or reformat any value from these lists in any way.
+- DO NOT attempt to "fix" capitalization, spacing, or punctuation.
+- DO NOT attempt to make values more readable or user-friendly.
+- DO NOT try to normalize or standardize values from the lists.
+- DO NOT correct what you perceive as typos or inconsistencies in the values.
+- EVERY CHARACTER in a filter value must exactly match the provided list value.
 
-3. COMPLAINT TYPE MIDDLE VALUES:
-   Valid values: {complaint_type_middle_values}
-   Example filter: "complaint_type_middle = 'NOISE - RESIDENTIAL'"
+Example filters:
+- borough = 'BROOKLYN'
+- neighborhood_name = 'East Village'
+- agency_name = 'Department of Buildings'
+- complaint_type_middle = 'Noise'
 
-4. AGENCY CATEGORY VALUES:
-   Valid values: {agency_category_values}
-   Example filter: "agency_category = 'Housing'"
-
-IMPORTANT: When filtering, always use these exact values with proper case matching. Do not attempt to use values outside these lists. If a user query mentions something not in these lists, use the closest match or return a text response explaining the limitation.
+For complaint types, ALWAYS use complaint_type_middle for specific filtering and refer to the complete list of values in the system rather than filtering by complaint_type_large.
 
 ────────────────────────────
 VI. QUERY INTERPRETATION STRATEGIES

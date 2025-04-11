@@ -51,29 +51,13 @@ FILTER_VALUES_DIR = "filter_values"
 with open(SYSTEM_INSTRUCTION_FILE, "r") as f:
     system_instruction_template = f.read()
 
-# Load filter values from JSON files
-with open(os.path.join(FILTER_VALUES_DIR, "boroughs.json"), "r") as f:
-    borough_values = json.dumps(json.load(f)["boroughs"])
+# Load all filter values directly from JSON file
+with open(os.path.join(FILTER_VALUES_DIR, "all_filters.json"), "r") as f:
+    all_filters = json.load(f)
 
-with open(os.path.join(FILTER_VALUES_DIR, "neighborhoods.json"), "r") as f:
-    neighborhood_values = json.dumps(json.load(f)["neighborhoods"])
-
-with open(os.path.join(FILTER_VALUES_DIR, "complaint_types.json"), "r") as f:
-    complaint_types = json.load(f)
-    complaint_type_large_values = json.dumps(complaint_types["complaint_type_large"])
-    complaint_type_middle_values = json.dumps(complaint_types["complaint_type_middle"])
-
-# Add loading of agency_category values
-with open(os.path.join(FILTER_VALUES_DIR, "agency_category.json"), "r") as f:
-    agency_category_values = json.dumps(json.load(f)["agency_category"])
-
-# Format system instructions with the filter values
+# Format system instructions with the complete filter values JSON
 system_instruction = system_instruction_template.format(
-    borough_values=borough_values,
-    neighborhood_values=neighborhood_values,
-    complaint_type_large_values=complaint_type_large_values,
-    complaint_type_middle_values=complaint_type_middle_values,
-    agency_category_values=agency_category_values
+    all_filters=json.dumps(all_filters)
 )
 
 logger.debug(f"System instructions formatted, length: {len(system_instruction)} chars")
