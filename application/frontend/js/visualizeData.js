@@ -4,6 +4,7 @@ import renderBarChart from "./chart/single_bar_chart.js";
 import renderLineChart from "./chart/line_chart.js";
 import renderGroupedBarChart from "./chart/grouped_bar_chart.js";
 import renderStackedBarChart from "./chart/stacked_bar_chart.js";
+import renderStackedAreaChart from "./chart/stacked_area_chart.js"; // Import new chart type
 import renderChoroplethMap from "./chart/choropleth_map.js";
 import renderPointMap from "./chart/heat_map.js";
 import renderTextResponse from "./chart/text_response.js";
@@ -50,6 +51,8 @@ function visualizeData() {
     grouped_bar_chart: renderGroupedBarChart,
     stacked_bar_chart: renderStackedBarChart,
     stacked_bar_chart_100: renderStackedBarChart,
+    stacked_area_chart: renderStackedAreaChart,
+    stacked_area_chart_100: renderStackedAreaChart,
     line_chart: renderLineChart,
     choropleth_map: renderChoroplethMap,
     heat_map: renderPointMap,
