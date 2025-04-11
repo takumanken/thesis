@@ -67,7 +67,13 @@ function createSvgContainer(container, width, height) {
 
 // Load GeoJSON and render map
 function loadGeoJsonAndRender(svg, container, geoDim, aggregatedData, width, height, maxVal, colorScale, measure) {
-  d3.json("assets/geojson/2020_nyc_neighborhood_tabulation_areas_nta.geojson").then((geojsonData) => {
+  // Choose the appropriate GeoJSON file based on geoDim
+  const geoJsonFile =
+    geoDim === "borough" || geoDim === "county"
+      ? "assets/geojson/2025_nyc_borough.geojson"
+      : "assets/geojson/2020_nyc_neighborhood_tabulation_areas_nta.geojson";
+
+  d3.json(geoJsonFile).then((geojsonData) => {
     // Setup projection
     const { projection, path } = setupProjection(geojsonData, width, height);
 
@@ -76,6 +82,11 @@ function loadGeoJsonAndRender(svg, container, geoDim, aggregatedData, width, hei
 
     // Render map paths
     renderPaths(svg, geojsonData, path, colorScale);
+
+    // Add labels only for borough or county level
+    if (geoDim === "borough" || geoDim === "county") {
+      addMapLabels(svg, geojsonData, path, geoDim);
+    }
 
     // Add tooltip interaction
     addTooltipInteraction(svg, container, geoDim, measure);
@@ -95,6 +106,7 @@ function setupProjection(geojsonData, width, height) {
 
 // Process GeoJSON features
 function processFeatures(geojsonData, geoDim, aggregatedData) {
+  // Borough to County mapping for county dimension
   const countyMapping = {
     BRONX: "BRONX",
     BROOKLYN: "KINGS",
@@ -103,17 +115,45 @@ function processFeatures(geojsonData, geoDim, aggregatedData) {
     "STATEN ISLAND": "RICHMOND",
   };
 
+  // Dataset to Borough GeoJSON mapping (handles different capitalization)
+  const boroughMapping = {
+    BRONX: "Bronx",
+    BROOKLYN: "Brooklyn",
+    MANHATTAN: "Manhattan",
+    QUEENS: "Queens",
+    "STATEN ISLAND": "Staten Island",
+  };
+
   geojsonData.features.forEach((feature) => {
     let regionName;
+
+    // Different property access based on geoDim and GeoJSON type
     if (geoDim === "borough") {
-      regionName = feature.properties.boroname.toUpperCase();
+      // For borough geojson, boroname is already in proper format
+      if (feature.properties.boroname) {
+        // Borough GeoJSON uses title case (Brooklyn), dataset uses uppercase (BROOKLYN)
+        regionName = feature.properties.boroname.toUpperCase();
+      } else {
+        // For neighborhood GeoJSON, extract borough name
+        regionName = feature.properties.boroname
+          ? feature.properties.boroname.toUpperCase()
+          : feature.properties.borough;
+      }
     } else if (geoDim === "neighborhood_name") {
       regionName = feature.properties.ntaname;
     } else if (geoDim === "county") {
-      regionName = countyMapping[feature.properties.boroname.toUpperCase()];
-      feature.properties.county = regionName;
+      if (feature.properties.boroname) {
+        // Borough GeoJSON - map borough name to county name
+        regionName = countyMapping[feature.properties.boroname.toUpperCase()];
+        feature.properties.county = regionName;
+      } else {
+        // Neighborhood GeoJSON
+        regionName = countyMapping[feature.properties.boroname.toUpperCase()];
+        feature.properties.county = regionName;
+      }
     }
 
+    // Assign aggregated value to the feature
     feature.properties.aggValue = regionName && regionName !== "UNSPECIFIED" ? aggregatedData[regionName] || 0 : 0;
   });
 }
@@ -131,20 +171,91 @@ function renderPaths(svg, geojsonData, path, colorScale) {
     .attr("stroke-width", 0.5);
 }
 
+// Add text labels to the map for borough/county level
+function addMapLabels(svg, geojsonData, path, geoDim) {
+  svg
+    .selectAll(".map-label")
+    .data(geojsonData.features)
+    .enter()
+    .append("text")
+    .attr("class", "map-label")
+    .attr("transform", (d) => {
+      // Calculate centroid of each feature for label positioning
+      const centroid = path.centroid(d);
+      return `translate(${centroid[0]}, ${centroid[1]})`;
+    })
+    .attr("text-anchor", "middle")
+    .attr("dy", ".35em") // Vertically center text
+    .style("font-size", "12px")
+    .style("font-weight", "bold")
+    .style("fill", "#333")
+    .style("text-shadow", "1px 1px 1px #fff, -1px -1px 1px #fff, 1px -1px 1px #fff, -1px 1px 1px #fff") // Text outline for readability
+    .text((d) => {
+      // Display appropriate label based on dimension
+      let regionName = "";
+
+      if (geoDim === "borough") {
+        regionName = d.properties.boroname;
+      } else if (geoDim === "county") {
+        // Get county name from boroname mapping
+        const boroughName = d.properties.boroname;
+        const countyMapping = {
+          Bronx: "BRONX",
+          Brooklyn: "KINGS",
+          Manhattan: "NEW YORK",
+          Queens: "QUEENS",
+          "Staten Island": "RICHMOND",
+        };
+        regionName = countyMapping[boroughName] + " County";
+      }
+
+      // Format measure value with thousands separators and up to 2 decimal places
+      const formattedValue = d.properties.aggValue !== undefined ? d3.format(",.2~f")(d.properties.aggValue) : "N/A";
+
+      // Combine region name and measure value
+      return `${regionName}\n${formattedValue}`;
+    })
+    // Add multiline text support
+    .each(function () {
+      const text = d3.select(this);
+      const lines = text.text().split("\n");
+
+      text.text(null); // Clear existing text
+
+      // Add first line (region name)
+      text
+        .append("tspan")
+        .attr("x", 0)
+        .attr("dy", "-0.7em") // Move up from center
+        .text(lines[0]);
+
+      // Add second line (measure value)
+      text
+        .append("tspan")
+        .attr("x", 0)
+        .attr("dy", "1.4em") // Move down for second line
+        .style("font-size", "11px") // Slightly smaller font for the value
+        .text(lines[1]);
+    });
+}
+
 // Add tooltip interaction
 function addTooltipInteraction(svg, container, geoDim, measure) {
   svg
     .selectAll("path")
     .on("mouseover", function (event, d) {
       let displayName;
+
+      // Get the appropriate display name based on the feature properties
       if (geoDim === "borough") {
-        displayName = d.properties.boroname;
+        displayName = d.properties.boroname || d.properties.borough;
       } else if (geoDim === "county") {
-        displayName = d.properties.county + " County";
+        displayName = d.properties.county ? `${d.properties.county} County` : "";
       } else {
         displayName = d.properties.ntaname;
       }
 
+      // Create tooltip
       const tooltip = d3
         .select(container)
         .append("div")
