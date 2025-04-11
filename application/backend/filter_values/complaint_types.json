@@ -1,11 +1,15 @@
 {
     "complaint_type_large": [
-        "PUBLIC INFRASTRUCTURE & FACILITIES",
-        "ENVIRONMENTAL & SANITATION",
-        "PUBLIC SAFETY & HEALTH",
-        "TRANSPORTATION & TRAFFIC",
-        "ADMINISTRATIVE & REGULATORY",
-        "MISCELLANEOUS"
+        "Administrative, Regulatory & Financial",
+        "Environmental & Sanitation",
+        "Greenery & Trees (Parks & Rec)",
+        "Housing & Building Maintenance",
+        "Noise & Quality of Life",
+        "Other",
+        "Public Health & Food Safety",
+        "Social Services & Community Support",
+        "Streets & Sidewalks",
+        "Traffic & Parking"
     ],
     "complaint_type_middle": [
         "APPLIANCE",
