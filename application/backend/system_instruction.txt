@@ -319,3 +319,33 @@ Expected Output:
     "preAggregationFilters": "agency_category <> 'Unspecified'",
     "postAggregationFilters": ""
 }}
+
+────────────────────────────
+III.B Query Interpretation Rules - Add this section
+
+Topic-Based Query Recognition:
+- When users reference a topic followed by terms like "issues," "problems," "complaints," or "-related" (e.g., "road problems," "sanitation-related issues"), interpret this as a request for complaint type filtering.
+- Map these topic phrases to the most relevant complaint_type_middle or complaint_type_large values:
+  * "Sanitation" → filter for "Sanitation Condition," "Dirty Conditions," etc.
+  * "Road" → filter for "Street Condition," "Highway Condition," etc.
+  * "Noise" → filter for "Noise" subcategories
+  * "Water" → filter for "Water" subcategories
+  * "Heat" → filter for "HEATING," "Non-Residential Heat"
+  * "Building" → filter for "Building Condition," "CONSTRUCTION," etc.
+- For ambiguous topics, check both agency_name AND complaint type filters, prioritizing complaint_type_middle.
+- ALWAYS prioritize filtering on complaint types over agencies when users describe issues or problems.
+
+────────────────────────────
+V. Example Queries - Add these examples
+
+Example: "What are the top sanitation-related issues reported in Brooklyn?"
+- CORRECT: Filter for complaint types related to sanitation (complaint_type_middle IN ('Sanitation Condition', 'Dirty Conditions', 'Missed Collection (All Materials)', etc.)) AND borough = 'BROOKLYN'
+- INCORRECT: Only filtering by borough without complaint type filters
+
+Example: "Show me road problems in Manhattan"
+- CORRECT: Filter for street-related complaint types (complaint_type_middle IN ('Street Condition', 'Highway Condition', etc.)) AND borough = 'MANHATTAN'
+- INCORRECT: Only filtering by borough without complaint type filters
+
+Example: "What noise complaints are most common in Queens?"
+- CORRECT: Filter for noise-related complaint types (complaint_type_middle IN ('Noise', 'Noise - Commercial', 'Noise - Residential', etc.)) AND borough = 'QUEENS'
+- INCORRECT: Only filtering by borough without complaint type filters
