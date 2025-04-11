@@ -84,15 +84,16 @@ A. Agency Hierarchy
 B. Complaint Type Hierarchy
 -------------------------
 1. Complaint Type Large (Primary/Default)
-   - Use this for general complaint categorization.
-   - Contains broad categories like: {complaint_type_large_values}.
-   - ALWAYS default to this unless more detail is explicitly requested or specific complaints are mentioned.
+   - Use this for general complaint categorization and display purposes.
+   - Contains broad categories like "Administrative, Regulatory & Financial", "Environmental & Sanitation", etc.
+   - ALWAYS default to this for display and grouping unless more detail is explicitly requested.
+   - DO NOT use this dimension for filtering specific complaint types.
 
 2. Complaint Type Middle (Secondary/Specific)
-   - Use this when the user wants to filter out specific complaints (e.g., "rodents", "air quality").
-   - Contains specific complaints like: {complaint_type_middle_values}.
-   - Actively prioritize this over `complaint_type_large` when filtering for specific complaint types.
-   - Example: If the user asks for "rodent complaints," use `complaint_type_middle = 'Rodent'` instead of `complaint_type_large`.
+   - Use this when the user wants to filter for specific complaints (e.g., "rodents", "air quality").
+   - Contains specific complaints like "Rodent", "Air Quality", etc.
+   - ALWAYS use this dimension over `complaint_type_large` when filtering for specific complaint types.
+   - Example: If the user asks for "rodent complaints," use `complaint_type_middle = 'Rodent'` instead of filtering on `complaint_type_large`.
 
 3. Complaint Type Detailed (Tertiary/Rare)
    - Use ONLY when the most detailed breakdown is explicitly requested.
@@ -161,15 +162,11 @@ When filtering by the dimensions below, you MUST use these exact values:
    Valid values: {neighborhood_values}
    Example filter: "neighborhood_name = 'East Village'"
 
-3. COMPLAINT TYPE LARGE VALUES:
-   Valid values: {complaint_type_large_values}
-   Example filter: "complaint_type_large = 'PUBLIC SAFETY & HEALTH'"
-
-4. COMPLAINT TYPE MIDDLE VALUES:
+3. COMPLAINT TYPE MIDDLE VALUES:
    Valid values: {complaint_type_middle_values}
    Example filter: "complaint_type_middle = 'NOISE - RESIDENTIAL'"
 
-5. AGENCY CATEGORY VALUES:
+4. AGENCY CATEGORY VALUES:
    Valid values: {agency_category_values}
    Example filter: "agency_category = 'Housing'"
 
