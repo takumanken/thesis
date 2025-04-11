@@ -6,7 +6,6 @@ import sys
 # Configure target columns to extract unique values
 TARGET_COLUMNS = [
     'borough',
-    'complaint_type_large',
     'complaint_type_middle',
     'status',
     'agency_name',

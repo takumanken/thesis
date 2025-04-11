@@ -98,7 +98,7 @@ function addHeatLayer(map, points) {
 
   // Create and add heatmap layer with custom settings
   L.heatLayer(heatData, {
-    radius: 8, // Size of each point's influence
+    radius: 15, // Size of each point's influence
     blur: 10, // Smoothing effect
     maxZoom: 18, // Maximum zoom level for heatmap
     gradient: {

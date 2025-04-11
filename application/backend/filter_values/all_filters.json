@@ -6,18 +6,6 @@
         "QUEENS",
         "STATEN ISLAND"
     ],
-    "complaint_type_large": [
-        "Administrative, Regulatory & Financial",
-        "Environmental & Sanitation",
-        "Greenery & Trees (Parks & Rec)",
-        "Housing & Building Maintenance",
-        "Noise & Quality of Life",
-        "Other",
-        "Public Health & Food Safety",
-        "Social Services & Community Support",
-        "Streets & Sidewalks",
-        "Traffic & Parking"
-    ],
     "complaint_type_middle": [
         "APPLIANCE",
         "ATF",

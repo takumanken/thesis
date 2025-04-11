@@ -141,8 +141,12 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[str, list[str]]:
             logger.debug("Time dimension detected: adding line_chart")
 
         if geo_dim and len(agg_def.dimensions) == 1:
-            available.append("choropleth_map")
-            ideal = "choropleth_map"
+            if "location" in geo_dim:
+                available.append("heat_map")
+                ideal = "heat_map"
+            else:
+                available.append("choropleth_map")
+                ideal = "choropleth_map"
 
     logger.info(f"Chart options - Ideal: {ideal}, Available: {available}")
     return ideal, available

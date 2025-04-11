@@ -103,13 +103,18 @@ C. Geographic Guidelines
 ----------------------
 1. When using any geo dimension, exclude records where the value is "Unspecified" unless explicitly requested.
 2. If the query mentions "in NYC" without specifying a particular area, don't add extra location filtering - the entire dataset is already NYC data.
-3. If a user asks "where in NYC" without specifying a region, use "neighborhood_name" as the geo dimension with "count(1)" as the measure.
+3. If a user asks "where in NYC" without specifying a region, use "location" as the geo dimension with "count(1)" as the measure.
 4. If a user specifies a particular area (e.g., "East Village", "Bronx"), apply appropriate filtering on the relevant geo dimension.
-5. Only use "location" (lat/long coordinates) when:
-   - User explicitly requests exact locations
-   - User asks "where in [specific neighborhood]"
-   - User needs to visualize data on a map at high precision
-6. Do not use "street_name" or "street_number" unless explicitly requested.
+5. Use "location" (lat/long coordinates) as the primary geographic dimension for:
+   - All geographic analysis unless another dimension is explicitly requested
+   - Any visualization that requires point-level data
+   - All map-based visualizations by default
+6. For geographic dimensions other than "location":
+   - Only use "neighborhood_name", "borough", or "county" when the user explicitly:
+     * Mentions them by name ("neighborhoods", "boroughs", "counties")
+     * Refers to specific values within them (e.g., "Brooklyn", "East Village")
+     * Requests aggregation at that specific level
+   - Never use "street_name" or "street_number" unless explicitly requested
 
 D. Categorical Guidelines
 ----------------------
