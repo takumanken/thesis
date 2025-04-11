@@ -65,7 +65,7 @@ function addSwapButton(controlsDiv, container) {
 }
 
 function drawColumnHeaders(svg, dimensions, measures, dim1X, dim2X, barStartX, margin, measureWidth) {
-  // Draw dimension headers
+  // Draw first dimension header
   svg
     .append("text")
     .attr("x", dim1X)
@@ -76,15 +76,18 @@ function drawColumnHeaders(svg, dimensions, measures, dim1X, dim2X, barStartX, m
     .attr("text-anchor", "start")
     .text(dimensions[0]);
 
-  svg
-    .append("text")
-    .attr("x", dim2X)
-    .attr("y", margin.top - 20)
-    .attr("font-size", chartStyles.fontSize.axisLabel)
-    .attr("font-weight", "bold")
-    .attr("font-family", chartStyles.fontFamily)
-    .attr("text-anchor", "start")
-    .text(dimensions[1] || "");
+  // Draw second dimension header only if it exists
+  if (dimensions.length > 1 && dim2X) {
+    svg
+      .append("text")
+      .attr("x", dim2X)
+      .attr("y", margin.top - 20)
+      .attr("font-size", chartStyles.fontSize.axisLabel)
+      .attr("font-weight", "bold")
+      .attr("font-family", chartStyles.fontFamily)
+      .attr("text-anchor", "start")
+      .text(dimensions[1]);
+  }
 
   // Draw measure headers
   measures.forEach((measure, i) => {
@@ -111,10 +114,20 @@ function calculateChartLayout(container, data, dimensions, measures) {
   const rowHeight = 24;
   const rowPadding = 4;
 
-  // Calculate column positions
+  // Calculate column positions - adjust based on dimension count
   const dim1X = margin.left;
-  const dim2X = dim1X + dim1Width + 20;
-  const barStartX = dim2X + dim2Width + 20;
+
+  // Dynamic positioning based on dimension count
+  let dim2X, barStartX;
+  if (dimensions.length > 1) {
+    // Two dimensions - normal layout
+    dim2X = dim1X + dim1Width + 20;
+    barStartX = dim2X + dim2Width + 20;
+  } else {
+    // One dimension - skip the second dimension column
+    dim2X = null; // Not used
+    barStartX = dim1X + dim1Width + 20;
+  }
 
   // Calculate space for measures
   const barAreaWidth = width - margin.right - barStartX;
@@ -195,24 +208,37 @@ function createHierarchicalData(dataset, dimensions, measures) {
 }
 
 function createSingleDimensionData(dataset, dimensions, measures) {
-  const segments = [];
-  const grouped = d3.group(dataset, (d) => d[dimensions[0]]);
+  const hierarchicalData = [];
+  const dimension = dimensions[0];
+  const grouped = d3.group(dataset, (d) => d[dimension]);
 
+  // Create one category for each unique dimension value
   for (const [name, values] of grouped) {
     const measureValues = {};
     measures.forEach((measure) => {
       measureValues[measure] = d3.sum(values, (d) => +d[measure]);
     });
 
-    segments.push({
-      name,
-      measures: measureValues,
-      value: measureValues[measures[0]],
+    // For single dimension, create a simple segment structure
+    // that matches the multi-dimension format but without unnecessary nesting
+    hierarchicalData.push({
+      name: name,
+      segments: [
+        {
+          name: "", // Empty second dimension
+          measures: measureValues,
+          value: measureValues[measures[0]],
+        },
+      ],
     });
   }
 
-  segments.sort((a, b) => b.measures[measures[0]] - a.measures[measures[0]]);
-  return [{ name: "All", segments: segments }];
+  // Sort by the first measure value
+  hierarchicalData.sort((a, b) => {
+    return b.segments[0].measures[measures[0]] - a.segments[0].measures[measures[0]];
+  });
+
+  return hierarchicalData;
 }
 
 function createMultiDimensionData(dataset, dimensions, measures) {
@@ -253,10 +279,8 @@ function createMultiDimensionData(dataset, dimensions, measures) {
 }
 
 function drawNestedTable(svg, data, measures, xScales, positions, margin, width, rowHeight, rowPadding, tooltip) {
-  const { dim1X, dim2X, barStartX, measureWidth } = positions;
   const measureColors = ["#4e79a7", "#59a14f", "#f28e2c"];
   let y = margin.top;
-  let globalSegmentIndex = 0;
 
   // STEP 1: Draw backgrounds first
   drawBackgrounds(svg, data, width, margin, rowHeight, rowPadding);
@@ -269,14 +293,14 @@ function drawNestedTable(svg, data, measures, xScales, positions, margin, width,
     margin,
     rowHeight,
     rowPadding,
-    dim2X,
-    barStartX,
+    positions.dim2X,
+    positions.barStartX,
     measures,
-    measureWidth
+    positions.measureWidth
   );
 
   // STEP 3: Draw text and bars
-  drawDataRows(svg, data, measures, xScales, dim1X, dim2X, y, rowHeight, rowPadding, measureColors, tooltip);
+  drawDataRows(svg, data, measures, xScales, positions, y, rowHeight, rowPadding, measureColors, tooltip);
 }
 
 function drawBackgrounds(svg, data, width, margin, rowHeight, rowPadding) {
@@ -313,52 +337,64 @@ function drawBorderLines(svg, data, width, margin, rowHeight, rowPadding, dim2X,
     .attr("stroke-width", 1)
     .attr("shape-rendering", "crispEdges");
 
-  // Calculate divider line positions more precisely to match background rectangles
+  // Calculate divider line positions
   let currentY = margin.top;
+
+  // Determine if we have two dimensions (check if dim2X is present)
+  const hasTwoDimensions = dim2X !== null;
+
+  // Process each category
   data.forEach((category, categoryIndex) => {
     // Calculate exact ending position of this category
-    // It's the starting position plus the height of all segments
     currentY += (rowHeight + rowPadding) * category.segments.length;
 
-    // Draw a divider line at the exact bottom edge of the last background rectangle
-    if (categoryIndex < data.length - 1) {
+    // Draw category divider lines only if we have two dimensions
+    if (hasTwoDimensions && categoryIndex < data.length - 1) {
       svg
         .append("line")
         .attr("x1", 0)
         .attr("x2", width)
-        .attr("y1", currentY - rowPadding / 2) // Adjusted position to match rectangle edge
-        .attr("y2", currentY - rowPadding / 2) // Adjusted position to match rectangle edge
+        .attr("y1", currentY - rowPadding / 2)
+        .attr("y2", currentY - rowPadding / 2)
         .attr("stroke", "#ddd")
         .attr("stroke-width", 1)
         .attr("shape-rendering", "crispEdges");
     }
   });
 
-  // Draw bottom horizontal border line (aligned with the bottom of the last background)
+  // Draw bottom horizontal border line
   svg
     .append("line")
     .attr("x1", 0)
     .attr("x2", width)
-    .attr("y1", currentY - rowPadding / 2) // Adjusted position to match last rectangle edge
-    .attr("y2", currentY - rowPadding / 2) // Adjusted position to match last rectangle edge
+    .attr("y1", currentY - rowPadding / 2)
+    .attr("y2", currentY - rowPadding / 2)
     .attr("stroke", "#ddd")
     .attr("stroke-width", 1)
     .attr("shape-rendering", "crispEdges");
 
-  // Add vertical separator lines (adjusted to match the new border positions)
-  [dim2X - 10, barStartX - 10].forEach((x) => {
+  // Add vertical separator lines - adjust based on dimension count
+  const separators = [];
+  if (hasTwoDimensions) {
+    // If we have a second dimension, add separator between dimensions
+    separators.push(dim2X - 10);
+  }
+  // Always add separator before bars
+  separators.push(barStartX - 10);
+
+  separators.forEach((x) => {
     svg
       .append("line")
       .attr("x1", x)
       .attr("x2", x)
       .attr("y1", margin.top - 30)
-      .attr("y2", currentY - rowPadding / 2) // Match the bottom line
+      .attr("y2", currentY - rowPadding / 2)
       .attr("stroke", "#ddd")
       .attr("stroke-width", 1)
       .attr("shape-rendering", "crispEdges");
   });
 
-  // Add measure separators (adjusted to match the new border positions)
+  // Add measure separators
   if (measures.length > 1) {
     for (let i = 1; i < measures.length; i++) {
       svg
@@ -366,17 +402,20 @@ function drawBorderLines(svg, data, width, margin, rowHeight, rowPadding, dim2X,
         .attr("x1", barStartX + i * measureWidth)
         .attr("x2", barStartX + i * measureWidth)
         .attr("y1", margin.top - 30)
-        .attr("y2", currentY - rowPadding / 2) // Match the bottom line
+        .attr("y2", currentY - rowPadding / 2)
         .attr("stroke", "#ddd")
         .attr("stroke-width", 1)
         .attr("shape-rendering", "crispEdges");
     }
   }
 
-  return currentY - rowPadding / 2; // Return the adjusted divider Y position
+  return currentY - rowPadding / 2;
 }
 
-function drawDataRows(svg, data, measures, xScales, dim1X, dim2X, y, rowHeight, rowPadding, measureColors, tooltip) {
+function drawDataRows(svg, data, measures, xScales, positions, y, rowHeight, rowPadding, measureColors, tooltip) {
+  const { dim1X, dim2X, barStartX } = positions;
+  const hasTwoDimensions = dim2X !== null;
+
   data.forEach((category) => {
     // Draw category name
     svg
@@ -392,17 +431,19 @@ function drawDataRows(svg, data, measures, xScales, dim1X, dim2X, y, rowHeight, 
 
     // Draw segments
     category.segments.forEach((segment) => {
-      // Draw segment name
-      svg
-        .append("text")
-        .attr("x", dim2X)
-        .attr("y", y + rowHeight / 2)
-        .attr("font-family", chartStyles.fontFamily)
-        .attr("font-size", chartStyles.fontSize.axisLabel)
-        .attr("dominant-baseline", "middle")
-        .attr("text-anchor", "start")
-        .attr("fill", "#333")
-        .text(segment.name);
+      // Draw segment name only if we have two dimensions
+      if (hasTwoDimensions) {
+        svg
+          .append("text")
+          .attr("x", dim2X)
+          .attr("y", y + rowHeight / 2)
+          .attr("font-family", chartStyles.fontFamily)
+          .attr("font-size", chartStyles.fontSize.axisLabel)
+          .attr("dominant-baseline", "middle")
+          .attr("text-anchor", "start")
+          .attr("fill", "#333")
+          .text(segment.name);
+      }
 
       // Draw bars for each measure
       measures.forEach((measure, i) => {
@@ -422,6 +463,8 @@ function drawDataRows(svg, data, measures, xScales, dim1X, dim2X, y, rowHeight, 
       y += rowHeight + rowPadding;
     });
   });
+
+  return y;
 }
 
 function drawMeasureBar(svg, measure, segment, category, xScale, y, rowHeight, color, tooltip) {
