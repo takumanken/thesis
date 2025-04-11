@@ -8,6 +8,7 @@ import renderChoroplethMap from "./chart/choropleth_map.js";
 import renderPointMap from "./chart/heat_map.js";
 import renderTextResponse from "./chart/text_response.js";
 import renderTreemap from "./chart/treemap.js";
+import renderNestedBarChart from "./chart/nested_bar_chart.js";
 
 // Clean up previous visualizations.
 function cleanupVisualization(container) {
@@ -53,6 +54,7 @@ function visualizeData() {
     choropleth_map: renderChoroplethMap,
     heat_map: renderPointMap,
     treemap: renderTreemap,
+    nested_bar_chart: renderNestedBarChart,
   };
 
   const renderer = renderers[state.chartType];

@@ -109,47 +109,69 @@ def classify_dimensions(dimensions: list[str]) -> tuple[list[str], list[str], li
     return time_dim, geo_dim, categorical_dim
 
 # Updated chart options function with time dimension logic
-def get_chart_options(agg_def: AggregationDefinition) -> tuple[str, list[str]]:
-    time_dim, geo_dim, _ = classify_dimensions(agg_def.dimensions)
-    ideal = "table"
+def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
+    """Determine which chart types are available based on the aggregation definition.
+    Returns a tuple of (available_charts, ideal_chart)
+    """
     available = ["table"]
+    ideal = "table"  # Default is table
 
-    if len(agg_def.measures) == 1:
-        measure_alias = agg_def.measures[0].get("alias", "")
-        is_additive_measure = measure_alias != "avg_days_to_resolve"
+    time_dim = agg_def.timeDimension
+    geo_dim = agg_def.geoDimension
+    cat_dim = agg_def.categoricalDimension
+    
+    all_dims = []
+    if time_dim:
+        all_dims.extend(time_dim)
+    if geo_dim:
+        all_dims.extend(geo_dim)
+    if cat_dim:
+        all_dims.extend(cat_dim)
+    
+    dim_count = len(all_dims)
+    measure_count = len(agg_def.measures)
+    
+    # Check for nested bar chart scenario - multiple dimensions or multiple measures
+    if dim_count > 0 and measure_count > 0 and (dim_count > 1 or measure_count > 1):
+        available.append("nested_bar_chart")
+        # Make it the ideal chart when we have nested dimensions/measures
+        if dim_count > 1 or measure_count > 1:
+            ideal = "nested_bar_chart"
 
-        logger.debug(f"Measure '{measure_alias}' is {'additive' if is_additive_measure else 'non-additive'}")
-
-        if len(agg_def.dimensions) == 1:
-            available.append("single_bar_chart")
-            if is_additive_measure and not time_dim:
-                available.append("treemap")
-            ideal = "single_bar_chart"
-
-        if len(agg_def.dimensions) == 2:
-            available.append("grouped_bar_chart")
-            if is_additive_measure:
-                available.append("stacked_bar_chart")
-                available.append("stacked_bar_chart_100")
-                if not time_dim:
-                    available.append("treemap")
-            ideal = "stacked_bar_chart" if is_additive_measure else "grouped_bar_chart"
-
-        if time_dim:
+    # Process for single dimension scenarios
+    if dim_count == 1 and measure_count == 1:
+        if time_dim and len(time_dim) == 1:
             available.append("line_chart")
             ideal = "line_chart"
-            logger.debug("Time dimension detected: adding line_chart")
+        else:
+            available.append("single_bar_chart")
+            ideal = "single_bar_chart"
 
-        if geo_dim and len(agg_def.dimensions) == 1:
-            if "location" in geo_dim:
-                available.append("heat_map")
-                ideal = "heat_map"
-            else:
-                available.append("choropleth_map")
-                ideal = "choropleth_map"
+    # Process for two dimension scenarios
+    if dim_count == 2 and measure_count > 0:
+        if time_dim and len(time_dim) == 1:
+            available.append("line_chart")
+            ideal = "line_chart"
+        else:
+            available.append("grouped_bar_chart")
+            available.append("stacked_bar_chart")
+            ideal = "grouped_bar_chart"
+            
+    # Process for three dimension scenarios
+    if dim_count == 3 and measure_count > 0:
+        available.append("treemap")
+        ideal = "treemap"
 
-    logger.info(f"Chart options - Ideal: {ideal}, Available: {available}")
-    return ideal, available
+    # Handle geo dimensions
+    if dim_count == 1 and geo_dim:
+        if "location" in geo_dim:
+            available.append("heat_map")
+            ideal = "heat_map"
+        else:
+            available.append("choropleth_map")
+            ideal = "choropleth_map"
+
+    return available, ideal
 
 # Generate SQL from the aggregation definition
 def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
@@ -290,7 +312,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                     logger.info(f"[{request_id}] Query returned {len(dataset)} records")
                     
                     # Determine visualization options
-                    ideal_chart, available_charts = get_chart_options(agg_def)
+                    available_charts, ideal_chart = get_chart_options(agg_def)
                     
                     # Prepare normal data response
                     response_payload = {

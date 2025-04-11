@@ -85,15 +85,16 @@ B. Complaint Type Hierarchy
 -------------------------
 1. Complaint Type Large (Primary/Default)
    - Use this for general complaint categorization and display purposes.
+   - When users say "complaint type", you should ALWAYS use this dimension over other complaint types.
    - Contains broad categories like "Administrative, Regulatory & Financial", "Environmental & Sanitation", etc.
    - ALWAYS default to this for display and grouping unless more detail is explicitly requested.
    - DO NOT use this dimension for filtering specific complaint types.
 
 2. Complaint Type Middle (Secondary/Specific)
    - Use this when the user wants to filter for specific complaints (e.g., "rodents", "air quality").
-   - Contains specific complaints like "Rodent", "Air Quality", etc.
+   - Only use if the user specifically asks for "most detailed" or "granular" complaint information.
    - ALWAYS use this dimension over `complaint_type_large` when filtering for specific complaint types.
-   - Example: If the user asks for "rodent complaints," use `complaint_type_middle = 'Rodent'` instead of filtering on `complaint_type_large`.
+
 
 3. Complaint Type Detailed (Tertiary/Rare)
    - Use ONLY when the most detailed breakdown is explicitly requested.
