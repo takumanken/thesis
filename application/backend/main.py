@@ -160,7 +160,7 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
         available.append("stacked_bar_chart")
     
     # Treemap
-    if 1 <= cat_count <= 2 and measure_count == 1:
+    if 1 <= dim_count <= 2 and measure_count == 1  and time_count == 0:
         available.append("treemap")
     
     # Heat Map
@@ -200,7 +200,7 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
             ideal = "single_bar_chart"
         
         # Nested Bar Chart
-        elif 1 <= cat_count <= 2 and 1 <= measure_count <= 2 and (cat_count > 1 or measure_count > 1):
+        elif 1 <= dim_count <= 2 and 1 <= measure_count <= 2 and (cat_count + measure_count) <= 4:
             ideal = "nested_bar_chart"
         
         # Grouped Bar Chart
