@@ -61,6 +61,9 @@ CATEGORICAL_DIMENSIONS = [
     "is_noise_complaint", "descriptor", "street_name", "street_number", "community_board", "created_weekday_datepart"
 ]
 
+# Define additive measures - measures that can be summed
+ADDITIVE_MEASURES = ["num_of_requests"]  # Currently only count(1) is additive
+
 # Data models
 class PromptRequest(BaseModel):
     prompt: str
@@ -109,6 +112,10 @@ def classify_dimensions(dimensions: list[str]) -> tuple[list[str], list[str], li
     cat_dim = [dim for dim in dimensions if dim not in time_dim and dim not in geo_dim]
     return time_dim, geo_dim, cat_dim
 
+def is_measure_additive(measure_alias: str) -> bool:
+    """Check if a measure is additive (can be summed)."""
+    return measure_alias in ADDITIVE_MEASURES
+
 def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
     """
     Determine available chart types and ideal chart based on the flowchart in chart_classification.md
@@ -130,6 +137,9 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
     cat_count = len(cat_dim)
     measure_count = len(measures)
     
+    # Count additive measures instead of checking for non-additive
+    additive_measure_count = sum(is_measure_additive(m["alias"]) for m in measures) if measures else 0
+    
     # STEP 1: TEXT RESPONSE CHECK
     if hasattr(agg_def, 'response_type') and agg_def.response_type == "text":
         return ["text"], "text"
@@ -150,64 +160,71 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
         available.append("line_chart")
     
     # Nested Bar Chart
-    if 1 <= cat_count <= 2 and 1 <= measure_count <= 2 and (cat_count > 1 or measure_count > 1):
+    if 1 <= dim_count <= 2 and 1 <= measure_count <= 2 and (dim_count > 1 or measure_count > 1):
         available.append("nested_bar_chart")
     
-    # Grouped Bar Chart & Stacked Bar Chart
-    if cat_count == 2 and measure_count == 1:
+    # Grouped Bar Chart
+    if dim_count == 2 and measure_count == 1:
         available.append("grouped_bar_chart")
-        available.append("stacked_bar_chart")
     
-    # Treemap
-    if 1 <= dim_count <= 2 and measure_count == 1  and time_count == 0:
+    # Stacked Bar Chart - Only add if ALL measures are additive
+    if dim_count == 2 and measure_count == 1 and additive_measure_count == measure_count:
+        available.append("stacked_bar_chart")
+        available.append("stacked_bar_chart_100")
+    
+    # Treemap - Only add if ALL measures are additive
+    if 1 <= dim_count <= 2 and measure_count == 1 and time_count == 0 and additive_measure_count == measure_count:
         available.append("treemap")
     
-    # Heat Map
-    if geo_count == 1 and len(dimensions) == 1 and measure_count == 1:
+    # Heat Map - Only add if ALL measures are additive
+    if geo_count == 1 and len(dimensions) == 1 and measure_count == 1 and additive_measure_count == measure_count:
         geo_name = geo_dim[0].lower()
         if "location" in geo_name:
             available.append("heat_map")
     
-    # Choropleth Map
-    if geo_count == 1 and len(dimensions) == 1 and measure_count == 1:
+    # Choropleth Map - Only add if ALL measures are additive
+    if geo_count == 1 and len(dimensions) == 1 and measure_count == 1 and additive_measure_count == measure_count:
         geo_name = geo_dim[0].lower()
         if any(area in geo_name for area in ["borough", "county", "neighborhood"]):
             available.append("choropleth_map")
     
     # IDEAL CHART SELECTION
-    # Follow the flowchart exactly as specified in chart_classification.md
+    # Follow the flowchart but respect additive measure constraints
     
     # STEP 3: GEOGRAPHIC DIMENSION CHECK
     if geo_count == 1 and len(dimensions) == 1 and measure_count == 1:
         geo_name = geo_dim[0].lower()
         
-        # Heat Map
-        if "location" in geo_name:
-            ideal = "heat_map"
-        # Choropleth Map
-        elif any(area in geo_name for area in ["borough", "county", "neighborhood"]):
-            ideal = "choropleth_map"
+        # Only assign geographic visualizations as ideal if ALL measures are additive
+        if additive_measure_count == measure_count:
+            # Heat Map
+            if "location" in geo_name:
+                ideal = "heat_map"
+            # Choropleth Map
+            elif any(area in geo_name for area in ["borough", "county", "neighborhood"]):
+                ideal = "choropleth_map"
     
     # STEP 4: TIME DIMENSION CHECK
     elif time_count == 1 and cat_count <= 1 and measure_count == 1:
-        ideal = "line_chart"
+        ideal = "line_chart"  # Line chart supports both additive and non-additive measures
     
     # STEP 5: CATEGORICAL DIMENSION CHECK
     else:
         # Single Bar Chart - Updated to match chart_classification.md
         if dim_count == 1 and measure_count == 1 and time_count == 0:
-            ideal = "single_bar_chart"
+            ideal = "single_bar_chart"  # Bar chart supports both additive and non-additive measures
         
         # Nested Bar Chart
         elif 1 <= dim_count <= 2 and 1 <= measure_count <= 2 and (cat_count + measure_count) <= 4:
-            ideal = "nested_bar_chart"
+            ideal = "nested_bar_chart"  # Nested bar chart supports both additive and non-additive measures
         
         # Grouped Bar Chart
         elif cat_count == 2 and measure_count == 1:
-            ideal = "grouped_bar_chart"
+            ideal = "grouped_bar_chart"  # Grouped bar chart supports both additive and non-additive measures
     
     # Ensure unique chart types
     available = list(dict.fromkeys(available))
+    
     logger.info(f"Chart options: {available}, ideal: {ideal}")
     return available, ideal
 
