@@ -55,11 +55,6 @@ TIME_DIMENSIONS = [
     "closed_hour_datepart"
 ]
 GEO_DIMENSIONS = ["borough", "county", "location", "incident_zip", "neighborhood_name"]
-CATEGORICAL_DIMENSIONS = [
-    "unique_key", "status", "agency_category", "agency_name",
-    "complaint_type_large", "complaint_type_middle", "complaint_type_detailed",
-    "is_noise_complaint", "descriptor", "street_name", "street_number", "community_board", "created_weekday_datepart"
-]
 
 # Define additive measures - measures that can be summed
 ADDITIVE_MEASURES = ["num_of_requests"]  # Currently only count(1) is additive
@@ -106,10 +101,14 @@ logger.info("Environment setup completed")
 
 # Helper functions
 def classify_dimensions(dimensions: list[str]) -> tuple[list[str], list[str], list[str]]:
-    """Classify dimensions into time, geo, and categorical dimensions."""
+    """Classify dimensions into time, geo, and categorical dimensions.
+    Note: Categorical dimensions now include all non-time dimensions (including geographic)."""
     time_dim = [dim for dim in dimensions if dim in TIME_DIMENSIONS]
     geo_dim = [dim for dim in dimensions if dim in GEO_DIMENSIONS]
-    cat_dim = [dim for dim in dimensions if dim not in time_dim and dim not in geo_dim]
+    
+    # New approach: All non-time dimensions are considered categorical
+    cat_dim = [dim for dim in dimensions if dim not in time_dim]
+    
     return time_dim, geo_dim, cat_dim
 
 def is_measure_additive(measure_alias: str) -> bool:
@@ -129,7 +128,7 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
     dimensions = agg_def.dimensions or []
     measures = agg_def.measures or []
     
-    # Classify dimensions
+    # Classify dimensions - note that cat_dim now includes geo dimensions
     time_dim, geo_dim, cat_dim = classify_dimensions(dimensions)
     dim_count = len(dimensions)  # Total dimension count
     time_count = len(time_dim)
@@ -158,6 +157,11 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
     # Line Chart
     if time_count == 1 and cat_count <= 1 and measure_count == 1:
         available.append("line_chart")
+    
+    # Stacked Area Chart - Only add if exactly 1 time dimension, 1 categorical dimension, and ALL measures are additive
+    if time_count == 1 and cat_count == 1 and measure_count == 1 and additive_measure_count == measure_count:
+        available.append("stacked_area_chart")
+        available.append("stacked_area_chart_100")
     
     # Nested Bar Chart
     if 1 <= dim_count <= 2 and 1 <= measure_count <= 2 and (dim_count > 1 or measure_count > 1):
@@ -207,6 +211,10 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
     # STEP 4: TIME DIMENSION CHECK
     elif time_count == 1 and cat_count <= 1 and measure_count == 1:
         ideal = "line_chart"  # Line chart supports both additive and non-additive measures
+        
+        # If exactly one categorical dimension and measure is additive, suggest stacked area chart as ideal
+        if cat_count == 1 and additive_measure_count == measure_count:
+            ideal = "stacked_area_chart"
     
     # STEP 5: CATEGORICAL DIMENSION CHECK
     else:
