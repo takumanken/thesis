@@ -239,7 +239,7 @@ function createLineGenerator(x, y, measure) {
     .y((d) => y(d[measure]));
 }
 
-// Draw grouped lines with tooltips
+// Draw grouped lines with tooltips - completely refactored approach
 function drawGroupedLines(
   svg,
   data,
@@ -251,100 +251,198 @@ function drawGroupedLines(
   timeDimension,
   isNumericTimeCheck
 ) {
+  // Group data by the grouping dimension
   const groupedData = d3.group(data, (d) => d[groupDimension]);
 
-  groupedData.forEach((values, key) => {
-    const validValues = values.sort((a, b) => a.parsedTime - b.parsedTime);
+  // Create array of processed groups
+  const groups = Array.from(groupedData, ([key, values]) => {
+    // Sort values chronologically
+    const sortedValues = values.sort((a, b) => a.parsedTime - b.parsedTime);
+    return { key, values: sortedValues };
+  });
 
-    // Draw the line
-    svg
-      .append("path")
-      .datum(validValues)
-      .attr("fill", "none")
-      .attr("stroke", colorScale(key))
-      .attr("stroke-width", 2)
-      .attr("d", lineGenerator);
+  // Draw lines - one per group
+  const lines = svg
+    .append("g")
+    .attr("class", "lines")
+    .selectAll("path")
+    .data(groups)
+    .join("path")
+    .attr("fill", "none")
+    .attr("stroke", (d) => colorScale(d.key))
+    .attr("stroke-width", 2)
+    .attr("d", (d) => lineGenerator(d.values));
 
-    // Add invisible points for better tooltip interaction
-    svg
-      .selectAll(`.point-${key.replace(/\s+/g, "-")}`)
-      .data(validValues)
-      .enter()
-      .append("circle")
-      .attr("class", `point-${key.replace(/\s+/g, "-")}`)
-      .attr("cx", (d) => lineGenerator.x()(d))
-      .attr("cy", (d) => lineGenerator.y()(d))
-      .attr("r", 5)
-      .style("opacity", 0) // Invisible but interactive
-      .style("fill", colorScale(key))
-      .on("mouseover", (event, d) => {
-        d3.select(event.target).transition().duration(100).attr("r", 7).style("opacity", 0.7);
+  // Create a voronoi overlay for better mouse interaction
+  // This avoids the need to create points for each data point
+  const allPoints = [];
+  groups.forEach((group) => {
+    group.values.forEach((d) => {
+      allPoints.push({
+        x: lineGenerator.x()(d),
+        y: lineGenerator.y()(d),
+        data: d,
+        group: group.key,
+      });
+    });
+  });
 
-        tooltip.transition().duration(200).style("opacity", 0.9);
+  // Create interaction layer
+  const interactionLayer = svg.append("g").attr("class", "interaction-layer");
 
-        // Format date/time based on whether it's numeric or date
-        const timeLabel = isNumericTime(d.parsedTime) ? d.parsedTime : d3.timeFormat("%Y-%m-%d")(d.parsedTime);
+  // Add an invisible rectangle to capture mouse events
+  const overlayRect = interactionLayer
+    .append("rect")
+    .attr("width", svg.attr("width"))
+    .attr("height", svg.attr("height"))
+    .style("fill", "none")
+    .style("pointer-events", "all");
+
+  // Create a highlight circle that will follow the closest point
+  const highlight = interactionLayer
+    .append("circle")
+    .attr("r", 5)
+    .style("fill", "none")
+    .style("stroke", "black")
+    .style("stroke-width", 2)
+    .style("opacity", 0);
+
+  // Add mouse interaction
+  overlayRect
+    .on("mousemove", function (event) {
+      const [mouseX, mouseY] = d3.pointer(event);
+
+      // Find the closest point to the mouse
+      let minDist = Infinity;
+      let closestPoint = null;
+
+      allPoints.forEach((point) => {
+        const dx = mouseX - point.x;
+        const dy = mouseY - point.y;
+        const dist = dx * dx + dy * dy; // Squared distance is faster than Math.sqrt
+
+        if (dist < minDist) {
+          minDist = dist;
+          closestPoint = point;
+        }
+      });
+
+      // Only show tooltip if we're reasonably close to a point
+      if (closestPoint && minDist < 900) {
+        // 30px squared radius
+        // Move highlight to the closest point
+        highlight
+          .attr("cx", closestPoint.x)
+          .attr("cy", closestPoint.y)
+          .style("fill", colorScale(closestPoint.group))
+          .style("opacity", 0.8);
+
+        // Show tooltip
+        const d = closestPoint.data;
+        const timeLabel = isNumericTimeCheck ? d.parsedTime : d3.timeFormat("%Y-%m-%d")(d.parsedTime);
 
         tooltip
-          .html(
-            `${key}<br>
-             ${timeDimension}: ${timeLabel}<br>
-             ${measure}: ${d3.format(".2f")(+d[measure])}`
-          )
+          .style("opacity", 0.9)
           .style("left", event.pageX + 10 + "px")
-          .style("top", event.pageY - 28 + "px");
-      })
-      .on("mouseout", (event) => {
-        d3.select(event.target).transition().duration(200).attr("r", 5).style("opacity", 0);
-
-        tooltip.transition().duration(500).style("opacity", 0);
-      });
-  });
+          .style("top", event.pageY - 28 + "px").html(`
+            <strong>${groupDimension}:</strong> ${closestPoint.group}<br>
+            <strong>${timeDimension}:</strong> ${timeLabel}<br>
+            <strong>${measure}:</strong> ${d3.format(".2f")(+d[measure])}
+          `);
+      } else {
+        // Hide highlight and tooltip if we're not close to any point
+        highlight.style("opacity", 0);
+        tooltip.style("opacity", 0);
+      }
+    })
+    .on("mouseleave", function () {
+      // Hide highlight and tooltip when leaving the chart area
+      highlight.style("opacity", 0);
+      tooltip.style("opacity", 0);
+    });
 }
 
 // Draw a single line for non-grouped data with tooltips
 function drawSingleLine(svg, data, lineGenerator, tooltip, measure, timeDimension) {
+  // Sort data by time
+  const sortedData = data.sort((a, b) => a.parsedTime - b.parsedTime);
+
   // Draw the line
   svg
     .append("path")
-    .datum(data.sort((a, b) => a.parsedTime - b.parsedTime))
+    .datum(sortedData)
     .attr("fill", "none")
     .attr("stroke", "steelblue")
     .attr("stroke-width", 2)
     .attr("d", lineGenerator);
 
-  // Add invisible points for better tooltip interaction
-  svg
-    .selectAll(".point")
-    .data(data)
-    .enter()
-    .append("circle")
-    .attr("class", "point")
-    .attr("cx", (d) => lineGenerator.x()(d))
-    .attr("cy", (d) => lineGenerator.y()(d))
-    .attr("r", 5)
-    .style("opacity", 0) // Invisible but interactive
-    .style("fill", "steelblue")
-    .on("mouseover", (event, d) => {
-      d3.select(event.target).transition().duration(100).attr("r", 7).style("opacity", 0.7);
+  // Create array of all data points for interaction
+  const points = sortedData.map((d) => ({
+    x: lineGenerator.x()(d),
+    y: lineGenerator.y()(d),
+    data: d,
+  }));
 
-      tooltip.transition().duration(200).style("opacity", 0.9);
+  // Create interaction layer
+  const interactionLayer = svg.append("g").attr("class", "interaction-layer");
 
-      // Format date/time based on whether it's numeric or date
-      const timeLabel = isNumericTime(d.parsedTime) ? d.parsedTime : d3.timeFormat("%Y-%m-%d")(d.parsedTime);
+  // Add an invisible rectangle to capture mouse events
+  const overlayRect = interactionLayer
+    .append("rect")
+    .attr("width", svg.attr("width"))
+    .attr("height", svg.attr("height"))
+    .style("fill", "none")
+    .style("pointer-events", "all");
 
-      tooltip
-        .html(
-          `${timeDimension}: ${timeLabel}<br>
-         ${measure}: ${d3.format(".2f")(+d[measure])}`
-        )
-        .style("left", event.pageX + 10 + "px")
-        .style("top", event.pageY - 28 + "px");
+  // Create a highlight circle that will follow the closest point
+  const highlight = interactionLayer.append("circle").attr("r", 5).style("fill", "steelblue").style("opacity", 0);
+
+  // Add mouse interaction
+  overlayRect
+    .on("mousemove", function (event) {
+      const [mouseX, mouseY] = d3.pointer(event);
+
+      // Find the closest point to the mouse
+      let minDist = Infinity;
+      let closestPoint = null;
+
+      points.forEach((point) => {
+        const dx = mouseX - point.x;
+        const dy = mouseY - point.y;
+        const dist = dx * dx + dy * dy;
+
+        if (dist < minDist) {
+          minDist = dist;
+          closestPoint = point;
+        }
+      });
+
+      // Only show tooltip if we're reasonably close to a point
+      if (closestPoint && minDist < 900) {
+        // Move highlight to the closest point
+        highlight.attr("cx", closestPoint.x).attr("cy", closestPoint.y).style("opacity", 0.8);
+
+        // Show tooltip
+        const d = closestPoint.data;
+        const timeLabel = typeof d.parsedTime === "number" ? d.parsedTime : d3.timeFormat("%Y-%m-%d")(d.parsedTime);
+
+        tooltip
+          .style("opacity", 0.9)
+          .style("left", event.pageX + 10 + "px")
+          .style("top", event.pageY - 28 + "px").html(`
+            <strong>${timeDimension}:</strong> ${timeLabel}<br>
+            <strong>${measure}:</strong> ${d3.format(".2f")(+d[measure])}
+          `);
+      } else {
+        // Hide highlight and tooltip if we're not close to any point
+        highlight.style("opacity", 0);
+        tooltip.style("opacity", 0);
+      }
     })
-    .on("mouseout", (event) => {
-      d3.select(event.target).transition().duration(200).attr("r", 5).style("opacity", 0);
-
-      tooltip.transition().duration(500).style("opacity", 0);
+    .on("mouseleave", function () {
+      // Hide highlight and tooltip when leaving the chart area
+      highlight.style("opacity", 0);
+      tooltip.style("opacity", 0);
     });
 }
 
