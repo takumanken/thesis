@@ -51,15 +51,14 @@ TIME_DIMENSIONS = [
     "created_week", "closed_week", "created_date", "closed_date",
     "created_month", "closed_month", "created_year", "closed_year",
     "created_year_datepart", "created_month_datepart", "created_day_datepart",
-    "created_hour_datepart", "created_weekday_datepart",
-    "closed_year_datepart", "closed_month_datepart", "closed_day_datepart",
+    "created_hour_datepart", "closed_year_datepart", "closed_month_datepart", "closed_day_datepart",
     "closed_hour_datepart"
 ]
 GEO_DIMENSIONS = ["borough", "county", "location", "incident_zip", "neighborhood_name"]
 CATEGORICAL_DIMENSIONS = [
     "unique_key", "status", "agency_category", "agency_name",
     "complaint_type_large", "complaint_type_middle", "complaint_type_detailed",
-    "is_noise_complaint", "descriptor", "street_name", "street_number", "community_board"
+    "is_noise_complaint", "descriptor", "street_name", "street_number", "community_board", "created_weekday_datepart"
 ]
 
 # Data models
