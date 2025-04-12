@@ -1,7 +1,7 @@
 CREATE OR REPLACE VIEW {object_name} AS
 SELECT
-    IFNULL("Unique Key", 'Unspecified') AS unique_key,
-    IFNULL("Status", 'Unspecified') AS status,
+    "Unique Key" AS unique_key,
+    "Status" AS status,
     cast("Created Date" as timestamp) AS created_timestamp,
     cast(created_timestamp as date) AS created_date,
     date_trunc('week', created_timestamp) AS created_week,
@@ -37,185 +37,107 @@ SELECT
         ELSE 'Others'
     END AS agency_category,
     CASE 
-        WHEN "Complaint Type" IN (
-            'HEATING',
-            'PLUMBING',
-            'ELECTRIC',
-            'Water System',
-            'Water Quality',
-            'PAINT - PLASTER',
-            'PAINT/PLASTER',
-            'Window Guard',
-            'Lead',
-            'Asbestos',
-            'Mold',
-            'APPLIANCE',
-            'NONCONST',
-            'Building/Use',
-            'Building Condition',
-            'GENERAL CONSTRUCTION',
-            'General Construction/Plumbing',
-            'CONSTRUCTION',
-            'Scaffold Safety',
-            'Stalled Sites',
-            'Boilers',
-            'Interior Demo',
-            'Best/Site Safety (B.E.S.T./Site Safety)',
-            'Home Repair',
-            'Weatherization',
-            'HPD Literature Request',
-            'Maintenance or Facility',
-            'Non-Residential Heat'
-        ) THEN 'Housing & Building Maintenance'
-        WHEN "Complaint Type" IN (
-            'Street Condition',
-            'Sidewalk Condition',
-            'Curb Condition',
-            'Street Light Condition',
-            'Street Sign - Damaged',
-            'Street Sign - Missing',
-            'Street Sign - Dangling',
-            'Highway Condition',
-            'Bridge Condition',
-            'Tunnel Condition',
-            'Highway Sign - Damaged',
-            'Highway Sign - Missing',
-            'Highway Sign - Dangling',
-            'Snow',
-            'Bus Stop Shelter Complaint',
-            'Bus Stop Shelter Placement',
-            'Public Payphone Complaint',
-            'Municipal Parking Facility',
-            'Bike Rack Condition'
-        ) THEN 'Streets & Sidewalks'
-        WHEN "Complaint Type" IN (
-            'Traffic Signal Condition',
-            'Broken Muni Meter',
-            'Broken Parking Meter',
-            'Parking Card',
-            'Blocked Driveway',
-            'Traffic',
-            'Traffic/Illegal Parking',
-            'Illegal Parking',
-            'Derelict Vehicle',
-            'Derelict Bicycle',
-            'City Vehicle Placard Complaint',
-            'Taxi Complaint',
-            'Taxi Compliment',
-            'For Hire Vehicle Complaint',
-            'Ferry Complaint',
-            'Ferry Inquiry',
-            'Ferry Permit',
-            'DOF Parking - Payment Issue',
-            'DOF Parking - Request Status',
-            'DOF Parking - Request Copy',
-            'DOF Parking - DMV Clearance',
-            'DOF Parking - Tax Exemption',
-            'DOF Parking - Address Update'
-        ) THEN 'Traffic & Parking'
-        WHEN "Complaint Type" IN (
-            'Noise - Residential',
-            'Noise',
-            'Noise - Commercial',
-            'Noise - Street/Sidewalk',
-            'Noise - Vehicle',
-            'Noise - House of Worship',
-            'Noise - Helicopter',
-            'Noise - Park',
-            'Noise Survey',
-            'Collection Truck Noise',
-            'Panhandling',
-            'Disorderly Youth',
-            'Urinating in Public',
-            'Squeegee',
-            'Illegal Fireworks',
-            'Posting Advertisement',
-            'Graffiti',
-            'Drinking',
-            'Non-Emergency Police Matter'
-        ) THEN 'Noise & Quality of Life'
-        WHEN "Complaint Type" IN (
-            'Dirty Conditions',
-            'Missed Collection (All Materials)',
-            'Sanitation Condition',
-            'Sweeping/Missed-Inadequate',
-            'Overflowing Litter Baskets',
-            'Litter Basket / Request',
-            'Rodent',
-            'Unsanitary Pigeon Condition',
-            'Hazardous Materials',
-            'Hazardous Material',
-            'Industrial Waste',
-            'Air Quality',
-            'Indoor Air Quality',
-            'Water Conservation',
-            'Recycling Enforcement',
-            'Poison Ivy',
-            'Sewer'
-        ) THEN 'Environmental & Sanitation'
-        WHEN "Complaint Type" IN (
-            'Damaged Tree',
-            'Overgrown Tree/Branches',
-            'New Tree Request',
-            'Dead Tree',
-            'Root/Sewer/Sidewalk Condition',
-            'Violation of Park Rules',
-            'Animal in a Park',
-            'Beach/Pool/Sauna Complaint',
-            'Lifeguard',
-            'Summer Camp'
-        ) THEN 'Greenery & Trees (Parks & Rec)'
-        WHEN "Complaint Type" IN (
-            'Food Establishment',
-            'Food Poisoning',
-            'Smoking',
-            'Calorie Labeling',
-            'Trans Fat',
-            'Tattooing',
-            'X-Ray Machine/Equipment',
-            'Illegal Animal Kept as Pet',
-            'Illegal Animal Sold',
-            'Bottled Water'
-        ) THEN 'Public Health & Food Safety'
-        WHEN "Complaint Type" IN (
-            'Homeless Encampment',
-            'Elder Abuse',
-            'Senior Center Complaint',
-            'Alzheimer''s Care',
-            'Home Care Provider Complaint',
-            'SCRIE',
-            'HEAP Assistance',
-            'Housing Options',
-            'Benefit Card Replacement',
-            'Eviction',
-            'Case Management Agency Complaint',
-            'Legal Services Provider Complaint',
-            'Home Delivered Meal Complaint',
-            'Home Delivered Meal - Missed Delivery',
-            'Transportation Provider Complaint',
-            'DHS Advantage - Tenant',
-            'DHS Advantage -Landlord/Broker',
-            'DHS Advantage - Third Party',
-            'DHS Income Savings Requirement'
-        ) THEN 'Social Services & Community Support'
-        WHEN "Complaint Type" IN (
-            'Consumer Complaint',
-            'DCA / DOH New License Application Request',
-            'DOF Property - Owner Issue',
-            'DOF Property - Reduction Issue',
-            'DOF Property - Request Copy',
-            'DOF Property - Payment Issue',
-            'DOF Property - City Rebate',
-            'DOF Property - RPIE Issue',
-            'DOF Property - Property Value',
-            'DOF Property - State Rebate',
-            'Registration and Transfers',
-            'Investigations and Discipline (IAD)',
-            'Forensic Engineering',
-            'Forms',
-            'Vending'
-        ) THEN 'Administrative, Regulatory & Financial'
-        ELSE 'Other'
+        -- Noise Issues
+        WHEN "Complaint Type" LIKE 'Noise%' OR
+             "Complaint Type" IN ('Helicopter Noise')
+        THEN 'Noise Issues'
+        
+        -- Housing & Building
+        WHEN "Complaint Type" IN ('HEAT/HOT WATER', 'PLUMBING', 'PAINT/PLASTER', 'DOOR/WINDOW',
+                                'WATER LEAK', 'GENERAL', 'ELECTRIC', 'FLOORING/STAIRS', 
+                                'APPLIANCE', 'Elevator', 'SAFETY', 'Heat/Hot Water',
+                                'Plumbing', 'Paint/Plaster', 'Door/Window', 'Electric',
+                                'Flooring/Stairs', 'Appliance', 'Safety', 'Building/Use', 
+                                'Lead', 'Mold', 'OUTSIDE BUILDING', 'Indoor Air Quality',
+                                'Non-Residential Heat', 'ELEVATOR', 'Boilers', 
+                                'CONSTRUCTION', 'GENERAL CONSTRUCTION', 'Building Condition',
+                                'General Construction/Plumbing', 'Scaffold Safety')
+        THEN 'Housing & Building'
+        
+        -- Parking & Street Access
+        WHEN "Complaint Type" IN ('Illegal Parking', 'Blocked Driveway', 
+                                'Traffic/Illegal Parking')
+        THEN 'Parking & Street Access'
+        
+        -- Street & Infrastructure
+        WHEN "Complaint Type" IN ('Street Condition', 'Traffic Signal Condition', 
+                                'Street Light Condition', 'Sidewalk Condition',
+                                'Curb Condition', 'Street Sign - Damaged', 
+                                'Street Sign - Missing', 'Highway Condition',
+                                'Bridge Condition', 'Street Sign - Dangling',
+                                'Broken Parking Meter', 'Highway Sign - Damaged',
+                                'Highway Sign - Missing', 'Highway Sign - Dangling',
+                                'Root/Sewer/Sidewalk Condition', 'Snow',
+                                'Tunnel Condition')
+        THEN 'Street & Infrastructure'
+        
+        -- Sanitation Issues
+        WHEN "Complaint Type" IN ('UNSANITARY CONDITION', 'Dirty Condition', 
+                               'Missed Collection', 'Illegal Dumping',
+                               'Dirty Conditions', 'Rodent', 'Dead Animal',
+                               'Missed Collection (All Materials)', 'Sanitation Condition',
+                               'Sweeping/Missed-Inadequate', 'Litter Basket / Request',
+                               'Overflowing Litter Baskets', 'Residential Disposal Complaint',
+                               'Unsanitary Condition', 'Request Large Bulky Item Collection', 
+                               'Street Sweeping Complaint', 'Sanitation Worker or Vehicle Complaint',
+                               'Commercial Disposal Complaint', 'Unsanitary Pigeon Condition')
+        THEN 'Sanitation Issues'
+        
+        -- Vehicle Concerns
+        WHEN "Complaint Type" IN ('Abandoned Vehicle', 'Derelict Vehicle', 'Derelict Vehicles', 
+                                'For Hire Vehicle Complaint', 'Taxi Complaint',
+                                'For Hire Vehicle Report', 'Taxi Report',
+                                'Green Taxi Complaint', 'Ferry Complaint',
+                                'Ferry Inquiry', 'Derelict Bicycle',
+                                'Taxi Compliment', 'Taxi Licensee Complaint')
+        THEN 'Vehicle Concerns'
+        
+        -- Public Safety & Order
+        WHEN "Complaint Type" IN ('Drug Activity', 'Illegal Fireworks',
+                                'Panhandling', 'Smoking', 'Drinking',
+                                'Urinating in Public', 'Disorderly Youth',
+                                'Non-Emergency Police Matter', 'Graffiti',
+                                'Obstruction', 'Illegal Animal Kept as Pet',
+                                'Bike/Roller/Skate Chronic', 'Animal-Abuse',
+                                'Real Time Enforcement', 'Violation of Park Rules',
+                                'Unleashed Dog', 'Face Covering Violation',
+                                'Vaccine Mandate Non-Compliance')
+        THEN 'Public Safety & Order'
+        
+        -- Environmental & Green Space
+        WHEN "Complaint Type" IN ('Water System', 'Damaged Tree',
+                                'Overgrown Tree/Branches', 'New Tree Request',
+                                'Dead Tree', 'Dead/Dying Tree', 'Air Quality',
+                                'Illegal Tree Damage', 'Water Quality',
+                                'Water Conservation', 'Sewer',
+                                'Harboring Bees/Wasps', 'Mosquitoes',
+                                'Standing Water', 'Poison Ivy',
+                                'Plant', 'Animal in a Park', 'Sewer Maintenance',
+                                'Beach/Pool/Sauna Complaint')
+        THEN 'Environmental & Green Space'
+        
+        -- Commercial & Consumer Issues
+        WHEN "Complaint Type" IN ('Consumer Complaint', 'Food Establishment',
+                                'Vendor Enforcement', 'Mobile Food Vendor',
+                                'Outdoor Dining', 'Food Poisoning',
+                                'Special Projects Inspection Team (SPIT)',
+                                'Illegal Posting', 'Day Care',
+                                'Pet Shop', 'Maintenance or Facility',
+                                'Dumpster Complaint', 'Business Complaint',
+                                'School Maintenance', 'Industrial Waste',
+                                'Calorie Labeling', 'Trans Fat', 'Tattooing')
+        THEN 'Commercial & Consumer Issues'
+        
+        -- Public Assistance
+        WHEN "Complaint Type" IN ('Homeless Person Assistance', 'Homeless Encampment',
+                                'Encampment', 'Social Services', 'Elder Abuse',
+                                'Senior Center Complaint', 'Alzheimer''s Care',
+                                'Home Care Provider Complaint', 'Home Delivered Meal - Missed Delivery',
+                                'HEAP Assistance')
+        THEN 'Public Assistance'
+        
+        -- All others
+        ELSE 'Others'
     END AS complaint_type_large,
     IFNULL("Complaint Type", 'Unspecified') AS complaint_type_middle,
     IFNULL("Descriptor", 'Unspecified') AS complaint_type_detailed,
@@ -236,5 +158,6 @@ SELECT
     IFNULL("Location Type", 'Unspecified') AS location_type,
     IFNULL("Address Type", 'Unspecified') AS address_type,
     IFNULL("Open Data Channel Type", 'Unspecified') AS open_data_channel_type,
+    1 as num_of_requests
 FROM
     read_parquet('{object_url}');
