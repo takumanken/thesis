@@ -28,25 +28,34 @@ def generate_unique_values(db_path='../backend/nyc_open_data.db', output_dir='..
     print(f"Connecting to database: {db_path}")
     con = duckdb.connect(db_path)
     
-    # Build SQL query for all target columns
-    sql_parts = []
+    # Build aggregate expressions for all columns
+    agg_expressions = []
     for column in TARGET_COLUMNS:
-        sql_parts.append(
-            f"SELECT '{column}' as field_name, array_agg(DISTINCT {column}) as value_list FROM requests_311 WHERE {column} != 'Unspecified'"
+        agg_expressions.append(
+            f"array_agg(DISTINCT CASE WHEN {column} != 'Unspecified' AND {column} IS NOT NULL THEN {column} END) AS {column}_values"
         )
     
-    sql_query = " UNION ALL ".join(sql_parts)
-    print("Executing SQL query...")
+    # Build temp table query with all target columns
+    column_list = ", ".join(TARGET_COLUMNS)
     
-    # Execute the query
+    # Combine both queries into a single execution
+    combined_query = f"""
+    CREATE TEMP TABLE base AS SELECT {column_list} FROM requests_311;
+    SELECT {', '.join(agg_expressions)} FROM base;
+    """
+    
+    print("Executing combined query...")
+    
     try:
-        results = con.execute(sql_query).fetchall()
+        # Execute both statements in a single call
+        result = con.execute(combined_query).fetchone()
         
-        # Create a combined file with all values
+        # Process results into the combined dictionary
         combined = {}
-        for field_name, value_list in results:
-            clean_values = sorted([v for v in value_list if v is not None])
-            combined[field_name] = clean_values
+        for i, column in enumerate(TARGET_COLUMNS):
+            values = result[i]  # Get array from the result row
+            clean_values = sorted([v for v in values if v is not None])
+            combined[column] = clean_values
         
         combined_file = os.path.join(output_dir, "all_filters.json")
         with open(combined_file, 'w') as f:
@@ -58,6 +67,11 @@ def generate_unique_values(db_path='../backend/nyc_open_data.db', output_dir='..
         print(f"Error executing query: {e}")
         sys.exit(1)
     finally:
+        # Clean up temp table before closing
+        try:
+            con.execute("DROP TABLE IF EXISTS base")
+        except:
+            pass
         con.close()
 
 if __name__ == "__main__":
