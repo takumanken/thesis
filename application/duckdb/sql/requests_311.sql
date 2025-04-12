@@ -219,12 +219,6 @@ SELECT
     END AS complaint_type_large,
     IFNULL("Complaint Type", 'Unspecified') AS complaint_type_middle,
     IFNULL("Descriptor", 'Unspecified') AS complaint_type_detailed,
-    IFNULL("Street Name", 'Unspecified') AS street_name,
-    REGEXP_EXTRACT(
-        "Incident Address",
-        CONCAT('([0-9\\-]+) ', "Street Name"),
-        1
-    ) AS street_number,
     IFNULL("Borough", 'Unspecified') AS borough,
     CASE
         WHEN IFNULL("Borough", 'Unspecified') = 'MANHATTAN' THEN 'NEW YORK'
@@ -239,6 +233,8 @@ SELECT
     IFNULL(neighborhood_code, 'Unspecified') AS neighborhood_code,
     IFNULL(neighborhood_name, 'Unspecified') AS neighborhood_name,
     IFNULL("Community Board", 'Unspecified') AS community_board,
-    LOWER(complaint_type_middle) like '%noise%' AS is_noise_complaint,
+    IFNULL("Location Type", 'Unspecified') AS location_type,
+    IFNULL("Address Type", 'Unspecified') AS address_type,
+    IFNULL("Open Data Channel Type", 'Unspecified') AS open_data_channel_type,
 FROM
     read_parquet('{object_url}');
