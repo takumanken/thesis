@@ -55,11 +55,11 @@ C. Categorical Dimension
 • complaint_type_large      : Default complaint type (broad).
 • complaint_type_middle     : The second detailed complaint type. Use only if explicitly asked.
 • complaint_type_detailed   : The most detailed complaint type. Use only if explicitly asked.
-• is_noise_complaint        : Boolean indicating if it is a noise complaint.
 • descriptor                : Additional complaint details.
-• street_name               : Incident street name.
-• street_number             : Incident street number.
 • community_board           : Community board.
+• location_type             : Type of location used in the address information.
+• address_type              : Type of incident location information available.
+• open_data_channel_type    : Indicates how the SR was submitted to 311
 
 D. Measures
 ----------
@@ -115,12 +115,11 @@ C. Geographic Guidelines
      * Mentions them by name ("neighborhoods", "boroughs", "counties")
      * Refers to specific values within them (e.g., "Brooklyn", "East Village")
      * Requests aggregation at that specific level
-   - Never use "street_name" or "street_number" unless explicitly requested
+   - Never use "street_name" unless user explicitly specify the street name in their query.
 
 D. Categorical Guidelines
 ----------------------
 1. When using any categorical dimension, exclude records where the value is "Unspecified" unless explicitly requested.
-2. For noise-related queries, always use "is_noise_complaint" for filtering rather than trying to match on complaint types.
 
 E. Measure Guidelines
 ------------------
@@ -295,19 +294,6 @@ Expected Output:
 }}
 
 Example 3:
-User Query: "Where are noise complaints most common in NYC?"
-Reasoning: This asks for location distribution of noise complaints, best shown by neighborhood.
-Expected Output:
-{{
-    "dimensions": ["neighborhood_name"],
-    "measures": [
-        {{ "expression": "count(1)", "alias": "num_of_requests" }}
-    ],
-    "preAggregationFilters": "neighborhood_name <> 'Unspecified' AND is_noise_complaint = TRUE",
-    "postAggregationFilters": ""
-}}
-
-Example 4:
 User Query: "Which agencies handle the most complaints?"
 Reasoning: This is asking about agencies at the category level since no detail was specified.
 Expected Output:
