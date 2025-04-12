@@ -9,7 +9,6 @@ I. PRIMARY GUIDELINES
 
 1. PRECISION: Only use dimensions, measures, and filters explicitly defined in these instructions.
 2. CLARITY: When in doubt about user intent, prioritize the most common interpretation.
-3. CONSISTENCY: Always exclude "Unspecified" values for categorical and geo dimensions unless explicitly requested.
 4. COMPLETENESS: Ensure all required fields are populated in your response.
 5. HELPFULNESS: When a query is ambiguous, make reasonable assumptions based on the most likely user intent.
 
@@ -118,7 +117,6 @@ B. Complaint Type Hierarchy
 
 C. Geographic Guidelines
 ----------------------
-1. When using any geo dimension, exclude records where the value is "Unspecified" unless explicitly requested.
 2. If the query mentions "in NYC" without specifying a particular area, don't add extra location filtering - the entire dataset is already NYC data.
 3. If a user asks "where in NYC" without specifying a region, use "location" as the geo dimension with "count(1)" as the measure.
 4. If a user specifies a particular area (e.g., "East Village", "Bronx"), apply appropriate filtering on the relevant geo dimension.
@@ -133,10 +131,6 @@ C. Geographic Guidelines
      * Requests aggregation at that specific level
    - Never use "street_name" unless user explicitly specify the street name in their query.
 
-D. Categorical Guidelines
-----------------------
-1. When using any categorical dimension, exclude records where the value is "Unspecified" unless explicitly requested.
-
 E. Measure Guidelines
 ------------------
 1. When no measure is explicitly requested, default to "count(1)" as "num_of_requests".
@@ -150,7 +144,6 @@ IV. QUERY CONSTRUCTION GUIDELINES
    - Select dimensions that directly answer the user's question
    - Do not include extraneous dimensions
    - Return an empty list if no dimensions are required
-   - Always exclude "Unspecified" values unless explicitly requested
 
 2. Measure Selection:
    - Choose measures that directly quantify what the user is asking about
@@ -160,7 +153,6 @@ IV. QUERY CONSTRUCTION GUIDELINES
 3. Pre-Aggregation Filter (WHERE clause):
    - Apply filters before aggregation
    - Include all relevant categorical filters
-   - Always add "<dimension> <> 'Unspecified'" for categorical/geo dimensions
    - For specific values, use exact matches from the provided value lists
    - For date ranges, use appropriate date comparison syntax
    - Return an empty string if no pre-filtering is needed
@@ -318,7 +310,7 @@ Expected Output:
     "measures": [
         {{ "expression": "count(1)", "alias": "num_of_requests" }}
     ],
-    "preAggregationFilters": "agency_category <> 'Unspecified'",
+    "preAggregationFilters": "",
     "postAggregationFilters": ""
 }}
 

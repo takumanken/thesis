@@ -164,23 +164,23 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
         available.append("stacked_area_chart_100")
     
     # Nested Bar Chart
-    if 1 <= dim_count <= 2 and 1 <= measure_count <= 2 and (dim_count > 1 or measure_count > 1):
+    if 1 <= cat_count <= 2 and 1 <= measure_count <= 2 and (cat_count > 1 or measure_count > 1):
         available.append("nested_bar_chart")
     
     # Grouped Bar Chart
-    if dim_count == 2 and measure_count == 1:
+    if cat_count == 2 and measure_count == 1:
         available.append("grouped_bar_chart")
     
-    # Stacked Bar Chart - Only add if ALL measures are additive
-    if dim_count == 2 and measure_count == 1 and additive_measure_count == measure_count:
+    # Stacked Bar Chart
+    if cat_count == 2 and measure_count == 1 and additive_measure_count == measure_count:
         available.append("stacked_bar_chart")
         available.append("stacked_bar_chart_100")
     
-    # Treemap - Only add if ALL measures are additive
-    if 1 <= dim_count <= 2 and measure_count == 1 and time_count == 0 and additive_measure_count == measure_count:
+    # Treemap
+    if 1 <= cat_count <= 2 and measure_count == 1 and time_count == 0 and additive_measure_count == measure_count:
         available.append("treemap")
     
-    # Heat Map - Only add if ALL measures are additive
+    # Heat Map
     if geo_count == 1 and len(dimensions) == 1 and measure_count == 1 and additive_measure_count == measure_count:
         geo_name = geo_dim[0].lower()
         if "location" in geo_name:
@@ -223,7 +223,7 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
             ideal = "single_bar_chart"  # Bar chart supports both additive and non-additive measures
         
         # Nested Bar Chart
-        elif 1 <= dim_count <= 2 and 1 <= measure_count <= 2 and (cat_count + measure_count) <= 4:
+        elif 1 <= cat_count <= 2 and 1 <= measure_count <= 2 and (cat_count + measure_count) <= 4:
             ideal = "nested_bar_chart"  # Nested bar chart supports both additive and non-additive measures
         
         # Grouped Bar Chart
