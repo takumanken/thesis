@@ -6,10 +6,15 @@ import sys
 # Configure target columns to extract unique values
 TARGET_COLUMNS = [
     'borough',
+    'county',
     'complaint_type_middle',
     'status',
     'agency_name',
-    'neighborhood_name'
+    'neighborhood_name',
+    'community_board',
+    'location_type',
+    'address_type',
+    'open_data_channel_type',
 ]
 
 def generate_unique_values(db_path='../backend/nyc_open_data.db', output_dir='../backend/filter_values'):
