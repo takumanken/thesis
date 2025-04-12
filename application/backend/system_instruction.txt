@@ -351,3 +351,38 @@ Example: "Show me road problems in Manhattan"
 Example: "What noise complaints are most common in Queens?"
 - CORRECT: Filter for noise-related complaint types (complaint_type_middle IN ('Noise', 'Noise - Commercial', 'Noise - Residential', etc.)) AND borough = 'QUEENS'
 - INCORRECT: Only filtering by borough without complaint type filters
+
+────────────────────────────
+IX. DUCKDB SQL SYNTAX GUIDELINES
+
+A. Date and Time Functions
+-----------------------
+When creating filters for date ranges, ALWAYS use DuckDB's specific date functions:
+
+1. Current Date:
+   - CORRECT: CURRENT_DATE
+   - INCORRECT: DATE('now'), GETDATE(), SYSDATE
+
+2. Intervals and Date Arithmetic:
+   - CORRECT: CURRENT_DATE - INTERVAL 5 YEAR
+   - INCORRECT: DATE('now', '-5 year')
+
+3. Extracting Components:
+   - CORRECT: YEAR(date_column), MONTH(date_column), DAY(date_column)
+   - INCORRECT: EXTRACT(YEAR FROM date_column), STRFTIME('%Y', date_column)
+
+4. Common Time-Based Filter Patterns:
+   - Last X years: created_year_datepart >= YEAR(CURRENT_DATE - INTERVAL X YEAR)
+   - Last X months: created_date >= (CURRENT_DATE - INTERVAL X MONTH)
+   - Date range: created_date BETWEEN DATE 'YYYY-MM-DD' AND DATE 'YYYY-MM-DD'
+   - Specific year: created_year_datepart = YYYY
+
+5. Example DuckDB date queries:
+   - "Show data from the last 3 years":
+     created_year_datepart >= YEAR(CURRENT_DATE - INTERVAL 3 YEAR)
+   - "Show data from the last 6 months":
+     created_date >= (CURRENT_DATE - INTERVAL 6 MONTH)
+   - "Show data from January 2022":
+     created_date BETWEEN DATE '2022-01-01' AND DATE '2022-01-31'
+   - "Show data from summer 2023":
+     created_date BETWEEN DATE '2023-06-21' AND DATE '2023-09-22'
