@@ -38,6 +38,22 @@ A. Time Related Dimension
    - closed_day_datepart       : INTEGER day number (1-31) from closed date.
    - closed_hour_datepart      : INTEGER hour (0-23) from closed date.
 
+A.1 Time Expression Interpretation
+-----------------
+• CRUCIAL: References to time periods in filtering context DO NOT change the time dimension:
+   - Temporal phrases like "in recent years", "over the past few years", "last 5 years", etc. should be interpreted as FILTER CONDITIONS, not as requests to change the time dimension.
+   - For these cases, still use the DEFAULT time dimension (created_week), but add appropriate filters.
+
+• ONLY select non-default time dimensions when the user EXPLICITLY requests:
+   - Specific granularity ("show me yearly trends", "monthly breakdown", etc.)
+   - Specific formatting ("format by year", "group by month", etc.)
+   - Direct mention of dimension ("use years instead of weeks", etc.)
+
+• Examples:
+   - "Show me complaint trends in recent years" → Use created_week (DEFAULT) with appropriate year filter
+   - "Show me yearly complaint trends" → Use created_year (EXPLICIT request for yearly granularity)
+   - "Show complaints by borough in the last 3 years" → Use created_week (DEFAULT) with 3-year filter
+
 B. Geo Related Dimension
 ----------------
 • borough                   : Borough of the incident.
