@@ -5,3 +5,4 @@ slowapi
 pandas
 dotenv
 google-genai
+polars
