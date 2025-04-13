@@ -117,10 +117,16 @@ def is_measure_additive(measure_alias: str) -> bool:
     """Check if a measure is additive (can be summed)."""
     return measure_alias in ADDITIVE_MEASURES
 
-def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
+def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]] = None) -> tuple[list[str], str]:
     """
     Determine available chart types and ideal chart based on the flowchart in chart_classification.md
-    Returns (available_charts, ideal_chart)
+    
+    Args:
+        agg_def: The aggregation definition
+        dimension_stats: Statistics from calculate_dimension_cardinality_stats (optional)
+        
+    Returns:
+        (available_charts, ideal_chart)
     """
     # Initialize with table as fallback
     available = ["table"]
@@ -156,14 +162,19 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
     if dim_count == 1 and measure_count == 1 and time_count == 0:
         available.append("single_bar_chart")
     
+    # Check if all dimensions exceed cardinality threshold
+    high_cardinality = dimension_stats and all_dimensions_exceed_cardinality(dimensions, dimension_stats)
+    
     # Line Chart
     if time_count == 1 and cat_count <= 1 and measure_count == 1:
-        available.append("line_chart")
+        if not high_cardinality:
+            available.append("line_chart")
     
     # Stacked Area Chart - Only add if exactly 1 time dimension, 1 categorical dimension, and ALL measures are additive
     if time_count == 1 and cat_count == 1 and measure_count == 1 and additive_measure_count == measure_count:
-        available.append("stacked_area_chart")
-        available.append("stacked_area_chart_100")
+        if not high_cardinality:
+            available.append("stacked_area_chart")
+            available.append("stacked_area_chart_100")
     
     # Nested Bar Chart
     if 1 <= cat_count <= 2 and 1 <= measure_count <= 2 and (cat_count > 1 or measure_count > 1):
@@ -171,12 +182,14 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
     
     # Grouped Bar Chart
     if cat_count == 2 and measure_count == 1:
-        available.append("grouped_bar_chart")
+        if not high_cardinality:
+            available.append("grouped_bar_chart")
     
     # Stacked Bar Chart
     if cat_count == 2 and measure_count == 1 and additive_measure_count == measure_count:
-        available.append("stacked_bar_chart")
-        available.append("stacked_bar_chart_100")
+        if not high_cardinality:
+            available.append("stacked_bar_chart")
+            available.append("stacked_bar_chart_100")
     
     # Treemap
     if 1 <= cat_count <= 2 and measure_count == 1 and time_count == 0 and additive_measure_count == measure_count:
@@ -231,6 +244,11 @@ def get_chart_options(agg_def: AggregationDefinition) -> tuple[list[str], str]:
         # Grouped Bar Chart
         elif cat_count == 2 and measure_count == 1:
             ideal = "grouped_bar_chart"  # Grouped bar chart supports both additive and non-additive measures
+    
+    if high_cardinality:
+        # If high cardinality and ideal was one of the restricted charts, fall back to table
+        if ideal in ["line_chart", "stacked_area_chart", "stacked_area_chart_100", "grouped_bar_chart", "stacked_bar_chart", "stacked_bar_chart_100"]:
+            ideal = "table"  # Fall back to table view
     
     # Ensure unique chart types
     available = list(dict.fromkeys(available))
@@ -441,6 +459,40 @@ def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_
         "categoricalDimension": cat_dim
     })
 
+def all_dimensions_exceed_cardinality(dimensions: list[str], dimension_stats: Dict[str, Dict[str, float]], threshold: int = 15) -> bool:
+    """
+    Check if all dimensions (except time dimensions) exceed the cardinality threshold.
+    
+    Args:
+        dimensions: List of dimension names
+        dimension_stats: Statistics about dimensions from calculate_dimension_cardinality_stats
+        threshold: The cardinality threshold (default: 15)
+        
+    Returns:
+        True if all non-time dimensions exceed threshold, False otherwise
+    """
+    if not dimensions or not dimension_stats:
+        return False
+        
+    # Filter out time dimensions
+    non_time_dims = [dim for dim in dimensions if dim not in TIME_DIMENSIONS]
+    
+    # If there are no non-time dimensions, return False
+    if not non_time_dims:
+        return False
+        
+    # Check if all non-time dimensions exceed the threshold
+    for dim in non_time_dims:
+        if dim not in dimension_stats:
+            continue
+        
+        cardinality = dimension_stats[dim].get("total_unique", 0)
+        if cardinality <= threshold:
+            return False
+            
+    # All dimensions exceed threshold
+    return True
+
 # Process prompt endpoint
 @app.post("/process")
 @limiter.limit("10/minute")
@@ -485,12 +537,9 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         dimension_stats = {}
         if dataset and agg_def.dimensions:
             dimension_stats = calculate_dimension_cardinality_stats(dataset, agg_def.dimensions)
-            
-            # Reorder dimensions based on cardinality
-            agg_def = reorder_dimensions_by_cardinality(agg_def, dimension_stats)
         
-        # Determine visualization options
-        available_charts, ideal_chart = get_chart_options(agg_def)
+        # Determine visualization options - pass dimension_stats
+        available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats)
         
         # Create response
         response_payload = {
