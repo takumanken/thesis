@@ -15,6 +15,8 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from typing import List, Dict, Tuple, Optional, Any
+import polars as pl
+import numpy as np
 
 # Enhanced logging setup
 logging.basicConfig(
@@ -333,6 +335,79 @@ def extract_json_from_text(json_text: str) -> tuple[dict, bool]:
     except json.JSONDecodeError:
         return {}, False
 
+def calculate_dimension_cardinality_stats(dataset: List[Dict], dimensions: List[str]) -> Dict[str, Dict[str, float]]:
+    """Calculate cardinality statistics for each dimension in the aggregated dataset.
+    
+    Args:
+        dataset: The aggregated dataset as a list of dictionaries
+        dimensions: List of dimension names from the aggregation definition
+        
+    Returns:
+        Dictionary with statistics for each dimension
+    """
+    if not dataset or not dimensions:
+        return {}
+    
+    # Convert to Polars DataFrame for better performance
+    try:
+        df = pl.DataFrame(dataset)
+    except Exception as e:
+        logger.warning(f"Failed to convert dataset to Polars DataFrame: {str(e)}. Falling back to pandas.")
+        import pandas as pd
+        df = pd.DataFrame(dataset)
+    
+    stats = {}
+    
+    # For each dimension, calculate stats
+    for dim in dimensions:
+        # Skip if dimension is not in dataset
+        if dim not in df.columns:
+            continue
+            
+        # Count total unique values for this dimension
+        total_unique = df[dim].n_unique()
+        
+        # If this is the only dimension, we can't calculate per-group stats
+        if len(dimensions) == 1:
+            stats[dim] = {
+                "total_unique": total_unique,
+                "min_per_group": total_unique,
+                "max_per_group": total_unique,
+                "avg_per_group": float(total_unique),
+                "median_per_group": float(total_unique),
+                "std_per_group": 0.0
+            }
+            continue
+        
+        # Get other dimensions to group by
+        other_dims = [d for d in dimensions if d != dim]
+        
+        # Group by other dimensions and calculate unique counts for this dimension
+        if isinstance(df, pl.DataFrame):
+            # Polars implementation
+            grouped = (df
+                      .group_by(other_dims)
+                      .agg(pl.col(dim).n_unique().alias("unique_count")))
+            
+            unique_counts = grouped["unique_count"].to_numpy()
+        else:
+            # Pandas fallback
+            grouped = df.groupby(other_dims)[dim].nunique().reset_index()
+            unique_counts = grouped[dim].values
+        
+        # Calculate statistics
+        stats[dim] = {
+            "total_unique": int(total_unique),
+            "min_per_group": int(np.min(unique_counts)),
+            "max_per_group": int(np.max(unique_counts)),
+            "avg_per_group": float(np.mean(unique_counts)),
+            "median_per_group": float(np.median(unique_counts)),
+            "std_per_group": float(np.std(unique_counts)),
+            "group_count": len(unique_counts)
+        }
+    
+    return stats
+
 # Process prompt endpoint
 @app.post("/process")
 @limiter.limit("10/minute")
@@ -373,6 +448,11 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         sql = generate_sql(agg_def, "requests_311")
         dataset = execute_sql_in_duckDB(sql, DB_FILE_NAME)
         
+        # Calculate dimension cardinality statistics
+        dimension_stats = {}
+        if dataset and agg_def.dimensions:
+            dimension_stats = calculate_dimension_cardinality_stats(dataset, agg_def.dimensions)
+        
         # Determine visualization options
         available_charts, ideal_chart = get_chart_options(agg_def)
         
@@ -384,6 +464,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             "aggregationDefinition": agg_def.dict(),
             "chartType": ideal_chart,
             "availableChartTypes": available_charts,
+            "dimensionStats": dimension_stats,  # Add the stats to the response
             "textResponse": None
         }
         
