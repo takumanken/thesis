@@ -408,6 +408,39 @@ def calculate_dimension_cardinality_stats(dataset: List[Dict], dimensions: List[
     
     return stats
 
+def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]]) -> AggregationDefinition:
+    """
+    Reorder dimensions by their cardinality (higher cardinality first).
+    Uses the total_unique count from dimension_stats.
+    
+    Args:
+        agg_def: The aggregation definition
+        dimension_stats: Statistics from calculate_dimension_cardinality_stats
+        
+    Returns:
+        Updated aggregation definition with reordered dimensions
+    """
+    if not agg_def.dimensions or len(agg_def.dimensions) <= 1 or not dimension_stats:
+        # No need to reorder if there are 0 or 1 dimensions
+        return agg_def
+    
+    # Sort dimensions by total_unique (descending)
+    sorted_dims = sorted(
+        agg_def.dimensions,
+        key=lambda dim: dimension_stats.get(dim, {}).get("total_unique", 0),
+        reverse=True  # Higher cardinality first
+    )
+    
+    # Create a new aggregation definition with reordered dimensions
+    time_dim, geo_dim, cat_dim = classify_dimensions(sorted_dims)
+    
+    return agg_def.copy(update={
+        "dimensions": sorted_dims,
+        "timeDimension": time_dim,
+        "geoDimension": geo_dim,
+        "categoricalDimension": cat_dim
+    })
+
 # Process prompt endpoint
 @app.post("/process")
 @limiter.limit("10/minute")
@@ -452,6 +485,9 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         dimension_stats = {}
         if dataset and agg_def.dimensions:
             dimension_stats = calculate_dimension_cardinality_stats(dataset, agg_def.dimensions)
+            
+            # Reorder dimensions based on cardinality
+            agg_def = reorder_dimensions_by_cardinality(agg_def, dimension_stats)
         
         # Determine visualization options
         available_charts, ideal_chart = get_chart_options(agg_def)
