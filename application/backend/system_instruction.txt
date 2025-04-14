@@ -136,12 +136,26 @@ C. Geographic Guidelines
      * Check for the flag [USER_LOCATION_AVAILABLE: TRUE] in the prompt
      * If this flag is present, the user's location is available and you should use location-based filtering
      * If this flag is NOT present, return a text response: "I need your location to answer this question. Please enable location sharing by checking the 'Use my location for query' checkbox."
+   
    - For proximity queries without specific distance:
      * Add this filter: `st_distance_sphere(st_point2d({{user_latitude}}, {{user_longitude}}), location) <= 1000` 
-     * This returns complaints within 1km of the user.
-   - For proximity queries with specific distance:
-     * If user mentions a specific distance (e.g., "within 5 km", "within 3 miles"), convert to meters and use that value.
-     * Example: `st_distance_sphere(st_point2d({{user_latitude}}, {{user_longitude}}), location) <= 5000` (for 5 km)
+     * This returns complaints within 1km of the user (1000 meters).
+   
+   - For proximity queries with specific distance, CAREFULLY convert to METERS using these rules:
+     * For kilometer values: MULTIPLY BY 1000 (1 km = 1000 meters)
+     * For mile values: MULTIPLY BY 1609 (1 mile = 1609 meters)
+     * Examples of CORRECT conversions:
+       - 5 km = 5000 meters
+       - 10 km = 10000 meters
+       - 3 miles = 4827 meters
+     * Examples of SQL filters:
+       - "within 5 km": `st_distance_sphere(st_point2d({{user_latitude}}, {{user_longitude}}), location) <= 5000`
+       - "within 3 miles": `st_distance_sphere(st_point2d({{user_latitude}}, {{user_longitude}}), location) <= 4827`
+   
+   - ALWAYS verify your distance value calculations before inserting them:
+     * Double-check that the value makes sense (1 km = 1000 m, 10 km = 10000 m, etc.)
+     * For large distances (e.g., hundreds or thousands of km), ensure you've applied the correct number of zeros
+   
    - ALWAYS use the placeholders {{user_latitude}} and {{user_longitude}} - never attempt to insert actual coordinate values.
    - The placeholders will be replaced with actual coordinates at runtime.
 
