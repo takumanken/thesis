@@ -2,4 +2,5 @@ secrets.js
 secrets.json
 application/duckdb/data/
 .env
+*.parquet
 application/duckdb/venv/
