@@ -1,3 +1,6 @@
+INSTALL spatial;
+LOAD spatial;
+
 CREATE OR REPLACE VIEW {object_name} AS
 SELECT
     "Unique Key" AS unique_key,
@@ -151,7 +154,7 @@ SELECT
         ELSE 'Unspecified'
     END AS county,
     IFNULL("Incident Zip", 'Unspecified') AS incident_zip,
-    "Location" AS location,
+    ST_Point2D(latitude, longitude) AS location,
     IFNULL(neighborhood_code, 'Unspecified') AS neighborhood_code,
     IFNULL(neighborhood_name, 'Unspecified') AS neighborhood_name,
     IFNULL("Community Board", 'Unspecified') AS community_board,
@@ -160,4 +163,4 @@ SELECT
     IFNULL("Open Data Channel Type", 'Unspecified') AS open_data_channel_type,
     1 as num_of_requests
 FROM
-    read_parquet('{object_url}');
+    read_parquet('data/requests_311.parquet');
