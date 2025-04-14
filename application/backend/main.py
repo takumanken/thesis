@@ -342,8 +342,15 @@ def execute_sql_in_duckDB(sql: str, db_filename: str) -> list:
             con.execute("INSTALL spatial;")
             con.execute("LOAD spatial;")
             
-            # Register the parquet file as a table - point to correct path
-            con.execute(f"CREATE OR REPLACE TABLE requests_311 AS SELECT * FROM read_parquet('{PARQUET_FILE_PATH}');")
+            # Read and execute the SQL from requests_311.sql file instead of simple SELECT *
+            with open("duckdb/requests_311.sql", "r") as f:
+                view_sql = f.read()
+            
+            # Format the SQL with the correct parquet file path
+            view_sql = view_sql.format(object_name="requests_311")
+            
+            # Execute the view creation SQL that will read from the parquet file
+            con.execute(view_sql)
             
             # Now execute the main query
             logger.info(f"Connection established, executing query...")
