@@ -6,3 +6,5 @@ pandas
 dotenv
 google-genai
 polars
+botocore
+boto3
