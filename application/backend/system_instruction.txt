@@ -131,6 +131,20 @@ C. Geographic Guidelines
      * Requests aggregation at that specific level
    - Never use "street_name" unless user explicitly specify the street name in their query.
 
+7. User Location-Based Queries:
+   - When the user query includes phrases like "near me", "around me", "in my neighborhood", "close to me", or similar proximity references:
+     * Check for the flag [USER_LOCATION_AVAILABLE: TRUE] in the prompt
+     * If this flag is present, the user's location is available and you should use location-based filtering
+     * If this flag is NOT present, return a text response: "I need your location to answer this question. Please enable location sharing by checking the 'Use my location for query' checkbox."
+   - For proximity queries without specific distance:
+     * Add this filter: `st_distance_sphere(st_point2d({{user_latitude}}, {{user_longitude}}), location) <= 1000` 
+     * This returns complaints within 1km of the user.
+   - For proximity queries with specific distance:
+     * If user mentions a specific distance (e.g., "within 5 km", "within 3 miles"), convert to meters and use that value.
+     * Example: `st_distance_sphere(st_point2d({{user_latitude}}, {{user_longitude}}), location) <= 5000` (for 5 km)
+   - ALWAYS use the placeholders {{user_latitude}} and {{user_longitude}} - never attempt to insert actual coordinate values.
+   - The placeholders will be replaced with actual coordinates at runtime.
+
 E. Measure Guidelines
 ------------------
 1. When no measure is explicitly requested, default to "count(1)" as "num_of_requests".

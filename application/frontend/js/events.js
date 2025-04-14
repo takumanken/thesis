@@ -20,6 +20,10 @@ export function updateChartTypeDropdown() {
 }
 
 export function initializeEventListeners() {
+  // Update the event listener for the Send button
+  document.getElementById("sendButton").addEventListener("click", handleUserQuery);
+
+  // Keep the Enter key listener
   document.getElementById("promptInput").addEventListener("keypress", (event) => {
     if (event.key === "Enter") handleUserQuery();
   });

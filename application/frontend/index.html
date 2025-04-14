@@ -15,7 +15,10 @@
 
     <h1>ASK NYC: NYC Open Data Explorer</h1>
     <input type="text" id="promptInput" placeholder="Enter your prompt" style="width: 600px;">
-    <button>Send</button>
+    <button id="sendButton">Send</button>
+    <label for="useLocationCheckbox" style="margin-left: 10px; display: inline-flex; align-items: center;">
+      <input type="checkbox" id="useLocationCheckbox"> Use my location for query
+    </label>
     <h2>Response:</h2>
     <div id="chartControls" style="margin-bottom: 10px;">
         <label for="chartTypeSelector">Chart Type:</label>

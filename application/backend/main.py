@@ -44,7 +44,7 @@ app.add_middleware(
 
 # Constants
 PUBLIC_BUCKET_URL = "https://pub-cb6e94f4490c42b9b0c520e8116fb9b7.r2.dev/"
-DB_FILE_NAME = "nyc_open_data.db"
+PARQUET_FILE_PATH = "data/requests_311.parquet"  # Update to match your download location
 SYSTEM_INSTRUCTION_FILE = "system_instruction.txt"
 FILTER_VALUES_DIR = "filter_values"
 
@@ -64,6 +64,7 @@ ADDITIVE_MEASURES = ["num_of_requests"]  # Currently only count(1) is additive
 # Data models
 class PromptRequest(BaseModel):
     prompt: str
+    location: Optional[Dict[str, float]] = None
 
 class AggregationDefinition(BaseModel):
     dimensions: List[str]
@@ -193,7 +194,9 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
     
     # Treemap
     if 1 <= cat_count <= 2 and measure_count == 1 and time_count == 0 and additive_measure_count == measure_count:
-        available.append("treemap")
+        # Only apply high cardinality filter when we have exactly 2 dimensions
+        if cat_count < 2 or not high_cardinality:
+            available.append("treemap")
     
     # Heat Map
     if geo_count == 1 and len(dimensions) == 1 and measure_count == 1 and additive_measure_count == measure_count:
@@ -247,7 +250,14 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
     
     if high_cardinality:
         # If high cardinality and ideal was one of the restricted charts, fall back to table
-        if ideal in ["line_chart", "stacked_area_chart", "stacked_area_chart_100", "grouped_bar_chart", "stacked_bar_chart", "stacked_bar_chart_100"]:
+        restricted_charts = ["line_chart", "stacked_area_chart", "stacked_area_chart_100", 
+                            "grouped_bar_chart", "stacked_bar_chart", "stacked_bar_chart_100"]
+        
+        # Add treemap to restricted charts only when cat_count == 2
+        if cat_count == 2:
+            restricted_charts.append("treemap")
+            
+        if ideal in restricted_charts:
             ideal = "table"  # Fall back to table view
     
     # Ensure unique chart types
@@ -256,20 +266,43 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
     logger.info(f"Chart options: {available}, ideal: {ideal}")
     return available, ideal
 
-def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
+def generate_sql(definition: AggregationDefinition, table_name: str, user_location: Optional[Dict[str, float]] = None) -> str:
     """Generate SQL query from aggregation definition."""
     start_time = time.time()
-    
+
     # Build SELECT clause
     dims = definition.dimensions
     dims_clause = ", ".join(dims) if dims else ""
     measures_clause = ", ".join([f"{m['expression']} AS {m['alias']}" for m in definition.measures])
     select_clause = f"{dims_clause}, {measures_clause}" if dims_clause and measures_clause else (dims_clause or measures_clause)
+    
     sql = f"SELECT {select_clause} FROM {table_name}"
     
     # Add filters
     if definition.preAggregationFilters:
-        sql += f" WHERE {definition.preAggregationFilters}"
+        # Replace location placeholders BEFORE adding to SQL
+        filters = definition.preAggregationFilters
+        
+        # Replace user location placeholders if available
+        if user_location and ("{{user_latitude}}" in filters or "{user_latitude}" in filters):
+            logger.info(f"Location placeholders found in filters, substituting with: lat={user_location.get('latitude'):.6f}, lng={user_location.get('longitude'):.6f}")
+            
+            # Log the original filters
+            logger.info(f"Original filters before substitution: {filters}")
+            
+            # Handle both double-brace and single-brace formats
+            for placeholder, replacement in [
+                ("{{user_latitude}}", str(user_location.get('latitude'))),
+                ("{{user_longitude}}", str(user_location.get('longitude'))),
+                ("{user_latitude}", str(user_location.get('latitude'))),
+                ("{user_longitude}", str(user_location.get('longitude')))
+            ]:
+                filters = filters.replace(placeholder, replacement)
+            
+            # Log the filters after substitution
+            logger.info(f"Filters after location substitution: {filters}")
+        
+        sql += f" WHERE {filters}"
     
     # Add grouping
     if dims:
@@ -290,22 +323,36 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     sql += " LIMIT 1000;"
     
     elapsed = time.time() - start_time
-    logger.debug(f"SQL generation completed in {elapsed:.2f}s")
+    logger.info(f"SQL generation completed in {elapsed:.2f}s")
+    logger.info(f"Generated SQL:\n{sql}")  # Log the final SQL at INFO level
     return sql.strip()
 
 def execute_sql_in_duckDB(sql: str, db_filename: str) -> list:
     """Execute SQL query and return results."""
     start_time = time.time()
-    logger.info(f"Executing SQL query in DuckDB")
+    
+    # Format the SQL for logging - indent lines and add line breaks
+    formatted_sql = "\n    ".join(sql.split("\n"))
+    logger.info(f"Executing SQL query in DuckDB:\n    {formatted_sql}")
     
     try:
-        with duckdb.connect(db_filename) as con:
+        # Create an in-memory database connection
+        with duckdb.connect(":memory:") as con:
+            # Load spatial extensions
+            con.execute("INSTALL spatial;")
+            con.execute("LOAD spatial;")
+            
+            # Register the parquet file as a table - point to correct path
+            con.execute(f"CREATE OR REPLACE TABLE requests_311 AS SELECT * FROM read_parquet('{PARQUET_FILE_PATH}');")
+            
+            # Now execute the main query
+            logger.info(f"Connection established, executing query...")
             df = con.execute(sql).fetchdf()
             row_count = len(df)
             logger.info(f"Query executed successfully: {row_count} rows returned")
     except Exception as e:
         logger.error(f"Database query failed: {str(e)}")
-        logger.error(f"SQL: {sql}")
+        logger.error(f"SQL with error:\n{formatted_sql}")
         raise
     
     # Format datetime columns
@@ -354,15 +401,7 @@ def extract_json_from_text(json_text: str) -> tuple[dict, bool]:
         return {}, False
 
 def calculate_dimension_cardinality_stats(dataset: List[Dict], dimensions: List[str]) -> Dict[str, Dict[str, float]]:
-    """Calculate cardinality statistics for each dimension in the aggregated dataset.
-    
-    Args:
-        dataset: The aggregated dataset as a list of dictionaries
-        dimensions: List of dimension names from the aggregation definition
-        
-    Returns:
-        Dictionary with statistics for each dimension
-    """
+    """Calculate cardinality statistics for each dimension in the aggregated dataset."""
     if not dataset or not dimensions:
         return {}
     
@@ -427,17 +466,7 @@ def calculate_dimension_cardinality_stats(dataset: List[Dict], dimensions: List[
     return stats
 
 def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]]) -> AggregationDefinition:
-    """
-    Reorder dimensions by their cardinality (higher cardinality first).
-    Uses the total_unique count from dimension_stats.
-    
-    Args:
-        agg_def: The aggregation definition
-        dimension_stats: Statistics from calculate_dimension_cardinality_stats
-        
-    Returns:
-        Updated aggregation definition with reordered dimensions
-    """
+    """Reorder dimensions by their cardinality (higher cardinality first)."""
     if not agg_def.dimensions or len(agg_def.dimensions) <= 1 or not dimension_stats:
         # No need to reorder if there are 0 or 1 dimensions
         return agg_def
@@ -460,17 +489,7 @@ def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_
     })
 
 def all_dimensions_exceed_cardinality(dimensions: list[str], dimension_stats: Dict[str, Dict[str, float]], threshold: int = 15) -> bool:
-    """
-    Check if all dimensions (except time dimensions) exceed the cardinality threshold.
-    
-    Args:
-        dimensions: List of dimension names
-        dimension_stats: Statistics about dimensions from calculate_dimension_cardinality_stats
-        threshold: The cardinality threshold (default: 15)
-        
-    Returns:
-        True if all non-time dimensions exceed threshold, False otherwise
-    """
+    """Check if all dimensions (except time dimensions) exceed the cardinality threshold."""
     if not dimensions or not dimension_stats:
         return False
         
@@ -502,11 +521,25 @@ async def process_prompt(request_data: PromptRequest, request: Request):
     start_time = time.time()
     
     try:
-        # Call Gemini API
+        # Extract location data if provided
+        user_location = None
+        content = request_data.prompt
+        
+        # Check if location data is available
+        if hasattr(request_data, 'location') and request_data.location:
+            user_location = request_data.location
+            logger.info(f"[{request_id}] Location data received: lat={user_location.get('latitude'):.6f}, lng={user_location.get('longitude'):.6f}")
+            
+            # Add location availability flag to prompt but NOT the actual coordinates
+            # This tells Gemini location is available without revealing coordinates
+            content = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
+            logger.info(f"[{request_id}] Added location availability flag to prompt")
+
+        # Call Gemini API with correct method
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             config=types.GenerateContentConfig(system_instruction=system_instruction),
-            contents=[request_data.prompt],
+            contents=[content],
         )
         
         # Get response text
@@ -529,16 +562,20 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             "categoricalDimension": cat_dim
         })
         
-        # Generate and execute SQL
-        sql = generate_sql(agg_def, "requests_311")
-        dataset = execute_sql_in_duckDB(sql, DB_FILE_NAME)
+        # Generate and execute SQL - pass user_location
+        sql = generate_sql(agg_def, "requests_311", user_location)
+        logger.info(f"[{request_id}] SQL query to execute:\n{sql}")
+        dataset = execute_sql_in_duckDB(sql, ":memory:")
         
         # Calculate dimension cardinality statistics
         dimension_stats = {}
         if dataset and agg_def.dimensions:
             dimension_stats = calculate_dimension_cardinality_stats(dataset, agg_def.dimensions)
+            
+            # Reorder dimensions based on cardinality
+            agg_def = reorder_dimensions_by_cardinality(agg_def, dimension_stats)
         
-        # Determine visualization options - pass dimension_stats
+        # Determine visualization options
         available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats)
         
         # Create response
@@ -549,7 +586,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             "aggregationDefinition": agg_def.dict(),
             "chartType": ideal_chart,
             "availableChartTypes": available_charts,
-            "dimensionStats": dimension_stats,  # Add the stats to the response
+            "dimensionStats": dimension_stats,
             "textResponse": None
         }
         
