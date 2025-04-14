@@ -33,20 +33,43 @@ function renderHeatMap(container) {
  */
 function processLocationData(dataset, geoDim, measure) {
   const points = [];
+  console.log("Processing location data:", dataset);
 
   dataset.forEach((record) => {
-    const locationStr = record[geoDim];
+    const locationData = record[geoDim];
+    console.log("Location data for record:", locationData, typeof locationData);
 
-    if (!locationStr || locationStr === "Unspecified") return;
+    if (!locationData || locationData === "Unspecified") return;
 
-    // Extract coordinates from string format: "(lat, lng)"
-    const coordMatch = locationStr.match(/\(([^,]+),\s*([^)]+)\)/);
-    if (!coordMatch || coordMatch.length !== 3) return;
+    let lat, lng;
 
-    const lat = parseFloat(coordMatch[1]);
-    const lng = parseFloat(coordMatch[2]);
+    // Case 1: Location is already an object with coordinates
+    if (typeof locationData === "object" && locationData !== null) {
+      // Handle object format from DuckDB spatial extension
+      if ("x" in locationData && "y" in locationData) {
+        lng = parseFloat(locationData.x);
+        lat = parseFloat(locationData.y);
+      } else if ("lon" in locationData && "lat" in locationData) {
+        lng = parseFloat(locationData.lon);
+        lat = parseFloat(locationData.lat);
+      } else if ("longitude" in locationData && "latitude" in locationData) {
+        lng = parseFloat(locationData.longitude);
+        lat = parseFloat(locationData.latitude);
+      }
+    }
+    // Case 2: Location is a string in format "(lat, lng)"
+    else if (typeof locationData === "string") {
+      const coordMatch = locationData.match(/\(([^,]+),\s*([^)]+)\)/);
+      if (coordMatch && coordMatch.length === 3) {
+        lat = parseFloat(coordMatch[1]);
+        lng = parseFloat(coordMatch[2]);
+      }
+    }
 
-    if (isNaN(lat) || isNaN(lng)) return;
+    if (isNaN(lat) || isNaN(lng)) {
+      console.log("Skipping invalid coordinates:", locationData);
+      return;
+    }
 
     points.push({
       lat,
@@ -55,6 +78,7 @@ function processLocationData(dataset, geoDim, measure) {
     });
   });
 
+  console.log(`Generated ${points.length} valid points for heat map`);
   return points;
 }
 
