@@ -33,43 +33,25 @@ function renderHeatMap(container) {
  */
 function processLocationData(dataset, geoDim, measure) {
   const points = [];
-  console.log("Processing location data:", dataset);
 
   dataset.forEach((record) => {
     const locationData = record[geoDim];
-    console.log("Location data for record:", locationData, typeof locationData);
-
     if (!locationData || locationData === "Unspecified") return;
 
-    let lat, lng;
-
-    if (typeof locationData === "object" && locationData !== null) {
-      // Handle object format from DuckDB spatial extension
-      if ("x" in locationData && "y" in locationData) {
-        lng = parseFloat(locationData.x);
-        lat = parseFloat(locationData.y);
-      } else if ("lon" in locationData && "lat" in locationData) {
-        lng = parseFloat(locationData.lon);
-        lat = parseFloat(locationData.lat);
-      } else if ("longitude" in locationData && "latitude" in locationData) {
-        lng = parseFloat(locationData.longitude);
-        lat = parseFloat(locationData.latitude);
-      }
-    }
+    let lat = parseFloat(locationData.x);
+    let lng = parseFloat(locationData.y);
 
     if (isNaN(lat) || isNaN(lng)) {
-      console.log("Skipping invalid coordinates:", locationData);
       return;
     }
 
     points.push({
       lat,
       lng,
-      value: +record[measure] || 0,
+      value: +record[measure] || 1,
     });
   });
 
-  console.log(`Generated ${points.length} valid points for heat map`);
   return points;
 }
 
@@ -113,7 +95,7 @@ function addHeatLayer(map, points) {
 
   // Create and add heatmap layer with custom settings
   L.heatLayer(heatData, {
-    radius: 15, // Size of each point's influence
+    radius: 7, // Size of each point's influence
     blur: 10, // Smoothing effect
     maxZoom: 18, // Maximum zoom level for heatmap
     gradient: {
