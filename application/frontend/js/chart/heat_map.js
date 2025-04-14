@@ -43,7 +43,6 @@ function processLocationData(dataset, geoDim, measure) {
 
     let lat, lng;
 
-    // Case 1: Location is already an object with coordinates
     if (typeof locationData === "object" && locationData !== null) {
       // Handle object format from DuckDB spatial extension
       if ("x" in locationData && "y" in locationData) {
@@ -55,14 +54,6 @@ function processLocationData(dataset, geoDim, measure) {
       } else if ("longitude" in locationData && "latitude" in locationData) {
         lng = parseFloat(locationData.longitude);
         lat = parseFloat(locationData.latitude);
-      }
-    }
-    // Case 2: Location is a string in format "(lat, lng)"
-    else if (typeof locationData === "string") {
-      const coordMatch = locationData.match(/\(([^,]+),\s*([^)]+)\)/);
-      if (coordMatch && coordMatch.length === 3) {
-        lat = parseFloat(coordMatch[1]);
-        lng = parseFloat(coordMatch[2]);
       }
     }
 
