@@ -14,6 +14,8 @@ body {
     line-height: 1.6;
     min-height: 100vh;
     margin: 0;
+    display: grid;
+    grid-template-rows: auto 1fr; /* Header auto size, content fills remainder */
 }
 
 /* ===============================================
@@ -29,6 +31,9 @@ body {
 .main-content {
     padding: 0;
     background-color: #F3F4F8;
+    display: grid;
+    grid-template-rows: auto 1fr; /* AI header auto size, insights container fills remainder */
+    overflow: hidden;
 }
 
 .main-content .container {
@@ -178,9 +183,19 @@ body {
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
     margin: 0 30px 30px;
     padding: 25px 30px;
-    display: flex !important; /* Use !important to prevent overrides */
+    
+    /* Enforce horizontal layout more strongly */
+    display: flex !important; 
+    flex-direction: row !important;
+    flex-wrap: nowrap !important; /* Critical - prevent wrapping to new line */
     gap: 30px;
-    height: calc(100vh - 150px); /* Reach bottom of viewport minus header space and bottom margin */
+    
+    overflow: hidden;
+    height: auto;
+    max-height: calc(100vh - 180px); /* Use viewport height instead of percentage */
+    
+    /* Add positioning context */
+    position: relative;
 }
 
 /* ===============================================
@@ -191,6 +206,8 @@ body {
     flex-direction: column;
     overflow: hidden;
     flex: 1;
+    width: calc(100% - 330px) !important; /* Force this width */
+    max-width: calc(100% - 330px) !important; /* Maximum width as well */
     height: 100%;
 }
 
@@ -219,12 +236,14 @@ body {
 }
 
 .insight-content .chart-container {
-    flex: 1; /* Take remaining vertical space */
+    flex: 1; /* Take available space */
     overflow-y: auto; /* Allow vertical scrolling */
     overflow-x: hidden; /* Prevent horizontal scrolling */
     padding-right: 10px;
-    width: 100%;
-    min-height: 0; /* Allow it to shrink if needed */
+    width: 100%; /* This is fine since parent is constrained */
+    min-height: 200px; /* Provide reasonable minimum */
+    max-height: calc(100vh - 250px); /* Prevent excessive growth */
+    height: auto; /* Let content determine height up to max-height */
 }
 
 .insight-content .chart-container > * {
@@ -255,12 +274,17 @@ body {
    9. SIDEBAR COMPONENTS
    =============================================== */
 .insight-sidebar {
-    width: 300px;
+    width: 300px !important;
+    min-width: 300px !important;
+    flex-basis: 300px !important;
     border-left: 1px solid #eaeaea;
     padding-left: 25px;
-    flex-shrink: 0;
+    flex-shrink: 0 !important; /* Never shrink sidebar */
+    flex-grow: 0 !important;   /* Never grow sidebar */
     height: 100%;
     overflow-y: auto;
+    position: relative; /* Create stacking context */
+    z-index: 2; /* Higher than content */
 }
 
 .chart-controls-container {
@@ -416,28 +440,5 @@ select {
         margin-top: 20px;
         height: auto;
         max-height: 300px;
-    }
-}
-
-/* Only target tablet-sized screens, not phones */
-@media (min-width: 768px) and (max-width: 1024px) {
-    /* Tablet-specific adjustments */
-    .insight-container {
-        height: calc(100vh - 120px); /* Slightly adjusted height for tablets */
-    }
-    
-    .insight-sidebar {
-        width: 250px; /* Slightly narrower sidebar on tablets */
-    }
-    
-    .chart-type-selector {
-        grid-template-columns: repeat(2, 1fr); /* 2 columns instead of 3 on tablets */
-    }
-}
-
-/* Only apply these changes for large tablets in portrait mode */
-@media (min-width: 768px) and (max-width: 900px) {
-    .search-container {
-        max-width: 65%; /* Slightly narrower search on medium tablets */
     }
 }
