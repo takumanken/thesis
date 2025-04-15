@@ -278,16 +278,29 @@ body .main-content .container .insight-container {
     margin-bottom: 15px;
 }
 
+/* Update these two rules for dynamic map sizing */
+
+/* Make chart container flex and take all available vertical space */
 .insight-content .chart-container {
     flex: 1;
-    height: auto;
-    max-height: calc(100vh - 250px);
-    min-height: 200px;
-    overflow-x: hidden;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Change from overflow-y: auto to hidden */
     padding-right: 10px;
-    padding-bottom: 30px; /* Increased padding at the bottom */
+    padding-bottom: 30px;
     width: 100%;
+    max-width: 100%;
+    position: relative;
+}
+
+/* Make Leaflet map fill the available space */
+.chart-container #leaflet-map,
+.chart-container .leaflet-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 !important; /* Fill available space */
+    min-height: 300px !important; /* Minimum height for usability */
+    margin-bottom: 20px !important; /* Preserve bottom spacing */
 }
 
 .insight-content .chart-container > * {
