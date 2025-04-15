@@ -2,76 +2,101 @@ import { handleUserQuery } from "./main.js";
 import { state } from "./state.js";
 import visualizeData from "./visualizeData.js";
 
+/**
+ * Updates the chart type dropdown with available chart types
+ */
 export function updateChartTypeDropdown() {
   const dropdown = document.getElementById("chartTypeSelector");
   if (!dropdown) return;
-  // Clear any existing options.
+
   dropdown.innerHTML = "";
-  // Populate dropdown using availableChartTypes from state.
+
   state.availableChartTypes.forEach((type) => {
     const option = document.createElement("option");
     option.value = type;
-    option.textContent = type;
-    if (type === state.chartType) {
-      option.selected = true;
-    }
+    option.textContent = formatChartTypeName(type);
+    option.selected = type === state.chartType;
     dropdown.appendChild(option);
   });
 }
 
+/**
+ * Formats chart type names for display (e.g., "single_bar_chart" -> "Single Bar Chart")
+ */
+function formatChartTypeName(type) {
+  return type
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+/**
+ * Handles chart type changes from any selector
+ */
+function handleChartTypeChange(value) {
+  if (value === state.chartType) return; // No change
+  state.chartType = value;
+  visualizeData();
+}
+
+/**
+ * Initializes all event listeners
+ */
 export function initializeEventListeners() {
-  // For prompt input and send button (standard elements)
+  // Search functionality
+  setupSearchListeners();
+
+  // Chart type selectors
+  setupChartSelectors();
+
+  // Always update the dropdown on initialization
+  updateChartTypeDropdown();
+}
+
+/**
+ * Sets up search input and button listeners
+ */
+function setupSearchListeners() {
   const promptInput = document.getElementById("promptInput");
   const sendButton = document.getElementById("sendButton");
-  if (promptInput && sendButton) {
-    // Input keyup event (e.g., for pressing Enter)
-    promptInput.addEventListener("keyup", function (event) {
-      if (event.key === "Enter") {
-        handleUserQuery();
-      }
-    });
 
-    // Send button click
-    sendButton.addEventListener("click", handleUserQuery);
-  } else {
-    console.warn("Search elements not found: promptInput or sendButton");
-  }
+  if (!promptInput || !sendButton) return;
 
-  // Location checkbox
+  promptInput.addEventListener("keyup", (event) => {
+    if (event.key === "Enter") handleUserQuery();
+  });
+
+  sendButton.addEventListener("click", handleUserQuery);
+
+  // Optional location checkbox
   const locationCheckbox = document.getElementById("useLocationCheckbox");
   if (locationCheckbox) {
     locationCheckbox.addEventListener("change", function (event) {
-      // Your location handling code
+      // Location handling logic would go here
+      state.useLocation = event.target.checked;
     });
-  } else {
-    console.warn("Element not found: useLocationCheckbox");
   }
+}
 
-  // Chart type selector - this appears to be missing or renamed
+/**
+ * Sets up chart type selection listeners
+ */
+function setupChartSelectors() {
+  // Primary chart type selector
   const chartTypeSelector = document.getElementById("chartTypeSelector");
   if (chartTypeSelector) {
-    chartTypeSelector.addEventListener("change", function (event) {
-      // Chart type change handling
-      state.chartType = event.target.value;
-      visualizeData();
+    chartTypeSelector.addEventListener("change", (event) => {
+      handleChartTypeChange(event.target.value);
     });
-  } else {
-    console.warn("Element not found: chartTypeSelector");
   }
 
-  // Chart dropdown - this appears to be missing or renamed
+  // Alternative chart dropdown (if it exists)
   const chartDropdown = document.getElementById("chartTypeDropdown");
   if (chartDropdown) {
-    chartDropdown.addEventListener("change", function (event) {
-      // Chart dropdown handling
-      state.chartType = event.target.value;
+    chartDropdown.addEventListener("change", (event) => {
+      handleChartTypeChange(event.target.value);
     });
-  } else {
-    console.warn("Element not found: chartTypeDropdown");
   }
-
-  // Always update the dropdown on initialization.
-  updateChartTypeDropdown();
 }
 
 export default initializeEventListeners;
