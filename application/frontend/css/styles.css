@@ -20,44 +20,44 @@
    1. BASE & RESET
    =============================================== */
 * {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
 }
 
 body {
-    font-family: 'Noto Sans', sans-serif;
     background-color: #F3F4F8;
     color: #333;
-    line-height: 1.6;
-    min-height: 100vh;
-    margin: 0;
     display: grid;
+    font-family: 'Noto Sans', sans-serif;
     grid-template-rows: auto 1fr; /* Header auto size, content fills remainder */
+    line-height: 1.6;
+    margin: 0;
+    min-height: 100vh;
 }
 
 /* ===============================================
    2. LAYOUT & CONTAINERS
    =============================================== */
 .container {
-    width: 100%;
-    max-width: 1200px;
     margin: 0 auto;
+    max-width: 1200px;
     padding: 0 20px;
+    width: 100%;
 }
 
 .main-content {
-    padding: 0;
     background-color: #F3F4F8;
     display: grid;
     grid-template-rows: auto 1fr; /* AI header auto size, insights container fills remainder */
     overflow: hidden;
+    padding: 0;
 }
 
 .main-content .container {
+    margin: 0;
     max-width: none;
     padding: 0;
-    margin: 0;
 }
 
 .results-section {
@@ -75,27 +75,27 @@ body {
    =============================================== */
 .header {
     background-color: #F3F4F8;
-    padding: 20px 0;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 20px 0;
     width: 100%;
 }
 
 .header .container {
-    width: 100%;
-    max-width: none;
     margin: 0;
+    max-width: none;
     padding: 0;
+    width: 100%;
 }
 
 .logo {
     flex-shrink: 0;
-    padding-left: 0;
     margin-left: 30px;
+    padding-left: 0;
 }
 
 .logo h1 {
-    font-family: 'Outfit', sans-serif;
     color: #414577;
+    font-family: 'Outfit', sans-serif;
     font-size: 1.8rem;
     font-weight: 700;
     margin: 0;
@@ -105,35 +105,35 @@ body {
    4. SEARCH COMPONENTS
    =============================================== */
 .search-wrapper {
-    display: flex;
     align-items: center;
-    justify-content: flex-start;
-    gap: 20px;
-    width: 100%;
-    padding: 0 30px 0 0;
+    display: flex;
     flex-wrap: wrap;
+    gap: 20px;
+    justify-content: flex-start;
+    padding: 0 30px 0 0;
+    width: 100%;
 }
 
 .search-container {
-    display: flex;
-    flex: 1;
-    max-width: 80%;
-    height: 50px;
     background: white;
     border-radius: 25px;
-    overflow: hidden;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex: 1;
+    height: 50px;
+    max-width: 80%;
+    overflow: hidden;
 }
 
 #promptInput {
-    flex: 1;
+    background: transparent;
     border: none;
-    padding: 0 20px;
+    color: #333;
+    flex: 1;
     font-family: 'Noto Sans', sans-serif;
     font-size: 16px;
-    color: #333;
     outline: none;
-    background: transparent;
+    padding: 0 20px;
 }
 
 #promptInput::placeholder {
@@ -141,16 +141,16 @@ body {
 }
 
 .search-button {
-    display: flex;
     align-items: center;
-    justify-content: center;
-    width: 50px;
-    height: 50px;
     background-color: transparent;
     border: none;
-    cursor: pointer;
     color: #414577;
+    cursor: pointer;
+    display: flex;
+    height: 50px;
+    justify-content: center;
     transition: background-color 0.2s;
+    width: 50px;
 }
 
 .search-button:hover {
@@ -161,29 +161,29 @@ body {
    5. LOCATION COMPONENTS
    =============================================== */
 .location-label {
-    display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 14px;
     color: #555;
-    white-space: nowrap;
+    display: flex;
     flex-shrink: 0;
+    font-size: 14px;
+    gap: 8px;
     margin-left: 15px;
     order: 3;
+    white-space: nowrap;
 }
 
 /* ===============================================
    6. DATA INSIGHTS & AI COMPONENTS
    =============================================== */
 .insight-header {
-    display: flex;
     align-items: center;
+    color: #414577;
+    display: flex;
     font-family: 'Asap', sans-serif;
     font-size: 1rem;
-    color: #414577;
-    margin: 15px 0 10px 30px;
     font-weight: normal;
     gap: 8px;
+    margin: 15px 0 10px 30px;
     opacity: 0.8;
 }
 
@@ -199,20 +199,15 @@ body {
     background-color: white;
     border-radius: 25px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-    margin: 0 30px 30px;
-    padding: 25px 30px;
-    
-    /* Enforce horizontal layout more strongly */
-    display: flex !important; 
+    display: flex !important;
     flex-direction: row !important;
-    flex-wrap: nowrap !important; /* Critical - prevent wrapping to new line */
+    flex-wrap: nowrap !important;
     gap: 30px;
-    
-    overflow: hidden;
     height: auto;
-    max-height: calc(100vh - 180px); /* Use viewport height instead of percentage */
-    
-    /* Add positioning context */
+    margin: 0 30px 30px;
+    max-height: calc(100vh - 180px);
+    overflow: hidden;
+    padding: 25px 30px;
     position: relative;
 }
 
@@ -221,12 +216,12 @@ body {
    =============================================== */
 .insight-content {
     display: flex;
-    flex-direction: column;
-    overflow: hidden;
     flex: 1;
-    width: calc(100% - 330px) !important; /* Force this width */
-    max-width: calc(100% - 330px) !important; /* Maximum width as well */
+    flex-direction: column;
     height: 100%;
+    max-width: calc(100% - 330px) !important;
+    overflow: hidden;
+    width: calc(100% - 330px) !important;
 }
 
 .insight-header-content {
@@ -235,33 +230,33 @@ body {
 }
 
 .insight-title {
+    color: #3A447C;
+    flex-shrink: 0;
     font-family: 'Noto Sans', sans-serif;
     font-size: 1.1rem;
-    color: #3A447C;
-    margin: 0 0 15px 0;
     font-weight: 500;
     line-height: 1.3;
-    flex-shrink: 0;
+    margin: 0 0 15px 0;
 }
 
 .insight-description {
+    color: #555;
+    flex-shrink: 0;
     font-family: 'Noto Sans', sans-serif;
     font-size: 0.9rem;
-    color: #555;
     line-height: 1.75;
     margin-bottom: 15px;
-    flex-shrink: 0;
 }
 
 .insight-content .chart-container {
-    flex: 1; /* Take available space */
-    overflow-y: auto; /* Allow vertical scrolling */
-    overflow-x: hidden; /* Prevent horizontal scrolling */
+    flex: 1;
+    height: auto;
+    max-height: calc(100vh - 250px);
+    min-height: 200px;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding-right: 10px;
-    width: 100%; /* This is fine since parent is constrained */
-    min-height: 200px; /* Provide reasonable minimum */
-    max-height: calc(100vh - 250px); /* Prevent excessive growth */
-    height: auto; /* Let content determine height up to max-height */
+    width: 100%;
 }
 
 .insight-content .chart-container > * {
@@ -270,8 +265,8 @@ body {
 
 /* Scrollbar styling */
 .insight-content .chart-container::-webkit-scrollbar {
-    width: 8px;
     height: 8px;
+    width: 8px;
 }
 
 .insight-content .chart-container::-webkit-scrollbar-track {
@@ -292,17 +287,17 @@ body {
    9. SIDEBAR COMPONENTS
    =============================================== */
 .insight-sidebar {
-    width: 300px !important;
-    min-width: 300px !important;
-    flex-basis: 300px !important;
     border-left: 1px solid #eaeaea;
-    padding-left: 25px;
-    flex-shrink: 0 !important; /* Never shrink sidebar */
-    flex-grow: 0 !important;   /* Never grow sidebar */
+    flex-basis: 300px !important;
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
     height: 100%;
+    min-width: 300px !important;
     overflow-y: auto;
-    position: relative; /* Create stacking context */
-    z-index: 2; /* Higher than content */
+    padding-left: 25px;
+    position: relative;
+    width: 300px !important;
+    z-index: 2;
 }
 
 .chart-controls-container {
@@ -312,29 +307,29 @@ body {
 }
 
 .controls-heading {
+    color: #333;
     font-family: 'Noto Sans', sans-serif;
     font-size: 1rem;
-    color: #333;
     font-weight: 500;
     margin-bottom: 10px;
 }
 
 .chart-type-selector {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
+    grid-template-columns: repeat(3, 1fr);
     margin-bottom: 20px;
 }
 
 .chart-type-option {
-    display: flex;
-    justify-content: center;
     align-items: center;
-    height: 40px;
     background-color: #f8f8f8;
     border: 1px solid #eaeaea;
     border-radius: 4px;
     cursor: pointer;
+    display: flex;
+    height: 40px;
+    justify-content: center;
     transition: all 0.2s ease;
 }
 
@@ -358,29 +353,29 @@ body {
 }
 
 .section-title {
+    color: #555;
     font-family: 'Noto Sans', sans-serif;
     font-size: 0.95rem;
-    color: #555;
     margin-bottom: 12px;
 }
 
 .tag-item {
-    display: inline-flex;
     align-items: center;
     background-color: #f0f7fa;
     border-radius: 20px;
-    padding: 6px 12px;
-    margin: 4px;
-    font-size: 0.85rem;
     color: #333;
+    display: inline-flex;
+    font-size: 0.85rem;
+    margin: 4px;
+    padding: 6px 12px;
 }
 
 /* ===============================================
    10. CHARTS & VISUALIZATIONS
    =============================================== */
 .chart-container svg {
-    width: 100% !important;
     height: auto;
+    width: 100% !important;
 }
 
 /* ===============================================
@@ -388,9 +383,9 @@ body {
    =============================================== */
 .gridjs-table th,
 .gridjs-table td {
-    padding: 5px;
     font-family: 'Arial', sans-serif;
     font-size: 12px;
+    padding: 5px;
 }
 
 .gridjs-wrapper {
@@ -402,41 +397,41 @@ body {
    12. CONTROLS & BUTTONS
    =============================================== */
 .chart-controls {
-    display: none;
     align-items: center;
+    display: none;
     gap: 10px;
     margin-bottom: 15px;
     margin-left: 30px;
 }
 
 select {
-    padding: 8px 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-family: 'Noto Sans', sans-serif;
+    padding: 8px 12px;
 }
 
 .chart-button {
-    padding: 6px 12px;
     background: #f5f5f5;
     border: 1px solid #ddd;
     border-radius: 4px;
     cursor: pointer;
+    padding: 6px 12px;
 }
 
 /* ===============================================
    13. MEDIA QUERIES
    =============================================== */
+/* Mobile styles */
 @media (max-width: 768px) {
     .search-wrapper {
-        flex-direction: column;
         align-items: stretch;
+        flex-direction: column;
     }
     
     .logo {
+        margin: 0 100px 10px;
         text-align: center;
-        margin-bottom: 10px;
-        margin: 0 100px;
     }
     
     .search-container {
@@ -444,29 +439,35 @@ select {
     }
 }
 
+/* Tablet and small screens */
 @media (max-width: 900px) {
     .insight-container {
         flex-direction: column;
     }
     
     .insight-sidebar {
-        width: 100%;
         border-left: none;
         border-top: 1px solid #eaeaea;
+        height: auto;
+        margin-top: 20px;
+        max-height: 300px;
         padding-left: 0;
         padding-top: 20px;
-        margin-top: 20px;
-        height: auto;
-        max-height: 300px;
+        width: 100% !important;
+    }
+    
+    .insight-content {
+        max-width: 100% !important;
+        width: 100% !important;
     }
 }
 
-/* Only target tablet-sized screens */
+/* Tablet optimizations */
 @media (min-width: 768px) and (max-width: 1024px) {
     .insight-sidebar {
-        width: 250px !important;
-        min-width: 250px !important;
         flex-basis: 250px !important;
+        min-width: 250px !important;
+        width: 250px !important;
     }
     
     .chart-type-selector {
@@ -474,7 +475,19 @@ select {
     }
     
     .insight-content {
-        width: calc(100% - 280px) !important;
         max-width: calc(100% - 280px) !important;
+        width: calc(100% - 280px) !important;
     }
+}
+
+/* Accessibility class for screen readers */
+.visually-hidden {
+    border: 0;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
 }
