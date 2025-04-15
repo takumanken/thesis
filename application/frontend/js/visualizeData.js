@@ -4,34 +4,41 @@ import renderBarChart from "./chart/single_bar_chart.js";
 import renderLineChart from "./chart/line_chart.js";
 import renderGroupedBarChart from "./chart/grouped_bar_chart.js";
 import renderStackedBarChart from "./chart/stacked_bar_chart.js";
-import renderStackedAreaChart from "./chart/stacked_area_chart.js"; // Import new chart type
+import renderStackedAreaChart from "./chart/stacked_area_chart.js";
 import renderChoroplethMap from "./chart/choropleth_map.js";
 import renderPointMap from "./chart/heat_map.js";
 import renderTextResponse from "./chart/text_response.js";
 import renderTreemap from "./chart/treemap.js";
 import renderNestedBarChart from "./chart/nested_bar_chart.js";
 
-// Clean up previous visualizations.
+/**
+ * Cleans up previous visualizations.
+ * @param {HTMLElement} container - The container element to clean
+ */
 function cleanupVisualization(container) {
-  if (!container) return; // Guard against null containers
+  if (!container) return;
 
+  // Clean up grid instance if it exists
   if (state.currentGridInstance) {
     state.currentGridInstance.destroy();
     state.currentGridInstance = null;
   }
 
-  if (state.currentChart) {
-    if (container.contains(state.currentChart)) {
-      container.removeChild(state.currentChart);
-    }
+  // Remove current chart if it exists
+  if (state.currentChart && container.contains(state.currentChart)) {
+    container.removeChild(state.currentChart);
     state.currentChart = null;
   }
 
-  // Clear contents but don't remove the container itself
+  // Clear container contents
   container.innerHTML = "";
 }
 
-// Helper function to safely render data visualizations
+/**
+ * Renders visualization if data is available
+ * @param {HTMLElement} container - The container to render into
+ * @param {Function} renderFunction - The chart rendering function
+ */
 function renderWithData(container, renderFunction) {
   if (state.dataset && state.dataset.length > 0) {
     renderFunction(container);
@@ -40,24 +47,23 @@ function renderWithData(container, renderFunction) {
   }
 }
 
-// Update the updateDataInsights function for better performance
+/**
+ * Updates the data insights panel with content from the response
+ * @param {Object} response - The API response containing insights
+ */
 function updateDataInsights(response) {
   const insightsContainer = document.getElementById("dataInsightsContainer");
   const insightsDiv = document.getElementById("dataInsights");
 
-  // More efficient DOM manipulation - clear once instead of in a loop
-  // Keep a reference to the tableContainer
-  const tableContainer = document.getElementById("tableContainer");
-
-  // Clear content in one operation
+  // Clear existing content
   insightsDiv.innerHTML = "";
 
-  // Create header content
+  // Create and add header content
   const headerContent = document.createElement("div");
   headerContent.className = "insight-header-content";
 
   // Add title if available
-  if (response.dataInsights && response.dataInsights.title) {
+  if (response.dataInsights?.title) {
     const titleElement = document.createElement("h3");
     titleElement.className = "insight-title";
     titleElement.textContent = response.dataInsights.title;
@@ -65,45 +71,46 @@ function updateDataInsights(response) {
   }
 
   // Add description if available
-  if (response.dataInsights && response.dataInsights.dataDescription) {
+  if (response.dataInsights?.dataDescription) {
     const descriptionElement = document.createElement("p");
     descriptionElement.className = "insight-description";
     descriptionElement.textContent = response.dataInsights.dataDescription;
     headerContent.appendChild(descriptionElement);
   }
 
-  // Build DOM tree before inserting
+  // Add header content to insights div
   insightsDiv.appendChild(headerContent);
 
-  // Re-add or create tableContainer
-  let newTableContainer;
-  if (tableContainer) {
-    // Clear the container but preserve its ID and class
-    newTableContainer = tableContainer.cloneNode(false);
-  } else {
-    newTableContainer = document.createElement("div");
-    newTableContainer.id = "tableContainer";
-    newTableContainer.className = "chart-container";
-  }
+  // Create chart container
+  const tableContainer = document.createElement("div");
+  tableContainer.id = "tableContainer";
+  tableContainer.className = "chart-container";
 
-  insightsDiv.appendChild(newTableContainer);
+  // Add chart container to insights div
+  insightsDiv.appendChild(tableContainer);
 
-  // Display the container - use flex instead of grid for better performance
-  insightsContainer.style.display = "block";
+  // Display the insights container with flex layout
+  insightsContainer.style.display = "flex";
 }
 
-// Main function to render chart based on chartType.
+/**
+ * Main function to render the appropriate chart based on chartType.
+ */
 export default function visualizeData() {
+  // Update insights panel
   updateDataInsights(state);
+
+  // Get and clean chart container
   const chartContainer = document.getElementById("tableContainer");
   cleanupVisualization(chartContainer);
 
+  // Handle text responses differently
   if (state.chartType === "text") {
     renderTextResponse(chartContainer);
     return;
   }
 
-  // For all data-dependent charts, use the helper function
+  // Map chart types to their rendering functions
   const renderers = {
     table: renderTable,
     single_bar_chart: renderBarChart,
@@ -119,6 +126,7 @@ export default function visualizeData() {
     nested_bar_chart: renderNestedBarChart,
   };
 
+  // Render the selected chart type if supported
   const renderer = renderers[state.chartType];
   if (renderer) {
     renderWithData(chartContainer, renderer);
