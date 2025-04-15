@@ -286,7 +286,7 @@ body .main-content .container .insight-container {
     overflow-x: hidden;
     overflow-y: auto;
     padding-right: 10px;
-    padding-bottom: 15px; /* Add bottom padding to prevent overlap */
+    padding-bottom: 30px; /* Increased padding at the bottom */
     width: 100%;
 }
 
@@ -415,6 +415,37 @@ body .main-content .container .insight-container {
 .chart-container .svg-container > svg {
     height: auto;
     width: 100%;
+}
+
+/* Chart container sizing control */
+.insight-content .chart-container {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+}
+
+/* SVG constraints */
+.chart-container > svg {
+    width: 100% !important;
+    max-width: 100%;
+    height: auto !important;
+}
+
+/* Map/Leaflet constraints */
+.chart-container #leaflet-map,
+.chart-container .leaflet-container {
+    width: 100% !important;
+    max-width: 100%;
+    height: 500px;
+    margin-bottom: 20px; /* Extra margin for maps specifically */
+}
+
+/* Ensure all interactive components stay within bounds */
+.chart-container .tooltip,
+.chart-container .leaflet-control-container {
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 /* ===============================================

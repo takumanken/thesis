@@ -62,7 +62,14 @@ function setupChartParameters(aggregatedData) {
 
 // Create SVG container
 function createSvgContainer(container, width, height) {
-  return d3.select(container).append("svg").attr("width", width).attr("height", height);
+  // Create responsive SVG with viewBox for better scaling
+  return d3
+    .select(container)
+    .append("svg")
+    .attr("width", "100%")
+    .attr("height", "auto")
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
 }
 
 // Load GeoJSON and render map
