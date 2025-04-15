@@ -1,20 +1,4 @@
 /* ===============================================
-   TABLE OF CONTENTS
-   ===============================================
-   1. Base & Reset
-   2. Layout & Containers
-   3. Typography
-   4. Header Components
-   5. Search Components
-   6. Main Content Area
-   7. Data Insights & AI Components
-   8. Charts & Visualizations
-   9. Table Styles
-   10. Controls & Buttons
-   11. Media Queries
-   =============================================== */
-
-/* ===============================================
    1. BASE & RESET
    =============================================== */
 * {
@@ -64,12 +48,7 @@ body {
 }
 
 /* ===============================================
-   3. TYPOGRAPHY
-   =============================================== */
-/* Typography styles are incorporated into their respective components */
-
-/* ===============================================
-   4. HEADER COMPONENTS
+   3. HEADER COMPONENTS
    =============================================== */
 .header {
     background-color: #F3F4F8;
@@ -100,7 +79,7 @@ body {
 }
 
 /* ===============================================
-   5. SEARCH COMPONENTS
+   4. SEARCH COMPONENTS
    =============================================== */
 .search-wrapper {
     display: flex;
@@ -156,7 +135,7 @@ body {
 }
 
 /* ===============================================
-   6. LOCATION COMPONENTS
+   5. LOCATION COMPONENTS
    =============================================== */
 .location-label {
     display: flex;
@@ -171,9 +150,8 @@ body {
 }
 
 /* ===============================================
-   7. DATA INSIGHTS & AI COMPONENTS
+   6. DATA INSIGHTS & AI COMPONENTS
    =============================================== */
-/* AI Generated Insight header */
 .insight-header {
     display: flex;
     align-items: center;
@@ -191,7 +169,9 @@ body {
     font-size: 24px;
 }
 
-/* Container for insights - ensure it fits within viewport and extends to bottom */
+/* ===============================================
+   7. INSIGHT CONTAINER LAYOUT
+   =============================================== */
 .insight-container {
     background-color: white;
     border-radius: 8px;
@@ -200,10 +180,12 @@ body {
     padding: 25px 30px;
     display: flex !important; /* Use !important to prevent overrides */
     gap: 30px;
-    height: calc(95vh - 125px);
+    height: calc(100vh - 150px); /* Reach bottom of viewport minus header space and bottom margin */
 }
 
-/* Improve the inner components to handle the fixed container height */
+/* ===============================================
+   8. INSIGHT CONTENT STYLING
+   =============================================== */
 .insight-content {
     display: flex;
     flex-direction: column;
@@ -212,13 +194,30 @@ body {
     height: 100%;
 }
 
-/* Fixed header section for title and description */
 .insight-header-content {
     flex-shrink: 0;
     margin-bottom: 16px;
 }
 
-/* Chart container with scrolling */
+.insight-title {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 1.5rem;
+    color: #3A447C;
+    margin: 0 0 15px 0;
+    font-weight: 500;
+    line-height: 1.3;
+    flex-shrink: 0;
+}
+
+.insight-description {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.95rem;
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 15px;
+    flex-shrink: 0;
+}
+
 .insight-content .chart-container {
     flex: 1; /* Take remaining vertical space */
     overflow-y: auto; /* Allow vertical scrolling */
@@ -228,12 +227,11 @@ body {
     min-height: 0; /* Allow it to shrink if needed */
 }
 
-/* Ensure all chart contents fit within container width */
 .insight-content .chart-container > * {
     max-width: 100%;
 }
 
-/* Style the scrollbar */
+/* Scrollbar styling */
 .insight-content .chart-container::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -253,49 +251,24 @@ body {
     background: #aaa;
 }
 
-/* Fix sidebar styling to ensure it's positioned correctly */
+/* ===============================================
+   9. SIDEBAR COMPONENTS
+   =============================================== */
 .insight-sidebar {
     width: 300px;
     border-left: 1px solid #eaeaea;
     padding-left: 25px;
     flex-shrink: 0;
-    height: 100%; /* Fill parent height */
-    overflow-y: auto; /* Add scrolling for sidebar content */
-    /* Remove these properties that could be causing issues */
-    margin-top: 0;
-    border-top: none;
-    padding-top: 0;
+    height: 100%;
+    overflow-y: auto;
 }
 
-/* Insight title styling */
-.insight-title {
-    font-family: 'Noto Sans', sans-serif;
-    font-size: 1.5rem;
-    color: #3A447C;
-    margin: 0 0 15px 0;
-    font-weight: 500;
-    line-height: 1.3;
-    flex-shrink: 0;
-}
-
-/* Insight description styling */
-.insight-description {
-    font-family: 'Noto Sans', sans-serif;
-    font-size: 0.95rem;
-    color: #555;
-    line-height: 1.5;
-    margin-bottom: 15px;
-    flex-shrink: 0;
-}
-
-/* Chart controls container */
 .chart-controls-container {
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
-/* Controls heading */
 .controls-heading {
     font-family: 'Noto Sans', sans-serif;
     font-size: 1rem;
@@ -304,7 +277,6 @@ body {
     margin-bottom: 10px;
 }
 
-/* Chart type selection */
 .chart-type-selector {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -333,12 +305,10 @@ body {
     border-color: #cce0ff;
 }
 
-/* Chart definition section */
 .chart-definition {
     margin-bottom: 25px;
 }
 
-/* Filter, dimension, and metrics sections */
 .filter-section,
 .dimension-section,
 .metrics-section {
@@ -364,29 +334,15 @@ body {
 }
 
 /* ===============================================
-   8. CHARTS & VISUALIZATIONS
+   10. CHARTS & VISUALIZATIONS
    =============================================== */
-.chart-container {
-    width: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-.insight-content .chart-container {
-    width: 100%;
-    min-height: 400px;
-    margin-top: 15px;
-    overflow: auto; /* Add scrolling for wide tables */
-}
-
-/* For SVG charts, ensure they're responsive */
 .chart-container svg {
     width: 100% !important;
     height: auto;
 }
 
 /* ===============================================
-   9. TABLE STYLES
+   11. TABLE STYLES
    =============================================== */
 .gridjs-table th,
 .gridjs-table td {
@@ -395,14 +351,13 @@ body {
     font-size: 12px;
 }
 
-/* Ensure tables don't create horizontal overflow */
 .gridjs-wrapper {
     max-width: 100%;
     overflow-x: hidden;
 }
 
 /* ===============================================
-   10. CONTROLS & BUTTONS
+   12. CONTROLS & BUTTONS
    =============================================== */
 .chart-controls {
     display: none;
@@ -428,7 +383,7 @@ select {
 }
 
 /* ===============================================
-   11. MEDIA QUERIES
+   13. MEDIA QUERIES
    =============================================== */
 @media (max-width: 768px) {
     .search-wrapper {
@@ -447,10 +402,9 @@ select {
     }
 }
 
-/* Mobile responsiveness */
 @media (max-width: 900px) {
     .insight-container {
-        flex-direction: column; /* Stack on mobile */
+        flex-direction: column;
     }
     
     .insight-sidebar {
@@ -460,5 +414,30 @@ select {
         padding-left: 0;
         padding-top: 20px;
         margin-top: 20px;
+        height: auto;
+        max-height: 300px;
+    }
+}
+
+/* Only target tablet-sized screens, not phones */
+@media (min-width: 768px) and (max-width: 1024px) {
+    /* Tablet-specific adjustments */
+    .insight-container {
+        height: calc(100vh - 120px); /* Slightly adjusted height for tablets */
+    }
+    
+    .insight-sidebar {
+        width: 250px; /* Slightly narrower sidebar on tablets */
+    }
+    
+    .chart-type-selector {
+        grid-template-columns: repeat(2, 1fr); /* 2 columns instead of 3 on tablets */
+    }
+}
+
+/* Only apply these changes for large tablets in portrait mode */
+@media (min-width: 768px) and (max-width: 900px) {
+    .search-container {
+        max-width: 65%; /* Slightly narrower search on medium tablets */
     }
 }
