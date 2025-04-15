@@ -1,4 +1,22 @@
 /* ===============================================
+   TABLE OF CONTENTS
+   ===============================================
+   1. Base & Reset
+   2. Layout & Containers
+   3. Header Components
+   4. Search Components
+   5. Location Components
+   6. Data Insights & AI Components
+   7. Insight Container Layout
+   8. Insight Content Styling 
+   9. Sidebar Components
+   10. Charts & Visualizations
+   11. Table Styles
+   12. Controls & Buttons
+   13. Media Queries
+   =============================================== */
+
+/* ===============================================
    1. BASE & RESET
    =============================================== */
 * {
@@ -179,7 +197,7 @@ body {
    =============================================== */
 .insight-container {
     background-color: white;
-    border-radius: 8px;
+    border-radius: 25px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
     margin: 0 30px 30px;
     padding: 25px 30px;
@@ -440,5 +458,23 @@ select {
         margin-top: 20px;
         height: auto;
         max-height: 300px;
+    }
+}
+
+/* Only target tablet-sized screens */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .insight-sidebar {
+        width: 250px !important;
+        min-width: 250px !important;
+        flex-basis: 250px !important;
+    }
+    
+    .chart-type-selector {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .insight-content {
+        width: calc(100% - 280px) !important;
+        max-width: calc(100% - 280px) !important;
     }
 }
