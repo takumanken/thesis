@@ -17,6 +17,7 @@ from google.genai import types
 from typing import List, Dict, Tuple, Optional, Any
 import polars as pl
 import numpy as np
+from data_description import generate_data_description
 
 # Setup logging
 logging.basicConfig(
@@ -87,14 +88,13 @@ def setup_environment():
         Tuple containing the formatted system instruction and initialized API client.
     """
     with open(SYSTEM_INSTRUCTION_FILE, "r") as f:
-        system_instruction_template = f.read()
+        system_instruction = f.read()
 
     with open(os.path.join(FILTER_VALUES_DIR, "all_filters.json"), "r") as f:
         all_filters = json.load(f)
-
-    system_instruction = system_instruction_template.format(
-        all_filters=json.dumps(all_filters)
-    )
+        
+    # Replace the {all_filters} placeholder 
+    system_instruction = system_instruction.replace("{all_filters}", json.dumps(all_filters))
     
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -601,7 +601,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         # Determine best visualization
         available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats)
         
-        # Build final response payload
+        # Build response
         response_payload = {
             "dataset": dataset,
             "fields": list(dataset[0].keys()) if dataset else [],
@@ -612,6 +612,17 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             "dimensionStats": dimension_stats,
             "textResponse": None
         }
+
+        # Add data description (new code)
+        if dataset:
+            data_description = generate_data_description(
+                original_query=request_data.prompt, 
+                dataset=dataset,
+                aggregation_definition=agg_def.dict(),
+                chart_type=ideal_chart
+            )
+            response_payload["dataDescription"] = data_description.get("dataDescription")
+            response_payload["directAnswer"] = data_description.get("directAnswer")
         
         logger.info(f"[{request_id}] Completed in {time.time() - start_time:.2f}s")
         return JSONResponse(content=response_payload)

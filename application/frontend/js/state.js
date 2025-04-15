@@ -6,7 +6,9 @@ export const state = {
   aggregationDefinition: {},
   chartType: "table",
   availableChartTypes: ["table"],
-  textResponse: null, // Add this field
+  textResponse: null,
+  dataDescription: null,
+  directAnswer: null,
 
   // Update method
   update(newData) {
@@ -17,7 +19,9 @@ export const state = {
     this.aggregationDefinition = newData.aggregationDefinition || {};
     this.chartType = newData.chartType || "table";
     this.availableChartTypes = newData.availableChartTypes || ["table"];
-    this.textResponse = newData.textResponse || null; // Include text response in update
+    this.textResponse = newData.textResponse || null;
+    this.dataDescription = newData.dataDescription || null;
+    this.directAnswer = newData.directAnswer || null;
 
     const chartTypeSelector = document.getElementById("chartTypeSelector");
     if (chartTypeSelector) {

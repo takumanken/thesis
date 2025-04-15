@@ -56,6 +56,8 @@ export async function askGemini() {
     chartType: result.chartType,
     availableChartTypes: result.availableChartTypes,
     textResponse: result.textResponse,
+    dataDescription: result.dataDescription,
+    directAnswer: result.directAnswer,
   });
 
   updateChartTypeDropdown();
