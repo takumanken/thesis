@@ -621,8 +621,10 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                 aggregation_definition=agg_def.dict(),
                 chart_type=ideal_chart
             )
-            response_payload["dataDescription"] = data_description.get("dataDescription")
-            response_payload["directAnswer"] = data_description.get("directAnswer")
+            response_payload["dataInsights"] = {
+                "title": data_description.get("title"),
+                "dataDescription": data_description.get("dataDescription")
+            }
         
         logger.info(f"[{request_id}] Completed in {time.time() - start_time:.2f}s")
         return JSONResponse(content=response_payload)

@@ -13,14 +13,21 @@ import renderNestedBarChart from "./chart/nested_bar_chart.js";
 
 // Clean up previous visualizations.
 function cleanupVisualization(container) {
+  if (!container) return; // Guard against null containers
+
   if (state.currentGridInstance) {
     state.currentGridInstance.destroy();
     state.currentGridInstance = null;
   }
+
   if (state.currentChart) {
-    container.removeChild(state.currentChart);
+    if (container.contains(state.currentChart)) {
+      container.removeChild(state.currentChart);
+    }
     state.currentChart = null;
   }
+
+  // Clear contents but don't remove the container itself
   container.innerHTML = "";
 }
 
@@ -33,66 +40,64 @@ function renderWithData(container, renderFunction) {
   }
 }
 
-// Update the updateDataInsights function for better formatting
+// Update the updateDataInsights function for better performance
+function updateDataInsights(response) {
+  const insightsContainer = document.getElementById("dataInsightsContainer");
+  const insightsDiv = document.getElementById("dataInsights");
 
-function updateDataInsights() {
-  const container = document.getElementById("dataInsightsContainer");
-  const insightsEl = document.getElementById("dataInsights");
+  // More efficient DOM manipulation - clear once instead of in a loop
+  // Keep a reference to the tableContainer
+  const tableContainer = document.getElementById("tableContainer");
 
-  if (!container || !insightsEl) return;
+  // Clear content in one operation
+  insightsDiv.innerHTML = "";
 
-  // Get values from state
-  const description = state.dataDescription || "";
-  const answer = state.directAnswer || "";
+  // Create header content
+  const headerContent = document.createElement("div");
+  headerContent.className = "insight-header-content";
 
-  // Combine them into a single text
-  let insightText = "";
-
-  if (description) {
-    insightText += description;
+  // Add title if available
+  if (response.dataInsights && response.dataInsights.title) {
+    const titleElement = document.createElement("h3");
+    titleElement.className = "insight-title";
+    titleElement.textContent = response.dataInsights.title;
+    headerContent.appendChild(titleElement);
   }
 
-  if (answer && answer.trim()) {
-    // Use nicer formatting for the separator
-    if (description) {
-      // Use HTML for better styling
-      insightsEl.textContent = description;
-
-      const separator = document.createElement("span");
-      separator.className = "insight-separator";
-      separator.textContent = " → ";
-      insightsEl.appendChild(separator);
-
-      const answerSpan = document.createElement("span");
-      answerSpan.textContent = answer;
-      answerSpan.style.fontWeight = "500";
-      insightsEl.appendChild(answerSpan);
-
-      container.style.display = "block";
-      return;
-    } else {
-      insightText = answer;
-    }
+  // Add description if available
+  if (response.dataInsights && response.dataInsights.dataDescription) {
+    const descriptionElement = document.createElement("p");
+    descriptionElement.className = "insight-description";
+    descriptionElement.textContent = response.dataInsights.dataDescription;
+    headerContent.appendChild(descriptionElement);
   }
 
-  // Update display
-  if (insightText.trim()) {
-    insightsEl.textContent = insightText;
-    container.style.display = "block";
+  // Build DOM tree before inserting
+  insightsDiv.appendChild(headerContent);
+
+  // Re-add or create tableContainer
+  let newTableContainer;
+  if (tableContainer) {
+    // Clear the container but preserve its ID and class
+    newTableContainer = tableContainer.cloneNode(false);
   } else {
-    container.style.display = "none";
+    newTableContainer = document.createElement("div");
+    newTableContainer.id = "tableContainer";
+    newTableContainer.className = "chart-container";
   }
+
+  insightsDiv.appendChild(newTableContainer);
+
+  // Display the container - use flex instead of grid for better performance
+  insightsContainer.style.display = "block";
 }
 
 // Main function to render chart based on chartType.
 export default function visualizeData() {
+  updateDataInsights(state);
   const chartContainer = document.getElementById("tableContainer");
   cleanupVisualization(chartContainer);
 
-  // Add this new function call at the beginning
-  updateDataInsights();
-
-  // Handle the special case first
   if (state.chartType === "text") {
     renderTextResponse(chartContainer);
     return;
@@ -115,7 +120,6 @@ export default function visualizeData() {
   };
 
   const renderer = renderers[state.chartType];
-
   if (renderer) {
     renderWithData(chartContainer, renderer);
   } else {

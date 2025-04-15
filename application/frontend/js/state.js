@@ -7,8 +7,10 @@ export const state = {
   chartType: "table",
   availableChartTypes: ["table"],
   textResponse: null,
-  dataDescription: null,
-  directAnswer: null,
+  dataInsights: {
+    title: null,
+    dataDescription: null,
+  },
 
   // Update method
   update(newData) {
@@ -20,8 +22,21 @@ export const state = {
     this.chartType = newData.chartType || "table";
     this.availableChartTypes = newData.availableChartTypes || ["table"];
     this.textResponse = newData.textResponse || null;
-    this.dataDescription = newData.dataDescription || null;
-    this.directAnswer = newData.directAnswer || null;
+
+    // Handle dataInsights property
+    if (newData.dataInsights) {
+      this.dataInsights = {
+        title: newData.dataInsights.title || null,
+        dataDescription: newData.dataInsights.dataDescription || null,
+      };
+    }
+    // Handle legacy flat structure
+    else {
+      this.dataInsights = {
+        title: newData.title || null,
+        dataDescription: newData.dataDescription || null,
+      };
+    }
 
     const chartTypeSelector = document.getElementById("chartTypeSelector");
     if (chartTypeSelector) {

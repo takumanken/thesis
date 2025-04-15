@@ -39,31 +39,35 @@ export async function askGemini() {
     console.log("Including location in query:", locationData);
   }
 
-  const response = await fetch(serverEndpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(requestBody),
-  });
+  try {
+    const response = await fetch(serverEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    });
 
-  const result = await response.json();
+    const result = await response.json();
+    console.log("Raw response from backend:", result);
 
-  // Update state with response data
-  state.update({
-    fields: result.fields,
-    dataset: result.dataset,
-    aggregationDefinition: result.aggregationDefinition,
-    sql: result.sql,
-    chartType: result.chartType,
-    availableChartTypes: result.availableChartTypes,
-    textResponse: result.textResponse,
-    dataDescription: result.dataDescription,
-    directAnswer: result.directAnswer,
-  });
+    // Update state with the exact structure from the API response
+    state.update({
+      fields: result.fields || [],
+      dataset: result.dataset || [],
+      aggregationDefinition: result.aggregationDefinition || {},
+      sql: result.sql || "",
+      chartType: result.chartType || "table",
+      availableChartTypes: result.availableChartTypes || ["table"],
+      textResponse: result.textResponse || null,
+      dataInsights: result.dataInsights || {
+        title: null,
+        dataDescription: null,
+      },
+    });
 
-  updateChartTypeDropdown();
-
-  console.log("Response from backend:", result);
-  console.log("State after processing:", state);
+    updateChartTypeDropdown();
+  } catch (error) {
+    console.error("Error in askGemini:", error);
+  }
 }
 
 export default askGemini;
