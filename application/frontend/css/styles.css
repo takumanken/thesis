@@ -21,3 +21,25 @@
   display: flex;
   width: 100%;
 }
+
+/* Add or update these styles */
+#dataInsightsContainer {
+  margin: 15px 0 20px;
+  padding: 12px 15px;
+  background-color: #f5f9fc;
+  border-left: 4px solid #0078d4;
+  border-radius: 4px;
+}
+
+#dataInsights {
+  font-size: 1rem;
+  color: #333;
+  line-height: 1.4;
+}
+
+/* Style for the arrow separator */
+.insight-separator {
+  color: #0078d4;
+  font-weight: bold;
+  margin: 0 4px;
+}

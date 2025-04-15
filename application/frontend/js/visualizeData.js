@@ -33,10 +33,64 @@ function renderWithData(container, renderFunction) {
   }
 }
 
+// Update the updateDataInsights function for better formatting
+
+function updateDataInsights() {
+  const container = document.getElementById("dataInsightsContainer");
+  const insightsEl = document.getElementById("dataInsights");
+
+  if (!container || !insightsEl) return;
+
+  // Get values from state
+  const description = state.dataDescription || "";
+  const answer = state.directAnswer || "";
+
+  // Combine them into a single text
+  let insightText = "";
+
+  if (description) {
+    insightText += description;
+  }
+
+  if (answer && answer.trim()) {
+    // Use nicer formatting for the separator
+    if (description) {
+      // Use HTML for better styling
+      insightsEl.textContent = description;
+
+      const separator = document.createElement("span");
+      separator.className = "insight-separator";
+      separator.textContent = " → ";
+      insightsEl.appendChild(separator);
+
+      const answerSpan = document.createElement("span");
+      answerSpan.textContent = answer;
+      answerSpan.style.fontWeight = "500";
+      insightsEl.appendChild(answerSpan);
+
+      container.style.display = "block";
+      return;
+    } else {
+      insightText = answer;
+    }
+  }
+
+  // Update display
+  if (insightText.trim()) {
+    insightsEl.textContent = insightText;
+    container.style.display = "block";
+  } else {
+    container.style.display = "none";
+  }
+}
+
 // Main function to render chart based on chartType.
-function visualizeData() {
+export default function visualizeData() {
   const chartContainer = document.getElementById("tableContainer");
   cleanupVisualization(chartContainer);
+
+  // Add this new function call at the beginning
+  updateDataInsights();
 
   // Handle the special case first
   if (state.chartType === "text") {
@@ -68,5 +122,3 @@ function visualizeData() {
     chartContainer.innerHTML = `<p>Chart type "${state.chartType}" is not supported.</p>`;
   }
 }
-
-export default visualizeData;
