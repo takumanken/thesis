@@ -45,11 +45,11 @@ function setupConfig(dataLength) {
 
 // Create the DOM structure for the chart
 function setupChartStructure(container, width, totalHeight, margin, fullChartHeight) {
-  // Create a container div to hold both fixed x-axis and scrollable chart
   const chartContainer = document.createElement("div");
   chartContainer.style.position = "relative";
-  chartContainer.style.width = width + "px";
-  chartContainer.style.height = totalHeight + "px";
+  chartContainer.style.width = "100%";
+  chartContainer.style.height = "100%";
+  chartContainer.style.minHeight = "400px";
   container.appendChild(chartContainer);
 
   // Create a fixed div for the x-axis
