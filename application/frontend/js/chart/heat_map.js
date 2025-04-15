@@ -58,12 +58,24 @@ function processLocationData(dataset, geoDim, measure) {
 /**
  * Create a container element for the Leaflet map
  */
+// Update this function to enforce container constraints
 function createMapContainer(container, width, height) {
+  // Create wrapper div to constrain map size
+  const wrapperDiv = document.createElement("div");
+  wrapperDiv.style.width = "100%";
+  wrapperDiv.style.maxWidth = "100%";
+  wrapperDiv.style.overflow = "hidden";
+  wrapperDiv.style.position = "relative";
+  container.appendChild(wrapperDiv);
+
+  // Create the map container with appropriate constraints
   const mapContainer = document.createElement("div");
   mapContainer.id = "leaflet-map";
-  mapContainer.style.width = `${width}px`;
+  mapContainer.style.width = "100%";
   mapContainer.style.height = `${height}px`;
-  container.appendChild(mapContainer);
+  mapContainer.style.maxWidth = "100%";
+  mapContainer.style.boxSizing = "border-box";
+  wrapperDiv.appendChild(mapContainer);
 
   return mapContainer;
 }
