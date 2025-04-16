@@ -76,6 +76,7 @@ function createChartStructure(container, config) {
   // Main chart container - responsive by default
   const chartContainer = document.createElement("div");
   chartContainer.className = "single-bar-chart";
+  chartContainer.id = "bar-chart-container";
   chartContainer.style.cssText = `
     position: relative;
     width: 100%;
@@ -86,6 +87,8 @@ function createChartStructure(container, config) {
 
   // Fixed header for x-axis
   const xAxisContainer = document.createElement("div");
+  xAxisContainer.className = "bar-chart-axis-container";
+  xAxisContainer.id = "bar-chart-x-axis";
   xAxisContainer.style.cssText = `
     position: absolute;
     top: 0;
@@ -98,6 +101,8 @@ function createChartStructure(container, config) {
 
   // Scrollable container for bars
   const scrollContainer = document.createElement("div");
+  scrollContainer.className = "bar-chart-bars-container";
+  scrollContainer.id = "bar-chart-scroll";
   scrollContainer.style.cssText = `
     position: absolute;
     top: ${config.margin.top}px;
@@ -109,10 +114,12 @@ function createChartStructure(container, config) {
   `;
   chartContainer.appendChild(scrollContainer);
 
-  // SVG elements
+  // SVG elements with class names
   const svg = d3
     .select(scrollContainer)
     .append("svg")
+    .attr("class", "bar-chart-svg")
+    .attr("id", "bar-chart-main-svg")
     .attr("width", "100%")
     .attr("height", config.fullChartHeight - config.margin.top)
     .attr("preserveAspectRatio", "xMinYMin meet");
@@ -120,6 +127,8 @@ function createChartStructure(container, config) {
   const xAxisSvg = d3
     .select(xAxisContainer)
     .append("svg")
+    .attr("class", "bar-chart-axis-svg")
+    .attr("id", "bar-chart-x-axis-svg")
     .attr("width", "100%")
     .attr("height", config.margin.top)
     .attr("preserveAspectRatio", "xMinYMin meet");
