@@ -311,12 +311,18 @@ function addTreemapLabels(cell, dimensions) {
     .attr("fill", "white")
     .text((d) => truncateLabel(d.data.name, Math.floor((d.x1 - d.x0) / 7)));
 
-  // Cell labels
+  // Cell labels - FIX HERE
   cell
     .append("text")
     .filter((d) => {
-      const minWidth = (dimensions.length > 1 && d.depth === 2) || d.depth === 1 ? 50 : 0;
-      return d.x1 - d.x0 > minWidth && d.y1 - d.y0 > 20;
+      // Skip root node and parent headers that already have labels
+      if (d.depth === 0 || (dimensions.length > 1 && d.depth === 1)) {
+        return false;
+      }
+
+      // Only show labels on cells with enough space
+      const isLeafNode = dimensions.length > 1 ? d.depth === 2 : d.depth === 1;
+      return isLeafNode && d.x1 - d.x0 > 60 && d.y1 - d.y0 > 25;
     })
     .attr("x", 4)
     .attr("y", 13)
