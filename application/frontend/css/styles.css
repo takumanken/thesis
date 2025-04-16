@@ -153,6 +153,7 @@ body {
     display: flex;
     flex-direction: column;
     padding-right: 30px;
+    flex: 1;
 }
 
 .viz-title {
