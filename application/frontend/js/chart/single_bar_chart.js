@@ -11,6 +11,12 @@ import { chartStyles } from "./utils/chartStyles.js";
  * @param {HTMLElement} container - DOM element to render the chart
  */
 function renderBarChart(container) {
+  // Safety check for container
+  if (!container) {
+    console.error("Container element is null or undefined");
+    return;
+  }
+
   // Check for valid data
   if (!state.dataset || !state.dataset.length) {
     container.innerHTML = "<p>No data available to display</p>";
@@ -73,15 +79,16 @@ function createChartConfig(dataLength) {
  * @returns {Object} References to chart elements
  */
 function createChartStructure(container, config) {
-  // Main chart container with responsive height
-  const chartContainer = document.createElement("div");
-  chartContainer.className = "single-bar-chart";
-  chartContainer.style.cssText = `
-    position: relative;
-    width: 100%;
-    height: ${Math.min(config.fullChartHeight, config.displayHeight)}px;
-  `;
-  container.appendChild(chartContainer);
+  // Double check the container exists
+  if (!container) {
+    console.error("Cannot create chart structure: container is null");
+    return null;
+  }
+
+  // Set container styles directly instead of creating an intermediate div
+  container.style.position = "relative";
+  container.style.width = "100%";
+  container.style.height = `${Math.min(config.fullChartHeight, 500)}px`;
 
   // Fixed header for x-axis
   const xAxisContainer = document.createElement("div");
@@ -94,7 +101,7 @@ function createChartStructure(container, config) {
     height: ${config.margin.top}px;
     z-index: 2;
   `;
-  chartContainer.appendChild(xAxisContainer);
+  container.appendChild(xAxisContainer);
 
   // Scrollable container for bars
   const scrollContainer = document.createElement("div");
@@ -108,7 +115,7 @@ function createChartStructure(container, config) {
     overflow-y: auto;
     overflow-x: hidden;
   `;
-  chartContainer.appendChild(scrollContainer);
+  container.appendChild(scrollContainer);
 
   // SVG elements with class names
   const svg = d3
@@ -131,7 +138,7 @@ function createChartStructure(container, config) {
   const tooltip = chartStyles.createTooltip();
 
   return {
-    chartContainer,
+    chartContainer: container,
     xAxisContainer,
     scrollContainer,
     svg,
@@ -151,13 +158,7 @@ function createScales(dataset, measure, config) {
   // Get container width with fallbacks for different possible class names
   let containerWidth;
   try {
-    // Try multiple selectors in order of preference
-    const container =
-      document.querySelector("#viz-container") ||
-      document.querySelector(".viz-container") ||
-      document.querySelector(".chart-container") ||
-      document.querySelector("#tableContainer");
-
+    const container = document.querySelector("#viz-container");
     containerWidth = container ? container.clientWidth : null;
   } catch (e) {
     console.warn("Container width calculation failed:", e);

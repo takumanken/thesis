@@ -101,12 +101,12 @@ function updateDataInsights(response) {
   insightsDiv.appendChild(headerContent);
 
   // Create chart container with both possible IDs for compatibility
-  const tableContainer = document.createElement("div");
-  tableContainer.id = "tableContainer";
-  tableContainer.className = "viz-container chart-container";
+  const vizContainer = document.createElement("div");
+  vizContainer.id = "vizContainer";
+  vizContainer.className = "viz-container";
 
   // Add chart container to insights div
-  insightsDiv.appendChild(tableContainer);
+  insightsDiv.appendChild(vizContainer);
 
   // Create chart type dropdown in the sidebar
   createChartTypeSwitcher();
@@ -205,21 +205,31 @@ window.createChartTypeSwitcher = createChartTypeSwitcher;
 window.switchChartType = switchChartType;
 
 /**
- * Main function to render the appropriate chart based on chartType.
+ * Renders the appropriate chart based on state
  */
-export default function visualizeData() {
-  // Update insights panel
+function visualizeData() {
+  // Update insights panel if needed
   updateDataInsights(state);
 
-  // Get and clean chart container
-  const chartContainer = document.getElementById("tableContainer");
-  cleanupVisualization(chartContainer);
+  // Get chart container with multiple fallbacks
+  const chartContainer =
+    document.getElementById("tableContainer") ||
+    document.querySelector(".viz-container") ||
+    document.querySelector("#viz-container");
 
-  // Handle text responses differently
-  if (state.chartType === "text") {
-    renderTextResponse(chartContainer);
+  // Check if container exists before proceeding
+  if (!chartContainer) {
+    console.error("Chart container not found. Check your HTML structure.");
     return;
   }
+
+  // Clean up any existing charts
+  cleanupVisualization(chartContainer);
+
+  // Get the current chart type
+  const chartType = state.chartType || "single_bar_chart";
+
+  console.log(`Rendering chart type: ${chartType}`);
 
   // Map chart types to their rendering functions
   const renderers = {
@@ -237,11 +247,18 @@ export default function visualizeData() {
     nested_bar_chart: renderNestedBarChart,
   };
 
-  // Render the selected chart type if supported
-  const renderer = renderers[state.chartType];
-  if (renderer) {
-    renderWithData(chartContainer, renderer);
-  } else {
-    chartContainer.innerHTML = `<p>Chart type "${state.chartType}" is not supported.</p>`;
+  // Render the selected chart type
+  try {
+    const renderer = renderers[chartType];
+    if (renderer) {
+      renderer(chartContainer);
+    } else {
+      chartContainer.innerHTML = `<p>Chart type "${chartType}" is not supported.</p>`;
+    }
+  } catch (error) {
+    console.error("Error rendering chart:", error);
+    chartContainer.innerHTML = `<p>Error rendering chart: ${error.message}</p>`;
   }
 }
+
+export default visualizeData;
