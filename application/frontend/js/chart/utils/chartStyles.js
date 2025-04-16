@@ -108,8 +108,8 @@ export const chartStyles = {
   // Add bar chart specific settings
   barChart: {
     bar: {
-      height: 25,
-      padding: 0.1,
+      height: 35,
+      padding: 0.5,
       cornerRadius: 2,
     },
     margin: {
