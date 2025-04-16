@@ -1,4 +1,5 @@
 import { state } from "./state.js";
+import { chartControls } from "./chart/utils/chartControls.js"; // Add this import
 import renderTable from "./chart/table.js";
 import renderBarChart from "./chart/single_bar_chart.js";
 import renderLineChart from "./chart/line_chart.js";
@@ -210,6 +211,10 @@ window.switchChartType = switchChartType;
 function visualizeData() {
   // Update insights panel if needed
   updateDataInsights(state);
+
+  // Reset dimension swap state when visualizing new data
+  state.dimensionsSwapped = false;
+  chartControls.removeExistingControl();
 
   // Get chart container with multiple fallbacks
   const chartContainer =

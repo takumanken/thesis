@@ -5,119 +5,132 @@ import { state } from "../../state.js";
  */
 export const chartControls = {
   /**
-   * Initialize dimension swap control if applicable
+   * Initialize dimension swap control based on chart type
    * @param {string} chartType - Current chart type
-   * @returns {boolean} Whether swap was initialized
+   * @returns {boolean} Whether swap control was initialized
    */
   initDimensionSwap(chartType) {
-    // Get compatible chart types - can expand this list as needed
+    // Define supported chart types
     const swappableChartTypes = ["treemap", "grouped_bar_chart", "stacked_bar_chart"];
 
-    // Check if current chart supports dimension swapping
+    // Check eligibility conditions
     const supportsSwap = swappableChartTypes.includes(chartType);
     const hasTwoDimensions = state.aggregationDefinition?.dimensions?.length === 2;
+    const shouldShowControl = supportsSwap && hasTwoDimensions;
 
-    // Update UI control
-    this.updateDimensionControls(supportsSwap && hasTwoDimensions);
+    // Clean up existing control regardless of what happens next
+    this.removeExistingControl();
 
-    return supportsSwap && hasTwoDimensions;
+    // Reset swap state if not eligible
+    if (!shouldShowControl) {
+      state.dimensionsSwapped = false;
+      return false;
+    }
+
+    // Create the control
+    this.createDimensionSwapControl();
+    return true;
   },
 
   /**
-   * Get dimensions array with swapping if needed
-   * @returns {Array} Dimensions array with proper ordering
+   * Get dimensions array with proper ordering based on swap state
+   * @returns {Array} Dimensions array
    */
   getSwappableDimensions() {
-    if (!state.aggregationDefinition?.dimensions) return [];
+    const dimensions = state.aggregationDefinition?.dimensions || [];
 
-    const dimensions = [...state.aggregationDefinition.dimensions];
-
+    // Return swapped dimensions if applicable
     if (dimensions.length === 2 && state.dimensionsSwapped) {
       return [dimensions[1], dimensions[0]];
     }
 
-    return dimensions;
+    return [...dimensions];
   },
 
   /**
-   * Updates dimension swap control visibility
-   * @param {boolean} show - Whether to show the control
+   * Remove any existing dimension swap control
    */
-  updateDimensionControls(show) {
-    const swapControl =
-      document.querySelector(".viz-dimension-swap") || (show ? this.createDimensionSwapControl() : null);
-
-    if (swapControl) {
-      swapControl.style.display = show ? "block" : "none";
-
-      // Update button state
-      const swapButton = swapControl.querySelector(".dimension-swap-btn");
-      if (swapButton) {
-        swapButton.style.backgroundColor = state.dimensionsSwapped ? "var(--color-primary-light)" : "white";
-        swapButton.style.borderColor = state.dimensionsSwapped ? "var(--color-primary)" : "var(--color-border)";
-      }
-    }
+  removeExistingControl() {
+    document.querySelector(".viz-dimension-swap")?.remove();
   },
 
   /**
    * Creates dimension swap control in sidebar
-   * @private
    */
   createDimensionSwapControl() {
+    // Find insertion points
     const controlPanel = document.querySelector(".viz-controls");
+    if (!controlPanel) return null;
+
     const chartDefSection = document.querySelector(".viz-definition");
 
-    // Create control section
+    // Create control container
     const swapSection = document.createElement("div");
     swapSection.className = "viz-dimension-swap";
     swapSection.style.marginBottom = "20px";
 
     // Add heading
-    const heading = document.createElement("h3");
-    heading.className = "control-heading";
-    heading.textContent = "Dimension Order";
-    swapSection.appendChild(heading);
+    swapSection.innerHTML = '<h3 class="control-heading">Dimension Order</h3>';
 
-    // Add swap button
+    // Create button
+    const swapButton = this.createSwapButton();
+    swapSection.appendChild(swapButton);
+
+    // Insert into DOM
+    if (chartDefSection) {
+      controlPanel.insertBefore(swapSection, chartDefSection);
+    } else {
+      controlPanel.appendChild(swapSection);
+    }
+
+    return swapSection;
+  },
+
+  /**
+   * Creates the swap button element
+   * @private
+   */
+  createSwapButton() {
     const swapButton = document.createElement("button");
     swapButton.textContent = "Swap Dimensions";
     swapButton.className = "dimension-swap-btn";
+
+    // Apply styles
     Object.assign(swapButton.style, {
       padding: "8px 12px",
       border: "1px solid var(--color-border)",
       borderRadius: "4px",
-      backgroundColor: "white",
+      backgroundColor: state.dimensionsSwapped ? "var(--color-primary-light)" : "white",
+      borderColor: state.dimensionsSwapped ? "var(--color-primary)" : "var(--color-border)",
       cursor: "pointer",
       fontSize: "12px",
       width: "100%",
     });
 
     // Add click handler
-    swapButton.addEventListener("click", () => {
-      state.dimensionsSwapped = !state.dimensionsSwapped;
+    swapButton.addEventListener("click", () => this.handleSwapButtonClick(swapButton));
 
-      // Update button appearance
-      swapButton.style.backgroundColor = state.dimensionsSwapped ? "var(--color-primary-light)" : "white";
-      swapButton.style.borderColor = state.dimensionsSwapped ? "var(--color-primary)" : "var(--color-border)";
+    return swapButton;
+  },
 
-      // Trigger visualization redraw via event
-      const event = new CustomEvent("dimensionSwap", {
+  /**
+   * Handles swap button clicks
+   * @param {HTMLElement} button - The button element
+   * @private
+   */
+  handleSwapButtonClick(button) {
+    // Toggle state
+    state.dimensionsSwapped = !state.dimensionsSwapped;
+
+    // Update button appearance
+    button.style.backgroundColor = state.dimensionsSwapped ? "var(--color-primary-light)" : "white";
+    button.style.borderColor = state.dimensionsSwapped ? "var(--color-primary)" : "var(--color-border)";
+
+    // Trigger redraw event
+    document.dispatchEvent(
+      new CustomEvent("dimensionSwap", {
         detail: { swapped: state.dimensionsSwapped },
-      });
-      document.dispatchEvent(event);
-    });
-
-    swapSection.appendChild(swapButton);
-
-    // Insert into DOM at correct position
-    if (controlPanel) {
-      if (chartDefSection) {
-        controlPanel.insertBefore(swapSection, chartDefSection);
-      } else {
-        controlPanel.appendChild(swapSection);
-      }
-    }
-
-    return swapSection;
+      })
+    );
   },
 };
