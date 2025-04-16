@@ -2,7 +2,6 @@
  * Single Bar Chart Component - Simplified Version
  */
 import { state } from "../state.js";
-import { CHART_DIMENSIONS } from "../constants.js";
 import { chartStyles } from "./utils/chartStyles.js";
 
 /**
