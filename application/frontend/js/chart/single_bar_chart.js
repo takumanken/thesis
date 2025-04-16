@@ -3,6 +3,7 @@
  */
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
+import { truncateLabel, formatValue, debounce, setupResizeHandler } from "./utils/chartUtils.js";
 
 /**
  * Renders a single bar chart in the provided container
@@ -56,7 +57,9 @@ function renderBarChart(container) {
   renderXAxis(xAxisSvg, scales.x, margin);
 
   // Add resize handling
-  setupResizeHandler(container, dataset, scales, margin, svg, xAxisSvg, measure);
+  setupResizeHandler(container, () => {
+    renderBarChart(container);
+  });
 }
 
 /**
@@ -213,61 +216,6 @@ function renderXAxis(svg, xScale, margin) {
 }
 
 /**
- * Set up resize handler
- */
-function setupResizeHandler(container, dataset, scales, margin, svg, xAxisSvg, measure) {
-  // Clean up any existing observers
-  if (container._resizeObserver) {
-    container._resizeObserver.disconnect();
-  }
-
-  const resizeChart = () => {
-    const width = container.clientWidth;
-    if (!width) return;
-
-    // Update x scale
-    const updatedX = scales.x.copy().range([margin.left, width - margin.right]);
-
-    // Update bar widths
-    svg.selectAll("rect.bar").attr("width", (d) => Math.max(0, updatedX(d[measure]) - margin.left));
-
-    // Update labels
-    svg.selectAll("text.bar-label").attr("x", (d) => updatedX(d[measure]) + 5);
-
-    // Update x-axis
-    xAxisSvg.select(".x-axis").call(d3.axisTop(updatedX).ticks(5).tickFormat(formatValue));
-
-    chartStyles.applyAxisStyles(xAxisSvg.select(".x-axis"));
-  };
-
-  // Observe resizing
-  const observer = new ResizeObserver(debounce(resizeChart, 250));
-  observer.observe(container);
-  container._resizeObserver = observer;
-
-  // Initial render
-  resizeChart();
-}
-
-/**
  * Utility functions
  */
-function truncateLabel(text, maxLength = 25) {
-  return text?.length > maxLength ? text.substring(0, maxLength) + "..." : text;
-}
-
-function formatValue(value) {
-  if (value >= 1000000) return (value / 1000000).toFixed(1) + "M";
-  if (value >= 1000) return (value / 1000).toFixed(1) + "K";
-  return value.toLocaleString();
-}
-
-function debounce(func, wait) {
-  let timeout;
-  return function (...args) {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(this, args), wait);
-  };
-}
-
 export default renderBarChart;
