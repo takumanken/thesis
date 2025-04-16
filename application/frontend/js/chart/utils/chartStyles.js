@@ -3,7 +3,7 @@
  */
 export const chartStyles = {
   // Font settings
-  fontFamily: "system-ui, -apple-system, sans-serif",
+  fontFamily: "Noto Sans, sans-serif",
   fontSize: {
     title: "16px",
     axisLabel: "12px",
@@ -77,5 +77,32 @@ export const chartStyles = {
   // Create and return a consistent color scale
   getColorScale(domain) {
     return d3.scaleOrdinal(this.colors).domain(domain);
+  },
+
+  /**
+   * Determines a contrasting text color for better readability
+   * @param {string|object} backgroundColor - Background color (string or d3 color object)
+   * @param {number} opacity - Opacity for the text color (0-1)
+   * @returns {string} Contrasting color as rgba string
+   */
+  getContrastingTextColor(backgroundColor, opacity = 1) {
+    const color = typeof backgroundColor === "string" ? d3.color(backgroundColor) : backgroundColor;
+    if (!color) return `rgba(0, 0, 0, ${opacity})`;
+
+    const r = color.r;
+    const g = color.g;
+    const b = color.b;
+
+    // Use WCAG luminance formula for better contrast perception
+    // Formula: 0.2126*R + 0.7152*G + 0.0722*B (where RGB are normalized)
+    const normalizedR = r / 255;
+    const normalizedG = g / 255;
+    const normalizedB = b / 255;
+
+    // Calculate relative luminance using the WCAG formula
+    const wcagLuminance = 0.2126 * normalizedR + 0.7152 * normalizedG + 0.0722 * normalizedB;
+
+    // Use the WCAG luminance threshold of 0.5 for contrast
+    return wcagLuminance < 0.5 ? `rgba(255, 255, 255, ${opacity})` : `rgba(0, 0, 0, ${opacity})`;
   },
 };
