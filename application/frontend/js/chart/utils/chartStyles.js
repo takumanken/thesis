@@ -7,9 +7,8 @@ export const chartStyles = {
   fontSize: {
     title: "16px",
     axisLabel: "12px",
-    tick: "11px",
-    legend: "12px",
-    tooltip: "12px",
+    tickLabel: "11px",
+    subtitle: "13px",
   },
 
   // Colors
@@ -58,7 +57,7 @@ export const chartStyles = {
     selection
       .selectAll(".tick text")
       .style("fill", "#333")
-      .style("font-size", this.fontSize.tick)
+      .style("font-size", this.fontSize.tickLabel)
       .style("font-family", this.fontFamily);
     return selection;
   },
@@ -104,5 +103,44 @@ export const chartStyles = {
 
     // Use the WCAG luminance threshold of 0.5 for contrast
     return wcagLuminance < 0.5 ? `rgba(255, 255, 255, ${opacity})` : `rgba(0, 0, 0, ${opacity})`;
+  },
+
+  // Add bar chart specific settings
+  barChart: {
+    bar: {
+      height: 25,
+      padding: 0.1,
+      cornerRadius: 2,
+    },
+    margin: {
+      top: 40,
+      right: 20,
+      bottom: 20,
+      left: 200,
+    },
+    maxHeight: 500,
+    valueGap: 5,
+  },
+
+  /**
+   * Get appropriate chart margins based on chart type
+   * @param {string} chartType - Type of chart
+   * @returns {Object} Margin object
+   */
+  getChartMargins(chartType) {
+    switch (chartType) {
+      case "grouped_bar_chart":
+      case "stacked_bar_chart":
+        return { ...this.barChart.margin, left: 150 }; // Slightly narrower left margin
+
+      case "horizontal_bar_chart":
+        return this.barChart.margin;
+
+      case "vertical_bar_chart":
+        return { top: 20, right: 20, bottom: 80, left: 60 }; // Different margins for vertical orientation
+
+      default:
+        return this.barChart.margin;
+    }
   },
 };

@@ -3,10 +3,7 @@
  */
 
 export const chartColors = {
-  /**
-   * Main color palette for visualizations
-   * Designed for good contrast and accessibility
-   */
+  baseColor: "#A1B1F3",
   mainPalette: [
     "#A1B1F3", // Light blue-purple
     "#C3E8FF", // Light blue
@@ -19,10 +16,6 @@ export const chartColors = {
     "#B2C9A7", // Sage green
     "#FFD7B5", // Light peach
   ],
-
-  /**
-   * Sequential color scales for single dimension charts
-   */
   sequential: {
     blue: {
       base: "#9EAADB", // Periwinkle blue
