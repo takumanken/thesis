@@ -1,173 +1,378 @@
+/**
+ * Single Bar Chart Component
+ * Renders a horizontal bar chart with scroll functionality for large datasets
+ */
 import { state } from "../state.js";
 import { CHART_DIMENSIONS } from "../constants.js";
 import { chartStyles } from "./utils/chartStyles.js";
 
-// Main function that orchestrates the rendering process
+/**
+ * Renders a single bar chart in the provided container
+ * @param {HTMLElement} container - DOM element to render the chart
+ */
 function renderBarChart(container) {
-  const dataset = state.dataset;
+  // Check for valid data
+  if (!state.dataset || !state.dataset.length) {
+    container.innerHTML = "<p>No data available to display</p>";
+    return;
+  }
+
+  // Clear previous content
   container.innerHTML = "";
+
+  // Get data properties from state
+  const dataset = state.dataset;
   const dimension = state.aggregationDefinition.dimensions[0];
   const measure = state.aggregationDefinition.measures[0].alias;
-  const config = setupConfig(dataset.length);
 
-  // Create chart structure and get references
-  const { chartContainer, xAxisDiv, scrollDiv, svg, xAxisSvg } = setupChartStructure(
-    container,
-    config.width,
-    config.totalHeight,
-    config.margin,
-    config.fullChartHeight
-  );
+  // Initialize chart configuration
+  const config = createChartConfig(dataset.length);
 
-  // Create scales
-  const scales = createScales(dataset, measure, config.margin, config.width, config.fullChartHeight);
+  // Create responsive chart structure
+  const chartElements = createChartStructure(container, config);
 
-  // Create tooltip using shared style
-  const tooltip = chartStyles.createTooltip();
+  // Setup scales based on data
+  const scales = createScales(dataset, measure, config);
 
-  // Draw elements
-  drawBars(svg, dataset, scales.x, scales.y, measure, config.margin, dimension, tooltip);
-  addBarLabels(svg, dataset, scales.x, scales.y, measure);
-  addYAxis(svg, scales.y, dataset, dimension, config.margin);
-  addXAxis(xAxisSvg, scales.x, config.margin);
+  // Render chart elements
+  renderChartElements(chartElements, dataset, scales, dimension, measure, config);
 }
 
-// Setup configuration values
-function setupConfig(dataLength) {
-  const width = CHART_DIMENSIONS.width;
-  const totalHeight = CHART_DIMENSIONS.height;
-  const margin = { top: 40, right: 20, bottom: 20, left: 200 };
+/**
+ * Creates chart configuration settings
+ * @param {number} dataLength - Length of the dataset
+ * @returns {Object} Chart configuration object
+ */
+function createChartConfig(dataLength) {
+  const margin = {
+    top: 40,
+    right: 20,
+    bottom: 20,
+    left: 200,
+  };
+
   const barHeight = 25;
+  const chartWidth = "100%"; // Responsive width
   const fullChartHeight = margin.top + margin.bottom + barHeight * dataLength;
+  const minHeight = 400; // Minimum chart height
 
-  return { width, totalHeight, margin, barHeight, fullChartHeight };
+  return {
+    margin,
+    barHeight,
+    width: chartWidth,
+    totalHeight: Math.max(minHeight, fullChartHeight),
+    fullChartHeight,
+    minHeight,
+  };
 }
 
-// Create the DOM structure for the chart
-function setupChartStructure(container, width, totalHeight, margin, fullChartHeight) {
+/**
+ * Creates the chart DOM structure
+ * @param {HTMLElement} container - Parent container
+ * @param {Object} config - Chart configuration
+ * @returns {Object} References to chart elements
+ */
+function createChartStructure(container, config) {
+  // Main chart container - responsive by default
   const chartContainer = document.createElement("div");
-  chartContainer.style.position = "relative";
-  chartContainer.style.width = "100%";
-  chartContainer.style.height = "100%";
-  chartContainer.style.minHeight = "400px";
+  chartContainer.className = "single-bar-chart";
+  chartContainer.style.cssText = `
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: ${config.minHeight}px;
+  `;
   container.appendChild(chartContainer);
 
-  // Create a fixed div for the x-axis
-  const xAxisDiv = document.createElement("div");
-  xAxisDiv.style.position = "absolute";
-  xAxisDiv.style.top = "0px";
-  xAxisDiv.style.left = "0px";
-  xAxisDiv.style.width = "100%";
-  xAxisDiv.style.height = margin.top + "px";
-  chartContainer.appendChild(xAxisDiv);
+  // Fixed header for x-axis
+  const xAxisContainer = document.createElement("div");
+  xAxisContainer.style.cssText = `
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: ${config.margin.top}px;
+    z-index: 2;
+  `;
+  chartContainer.appendChild(xAxisContainer);
 
-  // Create a scrollable container for the bars and y-axis
-  const scrollDiv = document.createElement("div");
-  scrollDiv.style.position = "absolute";
-  scrollDiv.style.top = margin.top + "px";
-  scrollDiv.style.left = "0px";
-  scrollDiv.style.width = "100%";
-  scrollDiv.style.height = totalHeight - margin.top + "px";
-  scrollDiv.style.overflowY = "auto";
-  chartContainer.appendChild(scrollDiv);
+  // Scrollable container for bars
+  const scrollContainer = document.createElement("div");
+  scrollContainer.style.cssText = `
+    position: absolute;
+    top: ${config.margin.top}px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  `;
+  chartContainer.appendChild(scrollContainer);
 
-  // Append SVGs
+  // SVG elements
   const svg = d3
-    .select(scrollDiv)
+    .select(scrollContainer)
     .append("svg")
-    .attr("width", width)
-    .attr("height", fullChartHeight - margin.top);
+    .attr("width", "100%")
+    .attr("height", config.fullChartHeight - config.margin.top)
+    .attr("preserveAspectRatio", "xMinYMin meet");
 
-  const xAxisSvg = d3.select(xAxisDiv).append("svg").attr("width", width).attr("height", margin.top);
+  const xAxisSvg = d3
+    .select(xAxisContainer)
+    .append("svg")
+    .attr("width", "100%")
+    .attr("height", config.margin.top)
+    .attr("preserveAspectRatio", "xMinYMin meet");
 
-  return { chartContainer, xAxisDiv, scrollDiv, svg, xAxisSvg };
+  // Create tooltip
+  const tooltip = chartStyles.createTooltip();
+
+  return {
+    chartContainer,
+    xAxisContainer,
+    scrollContainer,
+    svg,
+    xAxisSvg,
+    tooltip,
+  };
 }
 
-// Create scales for the chart
-function createScales(dataset, measure, margin, width, fullChartHeight) {
-  // X scale based on the measure values
-  const xMax = d3.max(dataset, (d) => d[measure]);
+/**
+ * Creates D3 scales for the chart
+ * @param {Array} dataset - The chart data
+ * @param {string} measure - Measure field name
+ * @param {Object} config - Chart configuration
+ * @returns {Object} x and y scales
+ */
+function createScales(dataset, measure, config) {
+  // Get container width for responsive scaling
+  const containerWidth = document.querySelector(".chart-container").clientWidth;
+  const effectiveWidth = containerWidth || 800; // Fallback width
+
+  // X scale (horizontal) for measure values
+  const xMax = d3.max(dataset, (d) => d[measure]) * 1.05; // Add 5% padding
   const x = d3
     .scaleLinear()
     .domain([0, xMax])
-    .range([margin.left, width - margin.right])
+    .range([config.margin.left, effectiveWidth - config.margin.right])
     .nice();
 
-  // Y scale for the bars
+  // Y scale (vertical) for dimension categories
   const y = d3
     .scaleBand()
     .domain(d3.range(dataset.length))
-    .range([0, fullChartHeight - margin.top - margin.bottom])
+    .range([0, config.fullChartHeight - config.margin.top - config.margin.bottom])
     .padding(0.1);
 
   return { x, y };
 }
 
-// Draw the bars with tooltip
-function drawBars(svg, dataset, x, y, measure, margin, dimension, tooltip) {
+/**
+ * Renders all chart elements
+ * @param {Object} elements - Chart DOM elements
+ * @param {Array} dataset - The chart data
+ * @param {Object} scales - D3 scales
+ * @param {string} dimension - Dimension field name
+ * @param {string} measure - Measure field name
+ * @param {Object} config - Chart configuration
+ */
+function renderChartElements(elements, dataset, scales, dimension, measure, config) {
+  renderBars(elements.svg, dataset, scales, measure, dimension, config.margin, elements.tooltip);
+  renderBarLabels(elements.svg, dataset, scales, measure);
+  renderYAxis(elements.svg, dataset, scales.y, dimension, config.margin);
+  renderXAxis(elements.xAxisSvg, scales.x, config.margin);
+
+  // Update on window resize for responsiveness
+  addResizeHandler(elements, dataset, scales, dimension, measure, config);
+}
+
+/**
+ * Renders the bars with tooltips
+ * @param {Object} svg - D3 SVG selection
+ * @param {Array} dataset - The chart data
+ * @param {Object} scales - D3 scales
+ * @param {string} measure - Measure field name
+ * @param {string} dimension - Dimension field name
+ * @param {Object} margin - Chart margins
+ * @param {HTMLElement} tooltip - Tooltip element
+ */
+function renderBars(svg, dataset, scales, measure, dimension, margin, tooltip) {
   svg
-    .selectAll("rect")
+    .selectAll("rect.bar")
     .data(dataset)
     .join("rect")
+    .attr("class", "bar")
     .attr("x", margin.left)
-    .attr("y", (d, i) => y(i))
-    .attr("width", (d) => x(d[measure]) - margin.left)
-    .attr("height", y.bandwidth())
-    .attr("fill", "steelblue")
+    .attr("y", (d, i) => scales.y(i))
+    .attr("width", (d) => Math.max(0, scales.x(d[measure]) - margin.left)) // Prevent negative width
+    .attr("height", scales.y.bandwidth())
+    .attr("fill", chartStyles.colors.primary)
+    .attr("rx", 2) // Rounded corners
     .on("mouseover", function (event, d) {
-      // Use shared tooltip style
+      // Highlight bar
+      d3.select(this).attr("fill", chartStyles.colors.highlight);
+
+      // Show tooltip with formatted values
       chartStyles.showTooltip(
         tooltip,
         event,
         `<strong>${dimension}:</strong> ${d[dimension]}<br>
-         <strong>${measure}:</strong> ${d[measure].toLocaleString()}`
+         <strong>${measure}:</strong> ${formatValue(d[measure])}`
       );
     })
-    .on("mouseout", () => chartStyles.hideTooltip(tooltip));
+    .on("mouseout", function () {
+      // Reset bar color
+      d3.select(this).attr("fill", chartStyles.colors.primary);
+      chartStyles.hideTooltip(tooltip);
+    });
 }
 
-// Add labels to the bars - update with consistent font styling
-function addBarLabels(svg, dataset, x, y, measure) {
+/**
+ * Renders value labels on bars
+ * @param {Object} svg - D3 SVG selection
+ * @param {Array} dataset - The chart data
+ * @param {Object} scales - D3 scales
+ * @param {string} measure - Measure field name
+ */
+function renderBarLabels(svg, dataset, scales, measure) {
   svg
     .selectAll("text.bar-label")
     .data(dataset)
     .join("text")
     .attr("class", "bar-label")
-    .attr("x", (d) => x(d[measure]) + 5)
-    .attr("y", (d, i) => y(i) + y.bandwidth() / 2)
+    .attr("x", (d) => scales.x(d[measure]) + 5)
+    .attr("y", (d, i) => scales.y(i) + scales.y.bandwidth() / 2)
     .attr("dy", "0.35em")
     .attr("text-anchor", "start")
-    .attr("fill", "#333")
+    .attr("fill", chartStyles.colors.text)
     .style("font-family", chartStyles.fontFamily)
     .style("font-size", chartStyles.fontSize.axisLabel)
-    .text((d) => d[measure]);
+    .style("font-weight", "500")
+    .text((d) => formatValue(d[measure]));
 }
 
-// Add the y-axis with consistent styling
-function addYAxis(svg, y, dataset, dimension, margin) {
+/**
+ * Renders the Y axis (categories)
+ * @param {Object} svg - D3 SVG selection
+ * @param {Array} dataset - The chart data
+ * @param {Function} yScale - D3 y scale
+ * @param {string} dimension - Dimension field name
+ * @param {Object} margin - Chart margins
+ */
+function renderYAxis(svg, dataset, yScale, dimension, margin) {
   const axis = svg
     .append("g")
+    .attr("class", "y-axis")
     .attr("transform", `translate(${margin.left},0)`)
     .call(
       d3
-        .axisLeft(y)
-        .tickFormat((d, i) => dataset[i][dimension])
+        .axisLeft(yScale)
+        .tickFormat((d, i) => truncateLabel(dataset[i][dimension], 25))
         .tickSize(0)
     );
 
-  // Apply shared axis styling
+  chartStyles.applyAxisStyles(axis);
+
+  // Add full text as title for truncated labels
+  axis
+    .selectAll(".tick text")
+    .append("title")
+    .text((d, i) => dataset[i][dimension]);
+}
+
+/**
+ * Renders the X axis (values)
+ * @param {Object} svg - D3 SVG selection
+ * @param {Function} xScale - D3 x scale
+ * @param {Object} margin - Chart margins
+ */
+function renderXAxis(svg, xScale, margin) {
+  const axis = svg
+    .append("g")
+    .attr("class", "x-axis")
+    .attr("transform", `translate(0,${margin.top - 1})`)
+    .call(d3.axisTop(xScale).ticks(5).tickFormat(formatValue));
+
   chartStyles.applyAxisStyles(axis);
 }
 
-// Add the x-axis with consistent styling
-function addXAxis(xAxisSvg, x, margin) {
-  const axis = xAxisSvg
-    .append("g")
-    .attr("transform", `translate(0,${margin.top - 1})`)
-    .call(d3.axisTop(x));
+/**
+ * Adds resize handler for responsiveness
+ * @param {Object} elements - Chart DOM elements
+ * @param {Array} dataset - The chart data
+ * @param {Object} scales - D3 scales
+ * @param {string} dimension - Dimension field name
+ * @param {string} measure - Measure field name
+ * @param {Object} config - Chart configuration
+ */
+function addResizeHandler(elements, dataset, scales, dimension, measure, config) {
+  const resizeChart = () => {
+    // Get updated container width
+    const containerWidth = elements.chartContainer.clientWidth;
+    if (!containerWidth) return;
 
-  // Apply shared axis styling
-  chartStyles.applyAxisStyles(axis);
+    // Update x scale with new width
+    const updatedX = scales.x.copy().range([config.margin.left, containerWidth - config.margin.right]);
+
+    // Update bars
+    elements.svg.selectAll("rect.bar").attr("width", (d) => Math.max(0, updatedX(d[measure]) - config.margin.left));
+
+    // Update labels
+    elements.svg.selectAll("text.bar-label").attr("x", (d) => updatedX(d[measure]) + 5);
+
+    // Update x-axis
+    elements.xAxisSvg.select(".x-axis").call(d3.axisTop(updatedX).ticks(5).tickFormat(formatValue));
+
+    chartStyles.applyAxisStyles(elements.xAxisSvg.select(".x-axis"));
+  };
+
+  // Initial call for first render
+  resizeChart();
+
+  // Add event listener
+  const resizeObserver = new ResizeObserver(debounce(resizeChart, 250));
+  resizeObserver.observe(elements.chartContainer);
+
+  // Store observer reference for cleanup
+  elements.chartContainer._resizeObserver = resizeObserver;
+}
+
+/**
+ * Utility function to truncate long text with ellipsis
+ * @param {string} text - Text to truncate
+ * @param {number} maxLength - Maximum length before truncating
+ * @returns {string} Truncated text
+ */
+function truncateLabel(text, maxLength = 25) {
+  return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
+}
+
+/**
+ * Format numerical values for display
+ * @param {number} value - Value to format
+ * @returns {string} Formatted value
+ */
+function formatValue(value) {
+  if (value >= 1000000) {
+    return (value / 1000000).toFixed(1) + "M";
+  } else if (value >= 1000) {
+    return (value / 1000).toFixed(1) + "K";
+  }
+  return value.toLocaleString();
+}
+
+/**
+ * Debounce function for resize events
+ * @param {Function} func - Function to debounce
+ * @param {number} wait - Wait time in ms
+ * @returns {Function} Debounced function
+ */
+function debounce(func, wait) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
 }
 
 export default renderBarChart;
