@@ -26,7 +26,7 @@ function renderTable(container) {
   }).render(container);
 }
 
-// Inject styles directly - no file loading needed
+// Inject styles directly
 function injectTableStyles() {
   const styleId = "table-chart-styles";
   if (document.getElementById(styleId)) return;
