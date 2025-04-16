@@ -47,10 +47,7 @@ function renderWithData(container, renderFunction) {
   }
 }
 
-/**
- * Updates the data insights panel with content from the response
- * @param {Object} response - The API response containing insights
- */
+// Modify updateDataInsights function to include chart type selector
 function updateDataInsights(response) {
   const insightsContainer = document.getElementById("dataInsightsContainer");
   const insightsDiv = document.getElementById("dataInsights");
@@ -89,8 +86,81 @@ function updateDataInsights(response) {
   // Add chart container to insights div
   insightsDiv.appendChild(tableContainer);
 
+  // Create chart type dropdown in the sidebar
+  createChartTypeSwitcher();
+
   // Display the insights container with flex layout
   insightsContainer.style.display = "flex";
+}
+
+/**
+ * Creates or updates the chart type dropdown in the sidebar
+ */
+function createChartTypeSwitcher() {
+  // Find the chart controls container in the sidebar
+  const chartControlsContainer = document.querySelector(".insight-sidebar .chart-controls-container");
+  if (!chartControlsContainer) return;
+
+  // Find the heading "Switch to other charts"
+  const headings = chartControlsContainer.querySelectorAll("h3.controls-heading");
+  let chartTypeSection;
+
+  headings.forEach((heading) => {
+    if (heading.textContent.includes("Switch to other charts")) {
+      chartTypeSection = heading.parentElement;
+    }
+  });
+
+  if (!chartTypeSection) return;
+
+  // Check if dropdown already exists
+  let chartTypeDropdown = chartTypeSection.querySelector("#chartTypeDropdown");
+
+  // Create dropdown if it doesn't exist
+  if (!chartTypeDropdown) {
+    chartTypeDropdown = document.createElement("select");
+    chartTypeDropdown.id = "chartTypeDropdown";
+    chartTypeDropdown.className = "chart-type-dropdown";
+
+    // Add event listener
+    chartTypeDropdown.addEventListener("change", function (event) {
+      state.chartType = event.target.value;
+      visualizeData(); // Re-render with new chart type
+    });
+
+    // Add after the heading
+    chartTypeSection.appendChild(chartTypeDropdown);
+  }
+
+  // Clear existing options
+  chartTypeDropdown.innerHTML = "";
+
+  // Add options based on available chart types
+  const chartTypes = {
+    table: "Data Table",
+    single_bar_chart: "Bar Chart",
+    grouped_bar_chart: "Grouped Bar Chart",
+    stacked_bar_chart: "Stacked Bar Chart",
+    stacked_bar_chart_100: "100% Stacked Bar Chart",
+    stacked_area_chart: "Stacked Area Chart",
+    stacked_area_chart_100: "100% Stacked Area Chart",
+    line_chart: "Line Chart",
+    choropleth_map: "Choropleth Map",
+    heat_map: "Heat Map",
+    treemap: "Treemap",
+    nested_bar_chart: "Nested Bar Chart",
+  };
+
+  // Only show chart types that are available for this dataset
+  state.availableChartTypes.forEach((chartType) => {
+    if (chartType in chartTypes) {
+      const option = document.createElement("option");
+      option.value = chartType;
+      option.textContent = chartTypes[chartType];
+      option.selected = chartType === state.chartType;
+      chartTypeDropdown.appendChild(option);
+    }
+  });
 }
 
 /**

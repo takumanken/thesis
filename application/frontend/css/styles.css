@@ -420,6 +420,31 @@ body .main-content .container .insight-container {
     padding: 6px 12px;
 }
 
+/* Chart type dropdown styling */
+.chart-type-dropdown {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background-color: white;
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 0.9rem;
+  margin-top: 10px;
+  margin-bottom: 15px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.chart-type-dropdown:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(65, 69, 119, 0.2);
+}
+
+.chart-type-dropdown option {
+  padding: 8px;
+}
+
 /* ===============================================
    10. CHARTS & VISUALIZATIONS
    =============================================== */
