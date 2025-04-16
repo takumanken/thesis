@@ -147,6 +147,7 @@ body {
     margin: 0 var(--space-xl) var(--space-xl);
     max-height: calc(100vh - 180px);
     padding: 30px;
+    display: flex;
 }
 
 .visualization-area {
@@ -276,6 +277,18 @@ body {
 .viz-dimensions,
 .viz-metrics {
     margin-bottom: 20px;
+}
+
+.viz-dimension-swap {
+  margin-bottom: 20px;
+}
+
+.dimension-swap-btn {
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.dimension-swap-btn:hover {
+  background-color: var(--color-primary-light) !important;
 }
 
 .tag-item {
