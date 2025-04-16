@@ -1,115 +1,30 @@
 /**
- * Shared styling for all chart visualizations
+ * Chart style definitions and utility functions
  */
 export const chartStyles = {
   // Font settings
   fontFamily: "Noto Sans, sans-serif",
   fontSize: {
-    title: "16px",
     axisLabel: "12px",
     tickLabel: "11px",
+    title: "16px",
     subtitle: "13px",
   },
 
-  // Colors
-  colors: d3.schemeCategory10,
-
-  // Tooltip creation
-  createTooltip(container = "body") {
-    return d3.select(container).append("div").attr("class", "tooltip").call(this.applyTooltipStyles);
+  // Color settings
+  colors: {
+    text: "#333",
+    axisLine: "#ddd",
+    gridLine: "#ddd",
+    background: "#ffffff",
+    alternateBackground: "#f8f8f8",
   },
 
-  // Show tooltip with content
-  showTooltip(tooltip, event, content) {
-    tooltip
-      .html(content)
-      .style("left", event.pageX + 12 + "px")
-      .style("top", event.pageY - 28 + "px")
-      .style("opacity", 0.95);
-  },
-
-  // Hide tooltip
-  hideTooltip(tooltip) {
-    tooltip.style("opacity", 0);
-  },
-
-  // Tooltip styling
-  applyTooltipStyles(tooltip) {
-    return tooltip
-      .style("position", "absolute")
-      .style("pointer-events", "none")
-      .style("background", "white")
-      .style("color", "#333")
-      .style("font-family", chartStyles.fontFamily)
-      .style("font-size", chartStyles.fontSize.tooltip)
-      .style("padding", "8px 10px")
-      .style("border", "1px solid #ddd")
-      .style("border-radius", "4px")
-      .style("box-shadow", "0 2px 4px rgba(0,0,0,0.1)")
-      .style("z-index", "100")
-      .style("opacity", "0");
-  },
-
-  // Apply axis styles
-  applyAxisStyles(selection) {
-    selection.selectAll(".domain").style("stroke", "#888");
-    selection.selectAll(".tick line").style("stroke", "#d1d1d1");
-    selection
-      .selectAll(".tick text")
-      .style("fill", "#333")
-      .style("font-size", this.fontSize.tickLabel)
-      .style("font-family", this.fontFamily);
-    return selection;
-  },
-
-  // Legend styling
-  applyLegendStyles(legend) {
-    legend
-      .selectAll("text")
-      .style("font-family", this.fontFamily)
-      .style("font-size", this.fontSize.legend)
-      .style("color", "#333");
-
-    return legend;
-  },
-
-  // Create and return a consistent color scale
-  getColorScale(domain) {
-    return d3.scaleOrdinal(this.colors).domain(domain);
-  },
-
-  /**
-   * Determines a contrasting text color for better readability
-   * @param {string|object} backgroundColor - Background color (string or d3 color object)
-   * @param {number} opacity - Opacity for the text color (0-1)
-   * @returns {string} Contrasting color as rgba string
-   */
-  getContrastingTextColor(backgroundColor, opacity = 1) {
-    const color = typeof backgroundColor === "string" ? d3.color(backgroundColor) : backgroundColor;
-    if (!color) return `rgba(0, 0, 0, ${opacity})`;
-
-    const r = color.r;
-    const g = color.g;
-    const b = color.b;
-
-    // Use WCAG luminance formula for better contrast perception
-    // Formula: 0.2126*R + 0.7152*G + 0.0722*B (where RGB are normalized)
-    const normalizedR = r / 255;
-    const normalizedG = g / 255;
-    const normalizedB = b / 255;
-
-    // Calculate relative luminance using the WCAG formula
-    const wcagLuminance = 0.2126 * normalizedR + 0.7152 * normalizedG + 0.0722 * normalizedB;
-
-    // Use the WCAG luminance threshold of 0.5 for contrast
-    return wcagLuminance < 0.5 ? `rgba(255, 255, 255, ${opacity})` : `rgba(0, 0, 0, ${opacity})`;
-  },
-
-  // Add bar chart specific settings
+  // Bar chart settings
   barChart: {
     bar: {
-      height: 35,
-      padding: 0.5,
+      height: 25,
+      padding: 0.1,
       cornerRadius: 2,
     },
     margin: {
@@ -123,24 +38,139 @@ export const chartStyles = {
   },
 
   /**
+   * Apply consistent axis styling to a D3 selection
+   * @param {d3.Selection} axisGroup - D3 selection containing axis elements
+   * @param {Object} options - Styling options
+   */
+  applyAxisStyles: function (axisGroup, options = {}) {
+    // Merge defaults with provided options
+    const config = {
+      hideAxisLine: options.hideAxisLine || false,
+      hideTickLines: options.hideTickLines || false,
+      textAnchor: options.textAnchor || null,
+    };
+
+    // Style the axis path (main line)
+    if (config.hideAxisLine) {
+      axisGroup.select(".domain").style("display", "none");
+    } else {
+      axisGroup
+        .select(".domain")
+        .attr("stroke", this.colors.axisLine)
+        .attr("stroke-width", 1)
+        .attr("shape-rendering", "crispEdges");
+    }
+
+    // Style the tick lines
+    if (config.hideTickLines) {
+      axisGroup.selectAll(".tick line").style("display", "none");
+    } else {
+      axisGroup
+        .selectAll(".tick line")
+        .attr("stroke", this.colors.gridLine)
+        .attr("stroke-width", 1)
+        .attr("shape-rendering", "crispEdges");
+    }
+
+    // Style the tick text
+    const textElements = axisGroup
+      .selectAll(".tick text")
+      .attr("fill", this.colors.text)
+      .style("font-family", this.fontFamily)
+      .style("font-size", this.fontSize.tickLabel);
+
+    if (config.textAnchor) {
+      textElements.attr("text-anchor", config.textAnchor);
+    }
+
+    return axisGroup;
+  },
+
+  /**
+   * Draw a grid line
+   * @param {d3.Selection} svg - SVG element
+   * @param {number} x1 - Start x position
+   * @param {number} x2 - End x position
+   * @param {number} y1 - Start y position
+   * @param {number} y2 - End y position
+   */
+  drawGridLine: function (svg, x1, x2, y1, y2) {
+    return svg
+      .append("line")
+      .attr("x1", x1)
+      .attr("x2", x2)
+      .attr("y1", y1)
+      .attr("y2", y2)
+      .attr("stroke", this.colors.gridLine)
+      .attr("stroke-width", 1)
+      .attr("shape-rendering", "crispEdges");
+  },
+
+  /**
    * Get appropriate chart margins based on chart type
    * @param {string} chartType - Type of chart
    * @returns {Object} Margin object
    */
-  getChartMargins(chartType) {
+  getChartMargins: function (chartType) {
     switch (chartType) {
       case "grouped_bar_chart":
       case "stacked_bar_chart":
-        return { ...this.barChart.margin, left: 150 }; // Slightly narrower left margin
+        return { ...this.barChart.margin, left: 150 };
+
+      case "nested_bar_chart":
+        return { top: 40, right: 120, bottom: 30, left: 30 };
 
       case "horizontal_bar_chart":
         return this.barChart.margin;
 
       case "vertical_bar_chart":
-        return { top: 20, right: 20, bottom: 80, left: 60 }; // Different margins for vertical orientation
+        return { top: 20, right: 20, bottom: 80, left: 60 };
 
       default:
         return this.barChart.margin;
     }
+  },
+
+  /**
+   * Creates a tooltip element
+   */
+  createTooltip: function () {
+    const tooltip = d3
+      .select("body")
+      .append("div")
+      .attr("class", "chart-tooltip")
+      .style("position", "absolute")
+      .style("visibility", "hidden")
+      .style("background-color", "white")
+      .style("border", "1px solid #ddd")
+      .style("border-radius", "3px")
+      .style("padding", "8px")
+      .style("font-family", this.fontFamily)
+      .style("font-size", "12px")
+      .style("pointer-events", "none")
+      .style("opacity", 0)
+      .style("z-index", 1000)
+      .style("box-shadow", "0 2px 4px rgba(0,0,0,0.1)");
+
+    return tooltip;
+  },
+
+  /**
+   * Show tooltip with content at a specific position
+   */
+  showTooltip: function (tooltip, event, content) {
+    tooltip
+      .html(content)
+      .style("visibility", "visible")
+      .style("opacity", 0.9)
+      .style("left", event.pageX + 10 + "px")
+      .style("top", event.pageY - 10 + "px");
+  },
+
+  /**
+   * Hide tooltip
+   */
+  hideTooltip: function (tooltip) {
+    tooltip.style("visibility", "hidden").style("opacity", 0);
   },
 };

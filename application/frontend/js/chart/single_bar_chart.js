@@ -1,5 +1,6 @@
 /**
  * Single Bar Chart Component
+ * Displays categorical data with a single measure as horizontal bars
  */
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
@@ -7,31 +8,26 @@ import { chartColors } from "./utils/chartColors.js";
 import { truncateLabel, formatValue, setupResizeHandler } from "./utils/chartUtils.js";
 
 /**
- * Renders a single bar chart in the provided container
+ * Main render function for single bar chart
  * @param {HTMLElement} container - DOM element to render the chart
  */
 function renderBarChart(container) {
-  // Validate and prepare
+  // Validate input and environment
   if (!isValidRenderingContext(container)) return;
 
-  // Extract data and dimensions
+  // Get data and configuration
   const { dataset, dimension, measure } = extractChartData();
+  const config = setupChartConfiguration(container, dataset);
 
-  // Configure container and layout
-  const { margin, displayHeight, fullChartHeight } = setupChartDimensions(container, dataset);
-
-  // Create DOM structure
-  const elements = createChartStructure(container, margin, fullChartHeight);
+  // Create DOM structure and scales
+  const elements = createDomStructure(container, config);
+  const scales = createScales(dataset, measure, config);
   const tooltip = chartStyles.createTooltip();
 
-  // Create scales
-  const containerWidth = container.clientWidth || 800;
-  const scales = createScales(dataset, measure, margin, containerWidth, fullChartHeight);
+  // Render chart components
+  renderChart(elements, dataset, scales, dimension, measure, config, tooltip);
 
-  // Render chart elements
-  renderChartComponents(elements, dataset, scales, measure, dimension, margin, tooltip);
-
-  // Setup event handlers
+  // Setup resize handling
   setupResizeHandler(container, () => renderBarChart(container));
 }
 
@@ -45,7 +41,7 @@ function isValidRenderingContext(container) {
   }
 
   if (!state.dataset?.length) {
-    if (container) container.innerHTML = "<p>No data available to display</p>";
+    container.innerHTML = "<p>No data available to display</p>";
     return false;
   }
 
@@ -64,55 +60,66 @@ function extractChartData() {
 }
 
 /**
- * Sets up chart dimensions and configures container
+ * Sets up chart configuration
  */
-function setupChartDimensions(container, dataset) {
+function setupChartConfiguration(container, dataset) {
+  // Get dimensions
   const margin = chartStyles.getChartMargins("horizontal_bar_chart");
   const barHeight = chartStyles.barChart.bar.height;
+  const containerWidth = container.clientWidth || 800;
+
+  // Calculate heights
   const fullChartHeight = margin.top + margin.bottom + barHeight * dataset.length;
   const displayHeight = Math.min(fullChartHeight, chartStyles.barChart.maxHeight);
+  const needsScrolling = fullChartHeight > displayHeight;
 
+  // Configure container
   Object.assign(container.style, {
     position: "relative",
     width: "100%",
     height: `${displayHeight}px`,
   });
 
-  return { margin, displayHeight, fullChartHeight };
+  return {
+    margin,
+    containerWidth,
+    displayHeight,
+    fullChartHeight,
+    needsScrolling,
+    barColor: chartColors.sequential.blue.base,
+  };
 }
 
 /**
- * Creates the DOM structure for the chart
+ * Creates DOM structure for chart
  */
-function createChartStructure(container, margin, fullChartHeight) {
-  // X-axis container
+function createDomStructure(container, config) {
+  // X-axis container (fixed at top)
   const xAxisContainer = document.createElement("div");
   xAxisContainer.className = "viz-axis-container";
   container.appendChild(xAxisContainer);
 
-  // Scrollable content
+  // Scrollable content area
   const scrollContainer = document.createElement("div");
   scrollContainer.className = "viz-bar-scroll";
-
   Object.assign(scrollContainer.style, {
     position: "absolute",
-    top: `${margin.top}px`,
+    top: `${config.margin.top}px`,
     bottom: "20px",
     left: "0",
     right: "0",
-    overflowY: "auto",
+    overflowY: config.needsScrolling ? "auto" : "hidden",
     overflowX: "hidden",
   });
-
   container.appendChild(scrollContainer);
 
-  // SVG elements
+  // Create SVG elements
   const svg = d3
     .select(scrollContainer)
     .append("svg")
     .attr("class", "viz-bar-canvas")
     .attr("width", "100%")
-    .attr("height", fullChartHeight - margin.top)
+    .attr("height", config.fullChartHeight - config.margin.top)
     .attr("preserveAspectRatio", "xMinYMin meet");
 
   const xAxisSvg = d3
@@ -120,25 +127,27 @@ function createChartStructure(container, margin, fullChartHeight) {
     .append("svg")
     .attr("class", "viz-axis-canvas")
     .attr("width", "100%")
-    .attr("height", margin.top)
+    .attr("height", config.margin.top)
     .attr("preserveAspectRatio", "xMinYMin meet");
 
   return { svg, xAxisSvg };
 }
 
 /**
- * Creates scales for both axes
+ * Creates scales for chart axes
  */
-function createScales(dataset, measure, margin, width, fullChartHeight) {
-  // X scale with padding
-  const xMax = d3.max(dataset, (d) => d[measure]) * 1.05;
+function createScales(dataset, measure, config) {
+  const { margin, containerWidth, fullChartHeight } = config;
+
+  // Create x scale with 5% padding
+  const maxValue = d3.max(dataset, (d) => d[measure]) || 0;
   const x = d3
     .scaleLinear()
-    .domain([0, xMax])
-    .range([margin.left, width - margin.right])
+    .domain([0, maxValue * 1.05])
+    .range([margin.left, containerWidth - margin.right])
     .nice();
 
-  // Y scale for categories
+  // Create y scale for categories
   const y = d3
     .scaleBand()
     .domain(d3.range(dataset.length))
@@ -151,20 +160,18 @@ function createScales(dataset, measure, margin, width, fullChartHeight) {
 /**
  * Renders all chart components
  */
-function renderChartComponents(elements, dataset, scales, measure, dimension, margin, tooltip) {
-  const { svg, xAxisSvg } = elements;
-
-  renderBars(svg, dataset, scales, measure, dimension, margin, tooltip);
-  renderBarLabels(svg, dataset, scales, measure);
-  renderYAxis(svg, dataset, scales.y, dimension, margin);
-  renderXAxis(xAxisSvg, scales.x, margin);
+function renderChart(elements, dataset, scales, dimension, measure, config, tooltip) {
+  renderBars(elements.svg, dataset, scales, measure, dimension, config, tooltip);
+  renderBarLabels(elements.svg, dataset, scales, measure);
+  renderYAxis(elements.svg, dataset, scales.y, dimension, config.margin);
+  renderXAxis(elements.xAxisSvg, scales.x, config.margin);
 }
 
 /**
- * Renders the bars with tooltips
+ * Renders bars with tooltips
  */
-function renderBars(svg, dataset, scales, measure, dimension, margin, tooltip) {
-  const barColor = chartColors.sequential.blue.base;
+function renderBars(svg, dataset, scales, measure, dimension, config, tooltip) {
+  const barColor = config.barColor;
   const highlightColor = d3.color(barColor).darker(0.2);
 
   svg
@@ -172,30 +179,24 @@ function renderBars(svg, dataset, scales, measure, dimension, margin, tooltip) {
     .data(dataset)
     .join("rect")
     .attr("class", "bar")
-    .attr("x", margin.left)
+    .attr("x", config.margin.left)
     .attr("y", (d, i) => scales.y(i))
-    .attr("width", (d) => Math.max(0, scales.x(d[measure]) - margin.left))
+    .attr("width", (d) => Math.max(0, scales.x(d[measure]) - config.margin.left))
     .attr("height", scales.y.bandwidth())
     .attr("fill", barColor)
     .attr("rx", chartStyles.barChart.bar.cornerRadius)
     .on("mouseover", function (event, d) {
       d3.select(this).attr("fill", highlightColor);
-      chartStyles.showTooltip(tooltip, event, formatTooltip(d, dimension, measure));
+      const tooltipContent = `
+        <strong>${dimension}:</strong> ${d[dimension]}<br>
+        <strong>${measure}:</strong> ${formatValue(d[measure])}
+      `;
+      chartStyles.showTooltip(tooltip, event, tooltipContent);
     })
     .on("mouseout", function () {
       d3.select(this).attr("fill", barColor);
       chartStyles.hideTooltip(tooltip);
     });
-}
-
-/**
- * Formats tooltip content
- */
-function formatTooltip(d, dimension, measure) {
-  return `
-    <strong>${dimension}:</strong> ${d[dimension]}<br>
-    <strong>${measure}:</strong> ${formatValue(d[measure])}
-  `;
 }
 
 /**
@@ -211,7 +212,7 @@ function renderBarLabels(svg, dataset, scales, measure) {
     .attr("y", (d, i) => scales.y(i) + scales.y.bandwidth() / 2)
     .attr("dy", "0.35em")
     .attr("text-anchor", "start")
-    .attr("fill", chartStyles.colors?.text || "#333")
+    .attr("fill", chartStyles.colors.text)
     .style("font-family", chartStyles.fontFamily)
     .style("font-size", chartStyles.fontSize.axisLabel)
     .style("font-weight", "500")
@@ -219,7 +220,7 @@ function renderBarLabels(svg, dataset, scales, measure) {
 }
 
 /**
- * Renders the Y axis (categories)
+ * Renders Y axis (categories)
  */
 function renderYAxis(svg, dataset, yScale, dimension, margin) {
   const axis = svg
@@ -233,7 +234,8 @@ function renderYAxis(svg, dataset, yScale, dimension, margin) {
         .tickSize(0)
     );
 
-  chartStyles.applyAxisStyles(axis);
+  // Apply consistent axis styling
+  chartStyles.applyAxisStyles(axis, { hideTickLines: true });
 
   // Add tooltips for truncated labels
   axis
@@ -243,7 +245,7 @@ function renderYAxis(svg, dataset, yScale, dimension, margin) {
 }
 
 /**
- * Renders the X axis (values)
+ * Renders X axis (values)
  */
 function renderXAxis(svg, xScale, margin) {
   const axis = svg
@@ -252,6 +254,7 @@ function renderXAxis(svg, xScale, margin) {
     .attr("transform", `translate(0,${margin.top - 1})`)
     .call(d3.axisTop(xScale).ticks(5).tickFormat(formatValue));
 
+  // Apply consistent axis styling
   chartStyles.applyAxisStyles(axis);
 }
 

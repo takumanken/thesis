@@ -16,36 +16,55 @@ import { formatValue, setupResizeHandler } from "./utils/chartUtils.js";
 function renderNestedBarChart(container) {
   if (!isValidRenderingContext(container)) return;
 
-  // Setup dimension controls and get data
+  // Initialize dimension controls
   chartControls.initDimensionSwap("nested_bar_chart");
   const dimensions = chartControls.getSwappableDimensions();
   const measures = state.aggregationDefinition.measures.map((m) => m.alias);
-  const data = createHierarchicalData(state.dataset, dimensions, measures);
 
-  // Calculate layout and setup chart
+  // Process data and render chart
+  const data = createHierarchicalData(state.dataset, dimensions, measures);
   const config = createChartConfig(container, data, dimensions, measures);
-  setupChartContainer(container, config);
-  renderChart(container, data, dimensions, measures, config);
+
+  setupContainer(container, config);
+  renderChartContent(container, data, dimensions, measures, config);
   setupEventHandlers(container);
 }
 
 /**
- * Creates complete chart configuration
+ * Validates the rendering context
+ */
+function isValidRenderingContext(container) {
+  if (!container) {
+    console.error("Container element is null or undefined");
+    return false;
+  }
+
+  if (!state.dataset?.length) {
+    container.innerHTML = "<p>No data available to display</p>";
+    return false;
+  }
+
+  container.innerHTML = "";
+  return true;
+}
+
+/**
+ * Creates chart configuration with layout calculations
  */
 function createChartConfig(container, data, dimensions, measures) {
-  // Text measurements
+  // Text measurements and basic layout
   const textMeasurements = measureTextWidths(container, data);
-
-  // Basic dimensions
-  const margin = { top: 40, right: 120, bottom: 30, left: 30 };
+  const margin = chartStyles.getChartMargins("nested_bar_chart");
   const width = container.clientWidth || CHART_DIMENSIONS.width;
-  const rowHeight = 24;
-  const rowPadding = 4;
 
-  // Calculate column positions
-  const { dim1X, dim2X, barStartX } = calculateColumnPositions(margin, textMeasurements, dimensions);
+  // Bar dimensions from chart styles
+  const rowHeight = chartStyles.barChart.bar.height;
+  const rowPadding = chartStyles.barChart.bar.height * chartStyles.barChart.bar.padding;
 
-  // Setup measures area
+  // Calculate column positioning
+  const { dim1X, dim2X, barStartX } = calculateColumnPositions(margin.left, textMeasurements, dimensions.length > 1);
+
+  // Calculate measures layout
   const { measureWidth, xScales, height } = calculateMeasuresLayout(
     data,
     measures,
@@ -56,11 +75,11 @@ function createChartConfig(container, data, dimensions, measures) {
     rowPadding
   );
 
-  // Assemble complete config
   return {
     margin,
     width,
-    height: Math.max(100, height),
+    height: Math.min(height, chartStyles.barChart.maxHeight),
+    fullHeight: height,
     dim1X,
     dim2X,
     barStartX,
@@ -68,45 +87,57 @@ function createChartConfig(container, data, dimensions, measures) {
     rowPadding,
     measureWidth,
     xScales,
-    hasTwoDimensions: dimensions.length > 1,
     colors: getMeasureColors(measures),
+    hasTwoDimensions: dimensions.length > 1,
   };
 }
 
 /**
- * Calculate column positions based on dimensions
+ * Calculates column positions based on dimensions
  */
-function calculateColumnPositions(margin, textMeasurements, dimensions) {
-  const dim1X = margin.left;
-  const { dim1Width, dim2Width } = textMeasurements;
+function calculateColumnPositions(leftMargin, textMeasurements, hasTwoDimensions) {
+  const dim1X = leftMargin;
 
-  if (dimensions.length > 1) {
-    // Two dimensions
-    const dim2X = dim1X + dim1Width + 20;
-    const barStartX = dim2X + dim2Width + 20;
+  if (hasTwoDimensions) {
+    const dim2X = dim1X + textMeasurements.dim1Width + 20;
+    const barStartX = dim2X + textMeasurements.dim2Width + 20;
     return { dim1X, dim2X, barStartX };
   } else {
-    // One dimension
-    const barStartX = dim1X + dim1Width + 20;
-    return { dim1X, dim2X: null, barStartX };
+    return {
+      dim1X,
+      dim2X: null,
+      barStartX: dim1X + textMeasurements.dim1Width + 20,
+    };
   }
 }
 
 /**
- * Setup container for chart
+ * Gets color array for measures
  */
-function setupChartContainer(container, config) {
-  Object.assign(container.style, {
-    position: "relative",
-    width: "100%",
-    height: `${config.height}px`,
+function getMeasureColors(measures) {
+  return measures.map((_, i) => {
+    if (i === 0) return chartColors.mainPalette[0];
+    if (i === 1) return chartColors.mainPalette[5];
+    return chartColors.mainPalette[i % chartColors.mainPalette.length];
   });
 }
 
 /**
- * Render the chart with all components
+ * Configures the container element
  */
-function renderChart(container, data, dimensions, measures, config) {
+function setupContainer(container, config) {
+  Object.assign(container.style, {
+    position: "relative",
+    width: "100%",
+    height: `${config.height}px`,
+    overflow: config.height < config.fullHeight ? "auto" : "visible",
+  });
+}
+
+/**
+ * Renders the chart content
+ */
+function renderChartContent(container, data, dimensions, measures, config) {
   const svg = d3
     .select(container)
     .append("svg")
@@ -116,40 +147,41 @@ function renderChart(container, data, dimensions, measures, config) {
 
   const tooltip = chartStyles.createTooltip();
 
-  // Draw all chart elements in proper order
-  drawTableStructure(svg, data, dimensions, measures, config);
-  drawDataContent(svg, data, dimensions, measures, config, tooltip);
+  drawStructure(svg, data, dimensions, measures, config);
+  drawData(svg, data, dimensions, measures, config, tooltip);
 }
 
 /**
- * Draw the basic table structure (headers, backgrounds, grid)
+ * Draws chart structural elements
  */
-function drawTableStructure(svg, data, dimensions, measures, config) {
-  drawColumnHeaders(svg, dimensions, measures, config);
+function drawStructure(svg, data, dimensions, measures, config) {
+  // Draw in proper order: backgrounds, grid, headers
   drawBackgrounds(svg, data, config);
   drawGridLines(svg, data, dimensions, measures, config);
+  drawColumnHeaders(svg, dimensions, measures, config);
 }
 
 /**
- * Draw all data content (labels, bars, values)
+ * Draws data elements
  */
-function drawDataContent(svg, data, dimensions, measures, config, tooltip) {
+function drawData(svg, data, dimensions, measures, config, tooltip) {
   let y = config.margin.top;
 
   data.forEach((category) => {
-    // Draw primary dimension label
-    drawText(svg, category.name, config.dim1X, y + config.rowHeight / 2);
+    // Label for primary dimension
+    drawDimensionText(svg, category.name, config.dim1X, y, config);
 
-    // Process each segment in the category
+    // Process each segment in this category
     category.segments.forEach((segment) => {
-      // Draw secondary dimension if applicable
+      // Label for secondary dimension (if applicable)
       if (config.hasTwoDimensions && config.dim2X) {
-        drawText(svg, segment.name, config.dim2X, y + config.rowHeight / 2);
+        drawDimensionText(svg, segment.name, config.dim2X, y, config);
       }
 
-      // Draw measure bars
+      // Draw bars for each measure
       measures.forEach((measure, i) => {
-        drawBar(
+        const yCenter = y + config.rowHeight / 2;
+        drawMeasureBar(
           svg,
           measure,
           segment,
@@ -168,123 +200,146 @@ function drawDataContent(svg, data, dimensions, measures, config, tooltip) {
 }
 
 /**
- * Draw a text element
+ * Draws dimension text with consistent styling
  */
-function drawText(svg, text, x, y, anchor = "start") {
+function drawDimensionText(svg, text, x, y, config) {
+  svg
+    .append("text")
+    .attr("x", x)
+    .attr("y", y + config.rowHeight / 2)
+    .attr("font-family", chartStyles.fontFamily)
+    .attr("font-size", chartStyles.fontSize.axisLabel)
+    .attr("dominant-baseline", "middle")
+    .attr("text-anchor", "start")
+    .attr("fill", chartStyles.colors.text)
+    .text(text || "");
+}
+
+/**
+ * Draws column headers
+ */
+function drawColumnHeaders(svg, dimensions, measures, config) {
+  const headerY = config.margin.top - 20;
+
+  // Primary dimension header
+  drawHeader(svg, dimensions[0], config.dim1X, headerY);
+
+  // Secondary dimension header
+  if (config.hasTwoDimensions && config.dim2X) {
+    drawHeader(svg, dimensions[1], config.dim2X, headerY);
+  }
+
+  // Measure headers
+  measures.forEach((measure, i) => {
+    const centerX = config.barStartX + i * config.measureWidth + config.measureWidth / 2;
+    drawHeader(svg, measure, centerX, headerY, "middle");
+  });
+}
+
+/**
+ * Draws a header text element
+ */
+function drawHeader(svg, text, x, y, anchor = "start") {
   svg
     .append("text")
     .attr("x", x)
     .attr("y", y)
     .attr("font-family", chartStyles.fontFamily)
     .attr("font-size", chartStyles.fontSize.axisLabel)
-    .attr("dominant-baseline", "middle")
+    .attr("font-weight", "bold")
     .attr("text-anchor", anchor)
-    .attr("fill", "#333")
+    .attr("fill", chartStyles.colors.text)
     .text(text);
 }
 
 /**
- * Draw column headers
- */
-function drawColumnHeaders(svg, dimensions, measures, config) {
-  // Primary dimension header
-  drawText(svg, dimensions[0], config.dim1X, config.margin.top - 20, "start");
-
-  // Secondary dimension header (if applicable)
-  if (config.hasTwoDimensions && config.dim2X) {
-    drawText(svg, dimensions[1], config.dim2X, config.margin.top - 20, "start");
-  }
-
-  // Measure headers
-  measures.forEach((measure, i) => {
-    const centerX = config.barStartX + i * config.measureWidth + config.measureWidth / 2;
-    drawText(svg, measure, centerX, config.margin.top - 20, "middle");
-  });
-}
-
-/**
- * Draw alternating row backgrounds
+ * Draws alternating row backgrounds
  */
 function drawBackgrounds(svg, data, config) {
   let y = config.margin.top;
-  let index = 0;
+  let rowIndex = 0;
 
   data.forEach((category) => {
     category.segments.forEach(() => {
-      if (index % 2 === 0) {
+      if (rowIndex % 2 === 0) {
         svg
           .append("rect")
           .attr("x", 0)
           .attr("y", y - config.rowPadding / 2)
           .attr("width", config.width)
           .attr("height", config.rowHeight + config.rowPadding)
-          .attr("fill", "#f8f8f8")
-          .attr("opacity", 1);
+          .attr("fill", chartStyles.colors.alternateBackground)
+          .attr("opacity", 0.5);
       }
       y += config.rowHeight + config.rowPadding;
-      index++;
+      rowIndex++;
     });
   });
 }
 
 /**
- * Draw grid lines for table structure
+ * Draws grid lines for table structure
  */
 function drawGridLines(svg, data, dimensions, measures, config) {
-  const { width, margin, rowHeight, rowPadding, hasTwoDimensions } = config;
-  const totalHeight = getTotalRowHeight(data, rowHeight, rowPadding);
+  const { width, margin, rowHeight, rowPadding } = config;
+  const totalHeight = calculateTotalHeight(data, rowHeight, rowPadding);
   const bottomY = margin.top + totalHeight;
 
   // Horizontal lines
-  drawLine(svg, 0, width, margin.top - rowPadding / 2, margin.top - rowPadding / 2); // Top
-  drawLine(svg, 0, width, bottomY - rowPadding / 2, bottomY - rowPadding / 2); // Bottom
+  chartStyles.drawGridLine(svg, 0, width, margin.top - rowPadding / 2, margin.top - rowPadding / 2); // Top
+  chartStyles.drawGridLine(svg, 0, width, bottomY - rowPadding / 2, bottomY - rowPadding / 2); // Bottom
 
-  // Category separators (if two dimensions)
-  if (hasTwoDimensions) {
-    let y = margin.top;
-    data.forEach((category, i) => {
-      if (i < data.length - 1) {
-        y += (rowHeight + rowPadding) * category.segments.length;
-        drawLine(svg, 0, width, y - rowPadding / 2, y - rowPadding / 2);
-      }
-    });
+  // Category separator lines
+  if (config.hasTwoDimensions) {
+    drawCategorySeparators(svg, data, config, width);
   }
 
-  // Vertical dimension separators
-  if (config.dim2X) {
-    drawLine(svg, config.dim2X - 10, config.dim2X - 10, margin.top - 30, bottomY);
+  // Vertical lines
+  drawVerticalSeparators(svg, config, dimensions, measures, bottomY);
+}
+
+/**
+ * Draws category separator lines
+ */
+function drawCategorySeparators(svg, data, config, width) {
+  let y = config.margin.top;
+
+  data.forEach((category, i) => {
+    if (i < data.length - 1) {
+      y += (config.rowHeight + config.rowPadding) * category.segments.length;
+      chartStyles.drawGridLine(svg, 0, width, y - config.rowPadding / 2, y - config.rowPadding / 2);
+    }
+  });
+}
+
+/**
+ * Draws vertical separator lines
+ */
+function drawVerticalSeparators(svg, config, dimensions, measures, bottomY) {
+  const { margin, dim2X, barStartX, measureWidth } = config;
+  const topY = margin.top - 30;
+
+  // Dimension separator
+  if (dim2X) {
+    chartStyles.drawGridLine(svg, dim2X - 10, dim2X - 10, topY, bottomY);
   }
 
-  drawLine(svg, config.barStartX - 10, config.barStartX - 10, margin.top - 30, bottomY);
+  // Bar area start separator
+  chartStyles.drawGridLine(svg, barStartX - 10, barStartX - 10, topY, bottomY);
 
   // Measure separators
   if (measures.length > 1) {
     for (let i = 1; i < measures.length; i++) {
-      const x = config.barStartX + i * config.measureWidth;
-      drawLine(svg, x, x, margin.top - 30, bottomY);
+      const x = barStartX + i * measureWidth;
+      chartStyles.drawGridLine(svg, x, x, topY, bottomY);
     }
   }
 }
 
 /**
- * Draw a single line
+ * Draws a single measure bar with value
  */
-function drawLine(svg, x1, x2, y1, y2) {
-  svg
-    .append("line")
-    .attr("x1", x1)
-    .attr("x2", x2)
-    .attr("y1", y1)
-    .attr("y2", y2)
-    .attr("stroke", "#ddd")
-    .attr("stroke-width", 1)
-    .attr("shape-rendering", "crispEdges");
-}
-
-/**
- * Draw a single measure bar with value label
- */
-function drawBar(svg, measure, segment, category, xScale, y, rowHeight, color, tooltip) {
+function drawMeasureBar(svg, measure, segment, category, xScale, y, rowHeight, color, tooltip) {
   const value = segment.measures[measure];
   const startX = xScale.range()[0];
   const barWidth = Math.max(1, xScale(value) - startX);
@@ -296,7 +351,7 @@ function drawBar(svg, measure, segment, category, xScale, y, rowHeight, color, t
     .attr("y", y + rowHeight * 0.15)
     .attr("width", barWidth)
     .attr("height", rowHeight * 0.7)
-    .attr("rx", chartStyles.barChart?.bar?.cornerRadius || 2)
+    .attr("rx", chartStyles.barChart.bar.cornerRadius)
     .attr("fill", color)
     .on("mouseover", (event) => {
       chartStyles.showTooltip(
@@ -307,90 +362,44 @@ function drawBar(svg, measure, segment, category, xScale, y, rowHeight, color, t
     })
     .on("mouseout", () => chartStyles.hideTooltip(tooltip));
 
-  // Value label (always to the right)
+  // Value label - always to the right of the bar
   svg
     .append("text")
-    .attr("x", xScale(value) + 5)
+    .attr("x", xScale(value) + chartStyles.barChart.valueGap)
     .attr("y", y + rowHeight / 2)
     .attr("font-family", chartStyles.fontFamily)
     .attr("font-size", chartStyles.fontSize.axisLabel)
     .attr("dominant-baseline", "middle")
     .attr("text-anchor", "start")
-    .attr("fill", "#333")
+    .attr("fill", chartStyles.colors.text)
     .text(formatValue(value));
 }
 
 /**
- * Get configured colors for measures
- */
-function getMeasureColors(measures) {
-  return measures.map((_, i) => {
-    if (i === 0) return chartColors.mainPalette[0]; // First measure color
-    if (i === 1) return chartColors.mainPalette[5]; // Second measure color
-    return chartColors.mainPalette[i % chartColors.mainPalette.length]; // Other colors
-  });
-}
-
-/**
- * Calculate total height of all rows
- */
-function getTotalRowHeight(data, rowHeight, rowPadding) {
-  const totalRows = data.reduce((sum, category) => sum + category.segments.length, 0);
-  return totalRows * (rowHeight + rowPadding);
-}
-
-/**
- * Setup event handlers for chart
- */
-function setupEventHandlers(container) {
-  setupResizeHandler(container, () => renderNestedBarChart(container));
-
-  document.removeEventListener("dimensionSwap", handleDimensionSwap);
-  document.addEventListener("dimensionSwap", handleDimensionSwap);
-}
-
-/**
- * Handle dimension swap events
- */
-function handleDimensionSwap() {
-  const container = document.querySelector(".viz-container");
-  if (container) renderNestedBarChart(container);
-}
-
-/**
- * Validate rendering context
- */
-function isValidRenderingContext(container) {
-  if (!container) {
-    console.error("Container element is null or undefined");
-    return false;
-  }
-
-  if (!state.dataset?.length) {
-    container.innerHTML = "<p>No data available to display</p>";
-    return false;
-  }
-
-  container.innerHTML = "";
-  return true;
-}
-
-/**
- * Calculate layout for measures area
+ * Calculate measures layout
  */
 function calculateMeasuresLayout(data, measures, barStartX, width, margin, rowHeight, rowPadding) {
-  // Available width for measures
+  // Calculate width available for each measure
   const barAreaWidth = width - margin.right - barStartX;
   const measureWidth = Math.max(80, barAreaWidth / measures.length);
 
-  // Calculate chart height
+  // Calculate total chart height
   const totalRows = data.reduce((sum, category) => sum + category.segments.length, 0);
   const contentHeight = totalRows * (rowHeight + rowPadding);
   const height = margin.top + margin.bottom + contentHeight;
 
-  // Create scales for measures
-  const xScales = {};
+  // Create scales for each measure
   const maxValues = getMaxMeasureValues(data, measures);
+  const xScales = createMeasureScales(measures, maxValues, barStartX, measureWidth);
+
+  return { measureWidth, xScales, height };
+}
+
+/**
+ * Creates scale for each measure
+ */
+function createMeasureScales(measures, maxValues, barStartX, measureWidth) {
+  const xScales = {};
 
   measures.forEach((measure, i) => {
     const startX = barStartX + i * measureWidth;
@@ -403,11 +412,11 @@ function calculateMeasuresLayout(data, measures, barStartX, width, margin, rowHe
       .nice();
   });
 
-  return { measureWidth, xScales, height };
+  return xScales;
 }
 
 /**
- * Get maximum values for each measure
+ * Gets maximum values for each measure
  */
 function getMaxMeasureValues(data, measures) {
   const maxValues = {};
@@ -421,10 +430,17 @@ function getMaxMeasureValues(data, measures) {
 }
 
 /**
+ * Calculates the total height needed for all rows
+ */
+function calculateTotalHeight(data, rowHeight, rowPadding) {
+  const totalRows = data.reduce((sum, category) => sum + category.segments.length, 0);
+  return totalRows * (rowHeight + rowPadding);
+}
+
+/**
  * Measure text dimensions for layout
  */
 function measureTextWidths(container, data) {
-  // Create temporary element for measurement
   const svg = d3.select(container).append("svg").attr("width", 0).attr("height", 0);
 
   const tempText = svg
@@ -433,32 +449,51 @@ function measureTextWidths(container, data) {
     .attr("font-size", chartStyles.fontSize.axisLabel)
     .style("opacity", 0);
 
-  // Find longest primary dimension
-  tempText.text(getLongestText(data.map((d) => d.name)));
-  const dim1ActualWidth = tempText.node().getComputedTextLength() || 0;
+  // Measure dimensions
+  const dim1Text = getLongestText(data.map((d) => d.name));
+  tempText.text(dim1Text);
+  const dim1Width = tempText.node().getComputedTextLength() || 0;
 
-  // Find longest secondary dimension
-  tempText.text(getLongestText(data.flatMap((d) => d.segments.map((s) => s.name))));
-  const dim2ActualWidth = tempText.node().getComputedTextLength() || 0;
+  const dim2Text = getLongestText(data.flatMap((d) => d.segments.map((s) => s.name)));
+  tempText.text(dim2Text);
+  const dim2Width = tempText.node().getComputedTextLength() || 0;
 
-  // Clean up
   svg.remove();
 
   return {
-    dim1Width: Math.min(300, Math.max(120, dim1ActualWidth + 30)),
-    dim2Width: Math.min(300, Math.max(150, dim2ActualWidth + 30)),
+    dim1Width: Math.min(300, Math.max(120, dim1Width + 30)),
+    dim2Width: Math.min(300, Math.max(150, dim2Width + 30)),
   };
 }
 
 /**
- * Find the longest text in an array
+ * Returns the longest text in an array based on character count
  */
 function getLongestText(textArray) {
-  return textArray.reduce((a, b) => (a.toString().length > b.toString().length ? a : b), "");
+  return textArray.reduce((a, b) => (a?.toString().length > b?.toString().length ? a : b), "");
 }
 
 /**
- * Create hierarchical data structure
+ * Sets up event handlers
+ */
+function setupEventHandlers(container) {
+  setupResizeHandler(container, () => renderNestedBarChart(container));
+
+  // Set up dimension swap handler
+  document.removeEventListener("dimensionSwap", handleDimensionSwap);
+  document.addEventListener("dimensionSwap", handleDimensionSwap);
+}
+
+/**
+ * Handles dimension swap event
+ */
+function handleDimensionSwap() {
+  const container = document.querySelector(".viz-container");
+  if (container) renderNestedBarChart(container);
+}
+
+/**
+ * Creates hierarchical data structure from the dataset
  */
 function createHierarchicalData(dataset, dimensions, measures) {
   return dimensions.length < 2
@@ -467,44 +502,44 @@ function createHierarchicalData(dataset, dimensions, measures) {
 }
 
 /**
- * Create data structure for single dimension
+ * Creates hierarchical data for a single dimension
  */
 function createSingleDimensionData(dataset, dimensions, measures) {
   const dimension = dimensions[0];
   const grouped = d3.group(dataset, (d) => d[dimension]);
 
   // Convert groups to hierarchical structure
-  const hierarchicalData = Array.from(grouped).map(([name, values]) => {
-    // Calculate measure values
-    const measureValues = {};
-    measures.forEach((measure) => {
-      measureValues[measure] = d3.sum(values, (d) => +d[measure] || 0);
-    });
+  return Array.from(grouped)
+    .map(([name, values]) => {
+      // Calculate measure values
+      const measureValues = {};
+      measures.forEach((measure) => {
+        measureValues[measure] = d3.sum(values, (d) => +d[measure] || 0);
+      });
 
-    return {
-      name,
-      segments: [
-        {
-          name: "",
-          measures: measureValues,
-          value: measureValues[measures[0]],
-        },
-      ],
-    };
-  });
-
-  return hierarchicalData.sort((a, b) => b.segments[0].measures[measures[0]] - a.segments[0].measures[measures[0]]);
+      return {
+        name,
+        segments: [
+          {
+            name: "",
+            measures: measureValues,
+            value: measureValues[measures[0]],
+          },
+        ],
+      };
+    })
+    .sort((a, b) => b.segments[0].value - a.segments[0].value);
 }
 
 /**
- * Create data structure for two dimensions
+ * Creates hierarchical data for two dimensions
  */
 function createMultiDimensionData(dataset, dimensions, measures) {
   const [dim1, dim2] = dimensions;
-  const hierarchicalData = [];
 
   // Group by primary dimension
   const primaryGroups = d3.group(dataset, (d) => d[dim1]);
+  const hierarchicalData = [];
 
   for (const [categoryName, categoryItems] of primaryGroups) {
     // Group by secondary dimension
