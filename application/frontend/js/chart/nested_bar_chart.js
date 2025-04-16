@@ -7,14 +7,14 @@ import { CHART_DIMENSIONS } from "../constants.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
 import { chartControls } from "./utils/chartControls.js";
-import { formatValue, setupResizeHandler } from "./utils/chartUtils.js";
+import { formatValue, setupResizeHandler, validateRenderingContext } from "./utils/chartUtils.js";
 
 /**
  * Main render function for nested bar chart
  * @param {HTMLElement} container - DOM element to render the chart
  */
 function renderNestedBarChart(container) {
-  if (!isValidRenderingContext(container)) return;
+  if (!validateRenderingContext(container)) return;
 
   // Initialize dimension controls
   chartControls.initDimensionSwap("nested_bar_chart");
@@ -28,24 +28,6 @@ function renderNestedBarChart(container) {
   setupContainer(container, config);
   renderChartContent(container, data, dimensions, measures, config);
   setupEventHandlers(container);
-}
-
-/**
- * Validates the rendering context
- */
-function isValidRenderingContext(container) {
-  if (!container) {
-    console.error("Container element is null or undefined");
-    return false;
-  }
-
-  if (!state.dataset?.length) {
-    container.innerHTML = "<p>No data available to display</p>";
-    return false;
-  }
-
-  container.innerHTML = "";
-  return true;
 }
 
 /**

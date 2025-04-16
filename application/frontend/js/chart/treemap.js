@@ -1,7 +1,7 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
-import { truncateLabel, formatValue, setupResizeHandler } from "./utils/chartUtils.js";
+import { truncateLabel, formatValue, setupResizeHandler, validateRenderingContext } from "./utils/chartUtils.js";
 import { chartControls } from "./utils/chartControls.js";
 
 // Constants
@@ -14,13 +14,9 @@ const MARGIN = { top: 10, right: 10, bottom: 10, left: 10 };
  */
 function renderTreemap(container) {
   // Validate input and set up container
-  if (!container || !state.dataset?.length) {
-    if (container) container.innerHTML = "<p>No data available to display</p>";
-    return;
-  }
+  if (!validateRenderingContext(container)) return;
 
-  // Clear and configure container
-  container.innerHTML = "";
+  // Clear and configure container step is already handled by validateRenderingContext
   Object.assign(container.style, {
     position: "relative",
     width: "100%",

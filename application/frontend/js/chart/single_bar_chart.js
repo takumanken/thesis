@@ -5,7 +5,7 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
-import { truncateLabel, formatValue, setupResizeHandler } from "./utils/chartUtils.js";
+import { truncateLabel, formatValue, setupResizeHandler, validateRenderingContext } from "./utils/chartUtils.js";
 
 /**
  * Main render function for single bar chart
@@ -13,7 +13,7 @@ import { truncateLabel, formatValue, setupResizeHandler } from "./utils/chartUti
  */
 function renderBarChart(container) {
   // Validate input and environment
-  if (!isValidRenderingContext(container)) return;
+  if (!validateRenderingContext(container)) return;
 
   // Get data and configuration
   const { dataset, dimension, measure } = extractChartData();
@@ -29,24 +29,6 @@ function renderBarChart(container) {
 
   // Setup resize handling
   setupResizeHandler(container, () => renderBarChart(container));
-}
-
-/**
- * Validates rendering context
- */
-function isValidRenderingContext(container) {
-  if (!container) {
-    console.error("Container element is null or undefined");
-    return false;
-  }
-
-  if (!state.dataset?.length) {
-    container.innerHTML = "<p>No data available to display</p>";
-    return false;
-  }
-
-  container.innerHTML = "";
-  return true;
 }
 
 /**

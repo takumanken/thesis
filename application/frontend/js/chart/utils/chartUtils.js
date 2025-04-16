@@ -1,3 +1,5 @@
+import { state } from "../../state.js";
+
 /**
  * Shared utility functions for chart components
  */
@@ -92,4 +94,25 @@ export function measureTextWidth(container, text, options = {}) {
   svg.remove();
 
   return width;
+}
+
+/**
+ * Validates the rendering context for charts
+ * @param {HTMLElement} container - DOM element to render the chart
+ * @param {string} [noDataMessage="No data available to display"] - Custom message to display when no data
+ * @returns {boolean} True if context is valid, false otherwise
+ */
+export function validateRenderingContext(container, noDataMessage = "No data available to display") {
+  if (!container) {
+    console.error("Container element is null or undefined");
+    return false;
+  }
+
+  if (!state?.dataset?.length) {
+    container.innerHTML = `<p>${noDataMessage}</p>`;
+    return false;
+  }
+
+  container.innerHTML = "";
+  return true;
 }
