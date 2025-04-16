@@ -2,6 +2,10 @@
  * Chart style definitions and utility functions
  */
 export const chartStyles = {
+  //-------------------------------------------------------------------------
+  // STYLE CONSTANTS
+  //-------------------------------------------------------------------------
+
   // Font settings
   fontFamily: "Noto Sans, sans-serif",
   fontSize: {
@@ -20,7 +24,7 @@ export const chartStyles = {
     alternateBackground: "#f8f8f8",
   },
 
-  // Bar chart settings
+  // Chart dimensions
   barChart: {
     bar: {
       height: 25,
@@ -37,20 +41,21 @@ export const chartStyles = {
     valueGap: 5,
   },
 
+  //-------------------------------------------------------------------------
+  // AXIS STYLING
+  //-------------------------------------------------------------------------
+
   /**
    * Apply consistent axis styling to a D3 selection
-   * @param {d3.Selection} axisGroup - D3 selection containing axis elements
-   * @param {Object} options - Styling options
    */
   applyAxisStyles: function (axisGroup, options = {}) {
-    // Merge defaults with provided options
     const config = {
       hideAxisLine: options.hideAxisLine || false,
       hideTickLines: options.hideTickLines || false,
       textAnchor: options.textAnchor || null,
     };
 
-    // Style the axis path (main line)
+    // Style axis line
     if (config.hideAxisLine) {
       axisGroup.select(".domain").style("display", "none");
     } else {
@@ -61,7 +66,7 @@ export const chartStyles = {
         .attr("shape-rendering", "crispEdges");
     }
 
-    // Style the tick lines
+    // Style tick lines
     if (config.hideTickLines) {
       axisGroup.selectAll(".tick line").style("display", "none");
     } else {
@@ -72,7 +77,7 @@ export const chartStyles = {
         .attr("shape-rendering", "crispEdges");
     }
 
-    // Style the tick text
+    // Style tick text
     const textElements = axisGroup
       .selectAll(".tick text")
       .attr("fill", this.colors.text)
@@ -87,12 +92,7 @@ export const chartStyles = {
   },
 
   /**
-   * Draw a grid line
-   * @param {d3.Selection} svg - SVG element
-   * @param {number} x1 - Start x position
-   * @param {number} x2 - End x position
-   * @param {number} y1 - Start y position
-   * @param {number} y2 - End y position
+   * Draw a grid line with consistent styling
    */
   drawGridLine: function (svg, x1, x2, y1, y2) {
     return svg
@@ -108,8 +108,6 @@ export const chartStyles = {
 
   /**
    * Get appropriate chart margins based on chart type
-   * @param {string} chartType - Type of chart
-   * @returns {Object} Margin object
    */
   getChartMargins: function (chartType) {
     switch (chartType) {
@@ -131,11 +129,15 @@ export const chartStyles = {
     }
   },
 
+  //-------------------------------------------------------------------------
+  // TOOLTIPS
+  //-------------------------------------------------------------------------
+
   /**
    * Creates a tooltip element
    */
   createTooltip: function () {
-    const tooltip = d3
+    return d3
       .select("body")
       .append("div")
       .attr("class", "chart-tooltip")
@@ -151,8 +153,6 @@ export const chartStyles = {
       .style("opacity", 0)
       .style("z-index", 1000)
       .style("box-shadow", "0 2px 4px rgba(0,0,0,0.1)");
-
-    return tooltip;
   },
 
   /**
@@ -172,5 +172,75 @@ export const chartStyles = {
    */
   hideTooltip: function (tooltip) {
     tooltip.style("visibility", "hidden").style("opacity", 0);
+  },
+
+  //-------------------------------------------------------------------------
+  // COLOR UTILITIES
+  //-------------------------------------------------------------------------
+
+  /**
+   * Get contrasting text color (black or white) based on background color
+   * @param {string|Object} backgroundColor - Color in various formats
+   * @returns {string} - "#333333" for light backgrounds, "#ffffff" for dark backgrounds
+   */
+  getContrastingTextColor: function (backgroundColor) {
+    // Handle null/undefined
+    if (!backgroundColor) {
+      return "#333333";
+    }
+
+    let r, g, b;
+
+    // Handle different color formats
+    if (typeof backgroundColor === "object") {
+      // For d3.color objects with rgb() method
+      if (backgroundColor.rgb) {
+        const rgb = backgroundColor.rgb();
+        r = rgb.r;
+        g = rgb.g;
+        b = rgb.b;
+      }
+      // For objects with r,g,b properties
+      else if ("r" in backgroundColor && "g" in backgroundColor && "b" in backgroundColor) {
+        r = backgroundColor.r;
+        g = backgroundColor.g;
+        b = backgroundColor.b;
+      }
+      // Default case if we can't extract RGB values
+      else {
+        return "#333333";
+      }
+    }
+    // Handle string formats
+    else if (typeof backgroundColor === "string") {
+      if (backgroundColor.startsWith("#")) {
+        r = parseInt(backgroundColor.slice(1, 3), 16);
+        g = parseInt(backgroundColor.slice(3, 5), 16);
+        b = parseInt(backgroundColor.slice(5, 7), 16);
+      }
+      // Handle rgb/rgba strings
+      else if (backgroundColor.startsWith("rgb")) {
+        const match = backgroundColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+        if (match) {
+          r = parseInt(match[1]);
+          g = parseInt(match[2]);
+          b = parseInt(match[3]);
+        } else {
+          return "#333333";
+        }
+      }
+      // Named colors
+      else {
+        return "#333333";
+      }
+    }
+    // Unexpected input types
+    else {
+      return "#333333";
+    }
+
+    // Calculate perceived brightness using W3C formula
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 125 ? "#333333" : "#ffffff";
   },
 };
