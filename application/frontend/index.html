@@ -21,83 +21,66 @@
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js" defer></script>
 </head>
 <body>
-    <!-- Header Section -->
     <header class="header">
-        <div class="container">
-            <div class="search-wrapper">
-                <div class="logo">
-                    <h1>ASK NYC</h1>
-                </div>
-                
-                <div class="search-container" role="search">
-                    <input type="text" id="promptInput" placeholder="What is the monthly trend of 311 complaints by borough?">
-                    <button id="sendButton" class="search-button" aria-label="Search">
-                        <span class="material-icons" aria-hidden="true">search</span>
-                    </button>
-                </div>
-                
-                <label for="useLocationCheckbox" class="location-label">
-                    <input type="checkbox" id="useLocationCheckbox"> 
-                    Use my location
-                </label>
-            </div>
+        <div class="logo">
+            <h1>ASK NYC</h1>
         </div>
+        
+        <div class="search-container" role="search">
+            <input type="text" id="promptInput" placeholder="What is the monthly trend of 311 complaints by borough?">
+            <button id="sendButton" class="search-button" aria-label="Search">
+                <span class="material-icons" aria-hidden="true">search</span>
+            </button>
+        </div>
+        
+        <label for="useLocationCheckbox" class="location-label">
+            <input type="checkbox" id="useLocationCheckbox"> 
+            Use my location
+        </label>
     </header>
 
-    <!-- Main Content Section -->
     <main class="main-content">
-        <div class="container">
-            <!-- Insight Header -->
-            <h2 class="insight-header">
-                <span class="material-icons insight-icon" aria-hidden="true">auto_awesome</span>
-                <span>AI Generated Insight</span>
-            </h2>
+        <h2 class="insight-header">
+            <span class="material-icons insight-icon" aria-hidden="true">auto_awesome</span>
+            <span>AI Generated Insight</span>
+        </h2>
+        
+        <section id="dataInsightsContainer" class="insight-container">
+            <div class="insight-content" id="dataInsights">
+                <div id="tableContainer" class="chart-container" aria-live="polite"></div>
+            </div>
             
-            <!-- Data Insights Container -->
-            <section id="dataInsightsContainer" class="insight-container">
-                <!-- Left Column - Chart Display -->
-                <div class="insight-content" id="dataInsights">
-                    <!-- Title and description will be inserted here by JS -->
-                    <div id="tableContainer" class="chart-container" aria-live="polite"></div>
-                </div>
-                
-                <!-- Right Column - Chart Controls -->
-                <aside class="insight-sidebar">
-                    <div class="chart-controls-container">
-                        <!-- Chart Type Selection -->
-                        <div>
-                            <h3 class="controls-heading">Switch to other charts</h3>
-                            <div class="chart-type-selector" role="radiogroup" aria-label="Chart type options">
-                                <!-- More chart options will be added dynamically -->
-                            </div>
-                        </div>
-                        
-                        <!-- Chart Definition Section -->
-                        <div class="chart-definition">
-                            <h3 class="controls-heading">Chart Definition</h3>
-                            
-                            <div class="filter-section">
-                                <h4 class="section-title">Filter</h4>
-                                <div class="filter-tags" aria-label="Applied filters"></div>
-                            </div>
-                            
-                            <div class="dimension-section">
-                                <h4 class="section-title">Dimension</h4>
-                                <div class="dimension-tags" aria-label="Chart dimensions"></div>
-                            </div>
-                            
-                            <div class="metrics-section">
-                                <h4 class="section-title">Metrics</h4>
-                                <div class="metrics-tags" aria-label="Chart metrics"></div>
-                            </div>
+            <aside class="insight-sidebar">
+                <div class="chart-controls-container">
+                    <div>
+                        <h3 class="controls-heading">Switch to other charts</h3>
+                        <div class="chart-type-selector" role="radiogroup" aria-label="Chart type options">
                         </div>
                     </div>
-                </aside>
-            </section>
-        </div>
+                    
+                    <div class="chart-definition">
+                        <h3 class="controls-heading">Chart Definition</h3>
+                        
+                        <div class="filter-section">
+                            <h4 class="section-title">Filter</h4>
+                            <div class="filter-tags" aria-label="Applied filters"></div>
+                        </div>
+                        
+                        <div class="dimension-section">
+                            <h4 class="section-title">Dimension</h4>
+                            <div class="dimension-tags" aria-label="Chart dimensions"></div>
+                        </div>
+                        
+                        <div class="metrics-section">
+                            <h4 class="section-title">Metrics</h4>
+                            <div class="metrics-tags" aria-label="Chart metrics"></div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </section>
     </main>
     
-    <!-- Main Application JavaScript -->
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

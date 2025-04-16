@@ -30,145 +30,93 @@
     --color-border: #eaeaea;
     --color-border-light: #ddd;
     
-    /* Spacing */
-    --spacing-xs: 4px;
-    --spacing-sm: 8px;
-    --spacing-md: 16px;
-    --spacing-lg: 25px;
-    --spacing-xl: 30px;
+    /* Simplified spacing system */
+    --space-unit: 8px;
+    --space-xs: var(--space-unit);
+    --space-sm: calc(var(--space-unit) * 2);
+    --space-md: calc(var(--space-unit) * 3);
+    --space-lg: calc(var(--space-unit) * 4);
+    --space-xl: calc(var(--space-unit) * 5);
     
-    /* Sizes */
+    /* Layout variables */
     --sidebar-width: 300px;
-    --sidebar-width-tablet: 250px;
+    --container-padding: var(--space-lg);
+    --content-gap: var(--space-md);
 }
 
 * {
     box-sizing: border-box;
     margin: 0;
-    padding: 0;
 }
 
 body {
     background-color: var(--color-background);
-    color: var(--color-text);
     display: grid;
     font-family: 'Noto Sans', sans-serif;
     grid-template-rows: auto 1fr; /* Header auto size, content fills remainder */
     line-height: 1.6;
-    margin: 0;
-    min-height: 100vh;
-}
-
-/* ===============================================
-   2. LAYOUT & CONTAINERS
-   =============================================== */
-.container {
-    margin: 0 auto;
-    max-width: 1200px;
-    padding: 0 20px;
-    width: 100%;
+    height: 98vh;
 }
 
 .main-content {
     background-color: var(--color-background);
     display: grid;
-    grid-template-rows: auto 1fr; /* AI header auto size, insights container fills remainder */
-    overflow: hidden;
-    padding: 0;
+    grid-template-rows: auto 1fr;
 }
 
-.main-content .container {
-    margin: 0;
-    max-width: none;
-    padding: 0;
-}
-
-.results-section {
-    margin-top: 10px;
-    padding-left: var(--spacing-xl);
-}
-
-.chart-flex-container {
-    display: flex;
-    width: 100%;
-}
 
 /* ===============================================
-   3. HEADER COMPONENTS
+   2. HEADER COMPONENTS
    =============================================== */
+
 .header {
     background-color: var(--color-background);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    padding: 20px 0;
-    width: 100%;
+    display: flex;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-xl);
 }
 
-.header .container {
-    margin: 0;
-    max-width: none;
-    padding: 0;
-    width: 100%;
-}
-
-.logo {
-    flex-shrink: 0;
-    margin-left: var(--spacing-xl);
-    padding-left: 0;
-}
-
-.logo h1 {
+/* === Logo === */
+.header > .logo h1 {
     color: var(--color-primary);
     font-family: 'Outfit', sans-serif;
     font-size: 1.8rem;
     font-weight: 700;
-    margin: 0;
 }
 
-/* ===============================================
-   4. SEARCH COMPONENTS
-   =============================================== */
-.search-wrapper {
-    align-items: center;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    justify-content: flex-start;
-    padding: 0 var(--spacing-xl) 0 0;
-    width: 100%;
-}
+/* === Search Box === */
 
-.search-container {
+/* Container */
+.header > .search-container {
     background: white;
     border-radius: 25px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     display: flex;
     flex: 1;
-    height: 50px;
-    max-width: 80%;
-    overflow: hidden;
 }
 
-#promptInput {
-    background: transparent;
+/* Prompt Input */
+.header > .search-container > #promptInput {
     border: none;
-    color: var(--color-text);
     flex: 1;
     font-family: 'Noto Sans', sans-serif;
     font-size: 16px;
     outline: none;
     padding: 0 20px;
+    border-radius: 25px;
 }
 
-#promptInput::placeholder {
+.header > .search-container > #promptInput::placeholder {
     color: #888;
 }
 
-#promptInput:focus {
+.header > .search-container > #promptInput:focus {
     box-shadow: inset 0 0 0 2px rgba(65, 69, 119, 0.2);
     border-radius: 25px;
 }
 
-.search-button {
+/* Search Button */
+.header > .search-container > .search-button {
     align-items: center;
     background-color: transparent;
     border: none;
@@ -181,38 +129,50 @@ body {
     width: 50px;
 }
 
-.search-button:hover {
+.header > .search-container > .search-button:hover {
     background-color: #f5f5f5;
 }
 
-/* ===============================================
-   5. LOCATION COMPONENTS
-   =============================================== */
-.location-label {
+/* === Search Box === */
+
+.header > .location-label {
     align-items: center;
     color: var(--color-text-secondary);
     display: flex;
-    flex-shrink: 0;
     font-size: 14px;
-    gap: var(--spacing-sm);
-    margin-left: 15px;
-    order: 3;
-    white-space: nowrap;
+    gap: 10px;
+}
+
+
+/* ===============================================
+   3. MAIN CONTENT
+=============================================== */
+
+.main-content .container {
+    height: 100vh;
+}
+
+.results-section {
+    margin-top: 10px;
+    padding-left: var(--space-xl);
+}
+
+.chart-flex-container {
+    display: flex;
+    width: 100%;
 }
 
 /* ===============================================
    6. DATA INSIGHTS & AI COMPONENTS
    =============================================== */
 .insight-header {
-    align-items: center;
-    color: var(--color-primary);
     display: flex;
+    color: var(--color-primary);
     font-family: 'Asap', sans-serif;
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: normal;
-    gap: var(--spacing-sm);
-    margin: 15px 0 10px var(--spacing-xl);
-    opacity: 0.8;
+    gap: 10px;
+    margin: 15px 0 10px var(--space-xl);
 }
 
 .insight-icon {
@@ -223,7 +183,6 @@ body {
 /* ===============================================
    7. INSIGHT CONTAINER LAYOUT
    =============================================== */
-/* More specific selector to avoid !important */
 body .main-content .container .insight-container {
     background-color: white;
     border-radius: 25px;
@@ -231,12 +190,25 @@ body .main-content .container .insight-container {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
-    gap: var(--spacing-xl);
+    gap: var(--space-xl);
     height: auto;
-    margin: 0 var(--spacing-xl) var(--spacing-xl);
-    max-height: calc(100vh - 180px);
+    margin: 0 var(--space-xl) var(--space-xl);
     overflow: hidden;
     padding: 25px 30px;
+    position: relative;
+    height: 100%;
+}
+
+/* Chart Container Structure - Base Styles */
+.insight-container {
+    background-color: white;
+    border-radius: 25px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    margin: 0 var(--space-xl) var(--space-xl);
+    max-height: calc(100vh - 180px);
+    overflow: hidden;
+    padding: var(--space-lg);
     position: relative;
 }
 
@@ -249,17 +221,18 @@ body .main-content .container .insight-container {
     flex: 1;
     flex-direction: column;
     height: 100%;
-    max-width: calc(100% - var(--sidebar-width) - 30px);
+    max-width: calc(100% - var(--sidebar-width) - var(--content-gap));
     overflow: hidden;
-    width: calc(100% - var(--sidebar-width) - 30px);
+    width: calc(100% - var(--sidebar-width) - var(--content-gap));
+    padding-right: 16px;
 }
 
 .insight-header-content {
     flex-shrink: 0;
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--space-md);
 }
 
-.insight-title {
+.insight-header-content .insight-title {
     color: var(--color-primary-dark);
     flex-shrink: 0;
     font-family: 'Noto Sans', sans-serif;
@@ -295,11 +268,11 @@ body .main-content .container .insight-container {
 /* Make Leaflet map fill the available space */
 .chart-container #leaflet-map,
 .chart-container .leaflet-container {
-    width: 100% !important;
-    max-width: 100% !important;
-    flex: 1 !important; /* Fill available space */
-    min-height: 300px !important; /* Minimum height for usability */
-    margin-bottom: 20px !important; /* Preserve bottom spacing */
+    width: 100%;
+    max-width: 100%;
+    flex: 1; /* Fill available space */
+    min-height: 300px; /* Minimum height for usability */
+    margin-bottom: 20px; /* Preserve bottom spacing */
 }
 
 .insight-content .chart-container > * {
@@ -326,10 +299,65 @@ body .main-content .container .insight-container {
     background: #aaa;
 }
 
+/* Content Area */
+.insight-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    height: 100%;
+    max-width: calc(100% - var(--sidebar-width) - var(--content-gap));
+    overflow: hidden;
+    padding-right: 16px;
+}
+
+/* Chart Container */
+.chart-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-right: 10px;
+    position: relative;
+}
+
+/* SVG Base Styling */
+.chart-container > svg {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+}
+
+/* Bar Chart Specific Styling */
+.bar-chart-bars-container {
+    position: absolute;
+    top: 40px;
+    left: 0;
+    right: 0;
+    bottom: 20px; /* Creates negative space without breaking scroll */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.bar-chart-svg {
+    width: 100%;
+    height: auto;
+    min-height: 100%;
+}
+
+/* Leaflet Maps */
+#leaflet-map.leaflet-container,
+.chart-container .leaflet-container {
+    width: 100%;
+    max-width: 100%;
+    flex: 1;
+    min-height: 300px;
+    margin-bottom: 20px;
+}
+
 /* ===============================================
    9. SIDEBAR COMPONENTS
    =============================================== */
-/* More specific selector to eliminate !important */
+/* More specific selector to eliminate */
 .main-content .insight-container > .insight-sidebar {
     border-left: 1px solid var(--color-border);
     flex-basis: var(--sidebar-width);
@@ -338,7 +366,7 @@ body .main-content .container .insight-container {
     height: 100%;
     min-width: var(--sidebar-width);
     overflow-y: auto;
-    padding-left: var(--spacing-lg);
+    padding-left: var(--space-lg);
     position: relative;
     width: var(--sidebar-width);
     z-index: 2;
@@ -444,6 +472,17 @@ body .main-content .container .insight-container {
   padding: 8px;
 }
 
+/* Sidebar Styling - Simplified */
+.insight-sidebar {
+    border-left: 1px solid var(--color-border);
+    flex: 0 0 var(--sidebar-width);
+    height: 100%;
+    overflow-y: auto;
+    padding-left: var(--space-lg);
+    position: relative;
+    z-index: 2;
+}
+
 /* ===============================================
    10. CHARTS & VISUALIZATIONS
    =============================================== */
@@ -464,15 +503,15 @@ body .main-content .container .insight-container {
 
 /* SVG constraints */
 .chart-container > svg {
-    width: 100% !important;
+    width: 100%;
     max-width: 100%;
-    height: auto !important;
+    height: auto;
 }
 
 /* Map/Leaflet constraints */
 .chart-container #leaflet-map,
 .chart-container .leaflet-container {
-    width: 100% !important;
+    width: 100%;
     max-width: 100%;
     height: 500px;
     margin-bottom: 20px; /* Extra margin for maps specifically */
@@ -508,7 +547,7 @@ body .main-content .container .insight-container {
     display: none;
     gap: 10px;
     margin-bottom: 15px;
-    margin-left: var(--spacing-xl);
+    margin-left: var(--space-xl);
 }
 
 select {
@@ -546,11 +585,28 @@ select {
     }
 }
 
-/* Tablet and small screens - use specificity instead of !important */
+@media (max-width: 768px) {
+    .header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    
+    .logo {
+        margin: 0 auto 16px;
+        text-align: center;
+    }
+    
+    .search-container {
+        max-width: 100%;
+    }
+}
+
+/* Tablet and small screens */
 @media (max-width: 900px) {
     /* Increase specificity by targeting parent elements */
     body .main-content .container .insight-container {
         flex-direction: column;
+        height: 100vh;
     }
     
     .main-content .insight-container > .insight-sidebar {
@@ -569,10 +625,34 @@ select {
     .main-content .insight-container > .insight-content {
         max-width: 100%;
         width: 100%;
+        padding-right: 0;
     }
 }
 
-/* Tablet optimizations - use specificity instead of !important */
+/* Media Queries */
+@media (max-width: 900px) {
+    .insight-container {
+        flex-direction: column;
+        padding: var(--space-md);
+    }
+    
+    .insight-sidebar {
+        border-left: none;
+        border-top: 1px solid var(--color-border);
+        height: auto;
+        margin-top: 20px;
+        max-height: 300px;
+        padding: var(--space-md) 0 0;
+        width: 100%;
+    }
+    
+    .insight-content {
+        max-width: 100%;
+        padding-right: 0;
+    }
+}
+
+/* Tablet optimizations */
 @media (min-width: 768px) and (max-width: 1024px) {
     /* Update CSS variables for tablet */
     :root {
@@ -584,8 +664,8 @@ select {
     }
     
     .main-content .insight-container > .insight-content {
-        max-width: calc(100% - var(--sidebar-width) - 30px);
-        width: calc(100% - var(--sidebar-width) - 30px);
+        max-width: calc(100% - var(--sidebar-width) - var(--content-gap));
+        width: calc(100% - var(--sidebar-width) - var(--content-gap));
     }
 }
 
