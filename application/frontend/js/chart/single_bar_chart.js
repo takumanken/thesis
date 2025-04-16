@@ -197,6 +197,10 @@ function renderChartElements(elements, dataset, scales, dimension, measure, conf
  * @param {HTMLElement} tooltip - Tooltip element
  */
 function renderBars(svg, dataset, scales, measure, dimension, margin, tooltip) {
+  // Define bar colors
+  const barColor = "#9EAADB";
+  const highlightColor = "#8690BA";
+
   svg
     .selectAll("rect.bar")
     .data(dataset)
@@ -204,13 +208,13 @@ function renderBars(svg, dataset, scales, measure, dimension, margin, tooltip) {
     .attr("class", "bar")
     .attr("x", margin.left)
     .attr("y", (d, i) => scales.y(i))
-    .attr("width", (d) => Math.max(0, scales.x(d[measure]) - margin.left)) // Prevent negative width
+    .attr("width", (d) => Math.max(0, scales.x(d[measure]) - margin.left))
     .attr("height", scales.y.bandwidth())
-    .attr("fill", chartStyles.colors.primary)
+    .attr("fill", barColor) // New color applied here
     .attr("rx", 2) // Rounded corners
     .on("mouseover", function (event, d) {
-      // Highlight bar
-      d3.select(this).attr("fill", chartStyles.colors.highlight);
+      // Highlight bar with our new highlight color
+      d3.select(this).attr("fill", highlightColor);
 
       // Show tooltip with formatted values
       chartStyles.showTooltip(
@@ -221,8 +225,8 @@ function renderBars(svg, dataset, scales, measure, dimension, margin, tooltip) {
       );
     })
     .on("mouseout", function () {
-      // Reset bar color
-      d3.select(this).attr("fill", chartStyles.colors.primary);
+      // Reset bar color to our new base color
+      d3.select(this).attr("fill", barColor);
       chartStyles.hideTooltip(tooltip);
     });
 }

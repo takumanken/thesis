@@ -287,7 +287,6 @@ body .main-content .container .insight-container {
     flex-direction: column;
     overflow: hidden; /* Change from overflow-y: auto to hidden */
     padding-right: 10px;
-    padding-bottom: 30px;
     width: 100%;
     max-width: 100%;
     position: relative;
