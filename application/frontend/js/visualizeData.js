@@ -48,9 +48,31 @@ function renderWithData(container, renderFunction) {
 }
 
 // Modify updateDataInsights function to include chart type selector
+/**
+ * Updates the data insights panel with chart information
+ * @param {Object} response - The data response containing insights
+ */
 function updateDataInsights(response) {
-  const insightsContainer = document.getElementById("dataInsightsContainer");
-  const insightsDiv = document.getElementById("dataInsights");
+  // Find containers with fallbacks for different possible IDs/classes
+  const insightsContainer =
+    document.getElementById("dataInsightsContainer") ||
+    document.querySelector(".dashboard-panel") ||
+    document.querySelector(".insight-container");
+
+  // Look for the visualization area with multiple possible selectors
+  const insightsDiv =
+    document.getElementById("dataInsights") ||
+    document.querySelector(".visualization-area") ||
+    document.querySelector(".insight-content");
+
+  // If we couldn't find the containers, log an error and stop
+  if (!insightsContainer || !insightsDiv) {
+    console.error("Visualization containers not found. Check HTML structure.", {
+      insightsContainer,
+      insightsDiv,
+    });
+    return;
+  }
 
   // Clear existing content
   insightsDiv.innerHTML = "";
@@ -62,7 +84,7 @@ function updateDataInsights(response) {
   // Add title if available
   if (response.dataInsights?.title) {
     const titleElement = document.createElement("h3");
-    titleElement.className = "insight-title";
+    titleElement.className = "viz-title";
     titleElement.textContent = response.dataInsights.title;
     headerContent.appendChild(titleElement);
   }
@@ -70,7 +92,7 @@ function updateDataInsights(response) {
   // Add description if available
   if (response.dataInsights?.dataDescription) {
     const descriptionElement = document.createElement("p");
-    descriptionElement.className = "insight-description";
+    descriptionElement.className = "viz-description";
     descriptionElement.textContent = response.dataInsights.dataDescription;
     headerContent.appendChild(descriptionElement);
   }
@@ -78,10 +100,10 @@ function updateDataInsights(response) {
   // Add header content to insights div
   insightsDiv.appendChild(headerContent);
 
-  // Create chart container
+  // Create chart container with both possible IDs for compatibility
   const tableContainer = document.createElement("div");
   tableContainer.id = "tableContainer";
-  tableContainer.className = "chart-container";
+  tableContainer.className = "viz-container chart-container";
 
   // Add chart container to insights div
   insightsDiv.appendChild(tableContainer);
@@ -89,79 +111,98 @@ function updateDataInsights(response) {
   // Create chart type dropdown in the sidebar
   createChartTypeSwitcher();
 
-  // Display the insights container with flex layout
+  // Display the insights container
   insightsContainer.style.display = "flex";
 }
 
 /**
- * Creates or updates the chart type dropdown in the sidebar
+ * Creates and populates the chart type switcher with available chart types
  */
 function createChartTypeSwitcher() {
-  // Find the chart controls container in the sidebar
-  const chartControlsContainer = document.querySelector(".insight-sidebar .chart-controls-container");
-  if (!chartControlsContainer) return;
-
-  // Find the heading "Switch to other charts"
-  const headings = chartControlsContainer.querySelectorAll("h3.controls-heading");
-  let chartTypeSection;
-
-  headings.forEach((heading) => {
-    if (heading.textContent.includes("Switch to other charts")) {
-      chartTypeSection = heading.parentElement;
-    }
-  });
-
-  if (!chartTypeSection) return;
-
-  // Check if dropdown already exists
-  let chartTypeDropdown = chartTypeSection.querySelector("#chartTypeDropdown");
-
-  // Create dropdown if it doesn't exist
-  if (!chartTypeDropdown) {
-    chartTypeDropdown = document.createElement("select");
-    chartTypeDropdown.id = "chartTypeDropdown";
-    chartTypeDropdown.className = "chart-type-dropdown";
-
-    // Add event listener
-    chartTypeDropdown.addEventListener("change", function (event) {
-      state.chartType = event.target.value;
-      visualizeData(); // Re-render with new chart type
-    });
-
-    // Add after the heading
-    chartTypeSection.appendChild(chartTypeDropdown);
+  // Find the selector container
+  const selectorContainer = document.querySelector(".viz-type-selector");
+  if (!selectorContainer) {
+    console.error("Chart type selector container not found");
+    return;
   }
 
-  // Clear existing options
-  chartTypeDropdown.innerHTML = "";
+  // Clear existing content
+  selectorContainer.innerHTML = "";
 
-  // Add options based on available chart types
-  const chartTypes = {
-    table: "Data Table",
-    single_bar_chart: "Bar Chart",
-    grouped_bar_chart: "Grouped Bar Chart",
-    stacked_bar_chart: "Stacked Bar Chart",
-    stacked_bar_chart_100: "100% Stacked Bar Chart",
-    stacked_area_chart: "Stacked Area Chart",
-    stacked_area_chart_100: "100% Stacked Area Chart",
-    line_chart: "Line Chart",
-    choropleth_map: "Choropleth Map",
-    heat_map: "Heat Map",
-    treemap: "Treemap",
-    nested_bar_chart: "Nested Bar Chart",
+  // Chart type configuration map with icons and labels
+  const chartTypeConfig = {
+    table: { icon: "table_chart", label: "Table" },
+    single_bar_chart: { icon: "bar_chart", label: "Bar Chart" },
+    line_chart: { icon: "show_chart", label: "Line Chart" },
+    choropleth_map: { icon: "map", label: "Map" },
+    heat_map: { icon: "grain", label: "Heat Map" },
+    grouped_bar_chart: { icon: "view_column", label: "Grouped Bar Chart" },
+    stacked_bar_chart: { icon: "stacked_bar_chart", label: "Stacked Bar Chart" },
+    stacked_bar_chart_100: { icon: "stacked_bar_chart", label: "100% Stacked Bar" },
+    stacked_area_chart: { icon: "area_chart", label: "Area Chart" },
+    stacked_area_chart_100: { icon: "area_chart", label: "100% Area Chart" },
+    treemap: { icon: "grid_view", label: "Treemap" },
+    nested_bar_chart: { icon: "view_list", label: "Nested Bar Chart" },
   };
 
-  // Only show chart types that are available for this dataset
-  state.availableChartTypes.forEach((chartType) => {
-    if (chartType in chartTypes) {
-      const option = document.createElement("option");
-      option.value = chartType;
-      option.textContent = chartTypes[chartType];
-      option.selected = chartType === state.chartType;
-      chartTypeDropdown.appendChild(option);
-    }
+  // Use state.availableChartTypes if available, otherwise fallback to basic types
+  const availableChartTypes = state.availableChartTypes || ["table"];
+
+  console.log("Available chart types:", availableChartTypes);
+
+  // Create chart type options for each available chart type
+  availableChartTypes.forEach((typeId) => {
+    // Get config or use fallback
+    const config = chartTypeConfig[typeId] || {
+      icon: "help_outline",
+      label: typeId
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" "),
+    };
+
+    const option = document.createElement("div");
+    option.className = `chart-type-option${state.chartType === typeId ? " selected" : ""}`;
+    option.dataset.chartType = typeId;
+    option.innerHTML = `<span class="material-icons">${config.icon}</span>`;
+    option.title = config.label;
+
+    // Add click handler
+    option.addEventListener("click", function () {
+      // Update selection state
+      selectorContainer.querySelectorAll(".chart-type-option").forEach((opt) => {
+        opt.classList.remove("selected");
+      });
+      this.classList.add("selected");
+
+      // Store in state directly
+      state.chartType = typeId;
+
+      // Redraw visualization
+      visualizeData();
+    });
+
+    selectorContainer.appendChild(option);
   });
 }
+
+/**
+ * Switch to a different chart type
+ * @param {string} chartType - The type of chart to switch to
+ */
+function switchChartType(chartType) {
+  console.log(`Switching to chart type: ${chartType}`);
+
+  // Update state directly
+  state.chartType = chartType;
+
+  // Redraw visualization using main function
+  visualizeData();
+}
+
+// Make sure functions are globally available
+window.createChartTypeSwitcher = createChartTypeSwitcher;
+window.switchChartType = switchChartType;
 
 /**
  * Main function to render the appropriate chart based on chartType.

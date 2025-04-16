@@ -73,22 +73,19 @@ function createChartConfig(dataLength) {
  * @returns {Object} References to chart elements
  */
 function createChartStructure(container, config) {
-  // Main chart container - responsive by default
+  // Main chart container with responsive height
   const chartContainer = document.createElement("div");
   chartContainer.className = "single-bar-chart";
-  chartContainer.id = "bar-chart-container";
   chartContainer.style.cssText = `
     position: relative;
     width: 100%;
-    height: 100%;
-    min-height: ${config.minHeight}px;
+    height: ${Math.min(config.fullChartHeight, config.displayHeight)}px;
   `;
   container.appendChild(chartContainer);
 
   // Fixed header for x-axis
   const xAxisContainer = document.createElement("div");
-  xAxisContainer.className = "bar-chart-axis-container";
-  xAxisContainer.id = "bar-chart-x-axis";
+  xAxisContainer.className = "viz-axis-container";
   xAxisContainer.style.cssText = `
     position: absolute;
     top: 0;
@@ -101,14 +98,13 @@ function createChartStructure(container, config) {
 
   // Scrollable container for bars
   const scrollContainer = document.createElement("div");
-  scrollContainer.className = "bar-chart-bars-container";
-  scrollContainer.id = "bar-chart-scroll";
+  scrollContainer.className = "viz-bar-scroll";
   scrollContainer.style.cssText = `
     position: absolute;
     top: ${config.margin.top}px;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: 20px;
     overflow-y: auto;
     overflow-x: hidden;
   `;
@@ -118,8 +114,7 @@ function createChartStructure(container, config) {
   const svg = d3
     .select(scrollContainer)
     .append("svg")
-    .attr("class", "bar-chart-svg")
-    .attr("id", "bar-chart-main-svg")
+    .attr("class", "viz-bar-canvas")
     .attr("width", "100%")
     .attr("height", config.fullChartHeight - config.margin.top)
     .attr("preserveAspectRatio", "xMinYMin meet");
@@ -127,8 +122,7 @@ function createChartStructure(container, config) {
   const xAxisSvg = d3
     .select(xAxisContainer)
     .append("svg")
-    .attr("class", "bar-chart-axis-svg")
-    .attr("id", "bar-chart-x-axis-svg")
+    .attr("class", "viz-axis-canvas")
     .attr("width", "100%")
     .attr("height", config.margin.top)
     .attr("preserveAspectRatio", "xMinYMin meet");
@@ -154,8 +148,22 @@ function createChartStructure(container, config) {
  * @returns {Object} x and y scales
  */
 function createScales(dataset, measure, config) {
-  // Get container width for responsive scaling
-  const containerWidth = document.querySelector(".chart-container").clientWidth;
+  // Get container width with fallbacks for different possible class names
+  let containerWidth;
+  try {
+    // Try multiple selectors in order of preference
+    const container =
+      document.querySelector("#viz-container") ||
+      document.querySelector(".viz-container") ||
+      document.querySelector(".chart-container") ||
+      document.querySelector("#tableContainer");
+
+    containerWidth = container ? container.clientWidth : null;
+  } catch (e) {
+    console.warn("Container width calculation failed:", e);
+  }
+
+  // Always provide a fallback even if all selectors fail
   const effectiveWidth = containerWidth || 800; // Fallback width
 
   // X scale (horizontal) for measure values
