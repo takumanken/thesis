@@ -173,7 +173,7 @@ function createChartElements(container, config) {
     .select(container)
     .append("svg")
     .attr("width", "100%")
-    .attr("height", "100%")
+    .attr("height", "98%")
     .attr("preserveAspectRatio", "xMinYMin meet")
     .append("g")
     .attr("transform", `translate(${config.margin.left},${config.margin.top})`);

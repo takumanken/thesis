@@ -115,8 +115,7 @@ function createChartElements(container, config) {
     .select(container)
     .append("svg")
     .attr("width", "100%")
-    .attr("height", "100%")
-    .attr("viewBox", `0 0 ${config.width} ${config.height}`)
+    .attr("height", "98%")
     .attr("preserveAspectRatio", "xMidYMid meet");
 }
 

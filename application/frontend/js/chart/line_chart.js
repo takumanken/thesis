@@ -172,8 +172,8 @@ function createChartElements(container, config) {
     .select(container)
     .append("svg")
     .attr("width", "100%")
-    .attr("height", "100%") // Use 100% height to fill container
-    .attr("preserveAspectRatio", "xMinYMin meet") // Preserve aspect ratio
+    .attr("height", "98%")
+    .attr("preserveAspectRatio", "xMinYMin meet")
     .append("g")
     .attr("transform", `translate(${config.margin.left},${config.margin.top})`);
 
