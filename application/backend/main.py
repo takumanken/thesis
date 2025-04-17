@@ -329,7 +329,7 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
     elif definition.measures:
         sql += f" ORDER BY {definition.measures[0]['alias']} DESC"
     
-    sql += " LIMIT 1000;"
+    sql += " LIMIT 5000;"
     
     logger.info(f"SQL generation completed in {time.time() - start_time:.2f}s")
     logger.info(f"Generated SQL:\n{sql}")
