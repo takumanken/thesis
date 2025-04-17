@@ -159,12 +159,12 @@ function addHeatLayer(map, points, measure) {
 
   // Create and add heatmap layer with custom settings
   L.heatLayer(heatData, {
-    radius: 6,
-    blur: 6,
+    radius: 7.5,
+    blur: 5,
     maxZoom: 1,
     gradient: gradient,
-    max: maxValue,
-    minOpacity: 0.5,
+    max: maxValue * 0.75,
+    minOpacity: 0.3,
   }).addTo(map);
 
   // Add tooltip functionality
