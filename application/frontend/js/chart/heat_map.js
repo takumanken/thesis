@@ -174,113 +174,66 @@ function addHeatLayer(map, points, measure) {
 // ===== INTERACTIVITY =====
 
 /**
+ * Find the nearest point (by straight‑line) to a given latlng
+ * @param {L.LatLng} latlng  – the mouse event coords
+ * @param {Array} points     – array of {lat, lng, value}
+ * @returns {{point:Object, distance:number}|null}
+ */
+function findClosestPoint(latlng, points) {
+  let minDist = Infinity,
+    closest = null;
+  points.forEach((p) => {
+    const dLat = p.lat - latlng.lat;
+    const dLng = p.lng - latlng.lng;
+    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+    if (dist < minDist) {
+      minDist = dist;
+      closest = p;
+    }
+  });
+  return closest ? { point: closest, distance: minDist } : null;
+}
+
+/**
  * Add tooltip functionality to the map
  */
 function addTooltipFunctionality(map, points, measure) {
-  if (!points || points.length === 0) return;
-
-  // Create tooltip element
+  // Legacy proximity‑based hover from the original design
   const tooltip = chartStyles.createTooltip();
-
-  // Keep track of tooltip state
-  let isTooltipVisible = false;
   let tooltipMarker = null;
+  let isTooltipVisible = false;
 
-  // Add event listener for mouse movement
   map.on("mousemove", (e) => {
-    // Find the closest point to mouse position
-    const closestPoint = findClosestPoint(e.latlng, points);
+    const nearest = findClosestPoint(e.latlng, points);
+    if (nearest && nearest.distance < 0.01) {
+      // show tooltip at mouse cursor
+      chartStyles.tooltip.show(
+        tooltip,
+        e.originalEvent,
+        `<strong>Location:</strong> ${nearest.point.lat.toFixed(4)}, ${nearest.point.lng.toFixed(4)}<br>
+         <strong>${measure}:</strong> ${formatValue(nearest.point.value)}`
+      );
 
-    // Use a smaller threshold for precise point detection (approx 1km)
-    const proximityThreshold = 0.01;
-
-    if (closestPoint && closestPoint.distance < proximityThreshold) {
-      // Show tooltip with point information
-      showPointTooltip(e.originalEvent, closestPoint.point, measure, tooltip);
-      isTooltipVisible = true;
-
-      // Add or update marker at the point location
+      // show (or move) a small marker at the point
       if (!tooltipMarker) {
-        tooltipMarker = L.circleMarker([closestPoint.point.lat, closestPoint.point.lng], {
-          radius: 4,
-          color: "#333",
+        tooltipMarker = L.circleMarker([nearest.point.lat, nearest.point.lng], {
+          radius: 5,
+          color: "#000",
           weight: 1,
-          fillColor: "#fff",
-          fillOpacity: 0.8,
+          fillOpacity: 0,
         }).addTo(map);
       } else {
-        tooltipMarker.setLatLng([closestPoint.point.lat, closestPoint.point.lng]);
+        tooltipMarker.setLatLng([nearest.point.lat, nearest.point.lng]);
       }
+      isTooltipVisible = true;
     } else if (isTooltipVisible) {
-      // Hide tooltip when not near a point
+      // hide tooltip and marker when out of range
       chartStyles.tooltip.hide(tooltip);
       isTooltipVisible = false;
-
-      // Remove marker when moving away
-      if (tooltipMarker) {
-        map.removeLayer(tooltipMarker);
-        tooltipMarker = null;
-      }
-    }
-  });
-
-  // Handle mouse leaving the map
-  map.on("mouseout", () => {
-    chartStyles.tooltip.hide(tooltip);
-    isTooltipVisible = false;
-
-    // Clean up marker
-    if (tooltipMarker) {
       map.removeLayer(tooltipMarker);
       tooltipMarker = null;
     }
   });
-}
-
-/**
- * Find the closest data point to a given location
- */
-function findClosestPoint(latlng, points) {
-  if (!points || points.length === 0) return null;
-
-  let closestPoint = null;
-  let closestDistance = Infinity;
-
-  points.forEach((point) => {
-    // Calculate distance between points accounting for longitude distortion
-    const distance = Math.sqrt(
-      Math.pow(point.lat - latlng.lat, 2) +
-        Math.pow((point.lng - latlng.lng) * Math.cos((Math.PI * latlng.lat) / 180), 2)
-    );
-
-    if (distance < closestDistance) {
-      closestDistance = distance;
-      closestPoint = point;
-    }
-  });
-
-  return {
-    point: closestPoint,
-    distance: closestDistance,
-  };
-}
-
-/**
- * Show tooltip with information about a specific point
- */
-function showPointTooltip(event, point, measure, tooltip) {
-  // Format coordinates with 4 decimal places (approx. 10m precision)
-  const lat = point.lat.toFixed(4);
-  const lng = point.lng.toFixed(4);
-
-  // Create tooltip content
-  const content = `
-    <strong>Location:</strong> ${lat}, ${lng}<br>
-    <strong>${measure}:</strong> ${formatValue(point.value)}
-  `;
-
-  // Show tooltip
-  chartStyles.tooltip.show(tooltip, event, content);
 }
 
 /**

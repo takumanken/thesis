@@ -11,6 +11,7 @@ import {
   setupResizeHandler,
   setupDimensionSwapHandler,
   validateRenderingContext,
+  attachMouseTooltip,
 } from "./utils/chartUtils.js";
 import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js";
 
@@ -228,41 +229,42 @@ function createChartElements(container, config) {
  * Render stacked bars
  */
 function renderBars(svg, stackData, sortedStacks, scales, groupKey, stackKey, measure, isPercentage, color, tooltip) {
-  // Create stack generator
-  const stack = d3.stack().keys(sortedStacks).order(d3.stackOrderNone).offset(d3.stackOffsetNone);
-
-  // Draw bars
-  svg
+  const stackGen = d3.stack().keys(sortedStacks);
+  const groups = svg
     .append("g")
     .selectAll("g")
-    .data(stack(stackData))
+    .data(stackGen(stackData))
     .join("g")
-    .attr("fill", (d) => color(d.key))
+    .attr("fill", (d) => color(d.key));
+
+  const rects = groups
     .selectAll("rect")
-    .data((d) => d)
+    .data((layer) => layer)
     .join("rect")
     .attr("y", (d) => scales.y(d.data[groupKey]))
     .attr("x", (d) => scales.x(d[0]))
     .attr("width", (d) => Math.max(0, scales.x(d[1]) - scales.x(d[0])))
-    .attr("height", scales.y.bandwidth())
-    .attr("rx", CHART_DESIGN.cornerRadius)
-    .on("mouseover", (event, d) => {
-      const stack = d3.select(event.target.parentNode).datum().key;
-      const group = d.data[groupKey];
-      const value = isPercentage ? d.data[`${stack}_original`] : d.data[stack];
-      const total = d.data._total || d3.sum(sortedStacks, (s) => d.data[s] || 0);
-      const percentage = isPercentage ? d.data[stack] : (value / total) * 100;
+    .attr("height", scales.y.bandwidth());
 
-      chartStyles.tooltip.show(
-        tooltip,
-        event,
-        `<strong>${groupKey}:</strong> ${group}<br>
-         <strong>${stackKey}:</strong> ${stack}<br>
-         <strong>${measure}:</strong> ${formatValue(value)}<br>
-         <strong>Percentage:</strong> ${percentage.toFixed(CHART_DESIGN.percentagePrecision)}%`
-      );
-    })
-    .on("mouseout", () => chartStyles.tooltip.hide(tooltip));
+  // replace .on handlers with one call:
+  attachMouseTooltip(
+    rects,
+    tooltip,
+    (d, el) => {
+      const stackVal = d3.select(el.parentNode).datum().key;
+      const grp = d.data[groupKey];
+      const raw = isPercentage ? d.data[`${stackVal}_original`] : d.data[stackVal];
+      const pct = isPercentage ? d.data[stackVal] : (raw / d.data._total) * 100;
+      return `
+        <strong>${groupKey}:</strong> ${grp}<br>
+        <strong>${stackKey}:</strong> ${stackVal}<br>
+        <strong>${measure}:</strong> ${formatValue(raw)}<br>
+        <strong>Pct:</strong> ${pct.toFixed(CHART_DESIGN.percentagePrecision)}%
+      `;
+    },
+    // optional highlight: accentuate on hover
+    (el) => el.attr("opacity", 0.8)
+  );
 }
 
 /**

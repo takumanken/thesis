@@ -5,7 +5,13 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
-import { truncateLabel, formatValue, setupResizeHandler, validateRenderingContext } from "./utils/chartUtils.js";
+import {
+  truncateLabel,
+  formatValue,
+  setupResizeHandler,
+  validateRenderingContext,
+  attachMouseTooltip,
+} from "./utils/chartUtils.js";
 
 /**
  * Main render function for single bar chart
@@ -156,7 +162,8 @@ function renderBars(svg, dataset, scales, measure, dimension, config, tooltip) {
   const barColor = config.barColor;
   const highlightColor = d3.color(barColor).darker(0.2);
 
-  svg
+  // build bars without individual .on handlers
+  const bars = svg
     .selectAll("rect.bar")
     .data(dataset)
     .join("rect")
@@ -166,19 +173,21 @@ function renderBars(svg, dataset, scales, measure, dimension, config, tooltip) {
     .attr("width", (d) => Math.max(0, scales.x(d[measure]) - config.margin.left))
     .attr("height", scales.y.bandwidth())
     .attr("fill", barColor)
-    .attr("rx", chartStyles.barChart.bar.cornerRadius)
-    .on("mouseover", function (event, d) {
-      d3.select(this).attr("fill", highlightColor);
-      const tooltipContent = `
-        <strong>${dimension}:</strong> ${d[dimension]}<br>
-        <strong>${measure}:</strong> ${formatValue(d[measure])}
-      `;
-      chartStyles.tooltip.show(tooltip, event, tooltipContent);
-    })
-    .on("mouseout", function () {
-      d3.select(this).attr("fill", barColor);
-      chartStyles.tooltip.hide(tooltip);
-    });
+    .attr("rx", chartStyles.barChart.bar.cornerRadius);
+
+  // attach heatmap‑style hover + tooltip
+  attachMouseTooltip(
+    bars,
+    tooltip,
+    (d, _el, _evt) => `
+      <strong>${dimension}:</strong> ${d[dimension]}<br>
+      <strong>${measure}:</strong> ${formatValue(d[measure])}
+    `,
+    (el, d) => {
+      // highlight on hover / un‐highlight on out
+      el.attr("fill", d ? highlightColor : barColor);
+    }
+  );
 }
 
 /**

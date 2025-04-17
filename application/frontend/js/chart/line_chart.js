@@ -5,7 +5,7 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
-import { formatValue, setupResizeHandler, validateRenderingContext } from "./utils/chartUtils.js";
+import { formatValue, setupResizeHandler, validateRenderingContext, attachMouseTooltip } from "./utils/chartUtils.js";
 import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js";
 
 /**
@@ -459,8 +459,29 @@ function renderSingleLine(svg, data, scales, lineGenerator, tooltip, config, tim
     .attr("stroke-width", 2)
     .attr("d", lineGenerator);
 
-  // Create interactive layer for tooltips
-  createSingleLineInteraction(svg, sortedData, scales, tooltip, lineGenerator, config, timeDimension, measure);
+  // Make each actual data-point interactive
+  const pts = svg
+    .selectAll("circle.point")
+    .data(data)
+    .join("circle")
+    .attr("class", "point")
+    .attr("cx", (d) => scales.x(d.parsedTime))
+    .attr("cy", (d) => scales.y(+d[measure]))
+    .attr("r", 0) // invisible but interactive
+    .style("pointer-events", "all");
+
+  attachMouseTooltip(
+    pts,
+    tooltip,
+    (d, _el, event) => {
+      const timeValue = isNumericTime ? d.parsedTime : d3.timeFormat("%Y-%m-%d")(d.parsedTime);
+      return `
+        <strong>${timeDimension}:</strong> ${timeValue}<br>
+        <strong>${measure}:</strong> ${formatValue(d[measure])}
+      `;
+    },
+    (el, d) => el.attr("r", d ? 5 : 0)
+  );
 }
 
 /**
@@ -551,82 +572,6 @@ function createInteractionLayer(
           event,
           `
           <strong>${groupDimension}:</strong> ${closestPoint.group}<br>
-          <strong>${timeDimension}:</strong> ${timeValue}<br>
-          <strong>${measure}:</strong> ${formatValue(closestPoint.data[measure])}
-        `
-        );
-      } else {
-        // Hide tooltip when not near any point
-        highlight.style("opacity", 0);
-        chartStyles.tooltip.hide(tooltip);
-      }
-    })
-    .on("mouseleave", function () {
-      // Hide tooltip when leaving chart area
-      highlight.style("opacity", 0);
-      chartStyles.tooltip.hide(tooltip);
-    });
-}
-
-/**
- * Create interaction layer for single line
- */
-function createSingleLineInteraction(svg, data, scales, tooltip, lineGenerator, config, timeDimension, measure) {
-  // Create array of points for interaction
-  const points = data.map((d) => ({
-    x: scales.x(d.parsedTime),
-    y: scales.y(+d[measure]),
-    data: d,
-  }));
-
-  // Create invisible overlay
-  const overlay = svg
-    .append("rect")
-    .attr("class", "overlay")
-    .attr("width", config.width)
-    .attr("height", config.height)
-    .style("fill", "none")
-    .style("pointer-events", "all");
-
-  // Create highlight circle
-  const highlight = svg.append("circle").attr("r", 5).style("fill", chartColors.mainPalette[0]).style("opacity", 0);
-
-  // Add mouse interactions
-  overlay
-    .on("mousemove", function (event) {
-      const [mouseX, mouseY] = d3.pointer(event);
-
-      // Find closest point
-      let closestPoint = null;
-      let minDistance = Infinity;
-
-      points.forEach((point) => {
-        const dx = point.x - mouseX;
-        const dy = point.y - mouseY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestPoint = point;
-        }
-      });
-
-      // Only show tooltip if reasonably close to a point
-      if (closestPoint && minDistance < 50) {
-        // Update highlight position
-        highlight.attr("cx", closestPoint.x).attr("cy", closestPoint.y).style("opacity", 0.8);
-
-        // Format time value based on type
-        const timeValue =
-          typeof closestPoint.data.parsedTime === "number"
-            ? closestPoint.data.parsedTime
-            : d3.timeFormat("%Y-%m-%d")(closestPoint.data.parsedTime);
-
-        // Show tooltip with formatted data
-        chartStyles.tooltip.show(
-          tooltip,
-          event,
-          `
           <strong>${timeDimension}:</strong> ${timeValue}<br>
           <strong>${measure}:</strong> ${formatValue(closestPoint.data[measure])}
         `

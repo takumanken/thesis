@@ -1,4 +1,5 @@
 import { state } from "../../state.js";
+import { chartStyles } from "./chartStyles.js"; // <-- add this at top
 
 /**
  * Shared utility functions for chart components
@@ -139,4 +140,38 @@ export function setupDimensionSwapHandler(renderCallback) {
 
   // Add the new handler
   document.addEventListener("dimensionSwap", currentDimensionSwapHandler);
+}
+
+/**
+ * Attach heatmap‑style hover + tooltip to any D3 selection.
+ *
+ * @param {d3.Selection} sel         – the elements to hover
+ * @param {d3.Selection} tooltip     – created via chartStyles.createTooltip()
+ * @param {Function}      contentFn  – (d, el, event) ⇒ HTML string
+ * @param {Function}      [highlight]– (el, d) ⇒ void, e.g. style change
+ */
+export function attachMouseTooltip(sel, tooltip, contentFn, highlight) {
+  let lastEl = null; // <-- declare per‐call state
+
+  sel
+    .on("mousemove", function (event, d) {
+      // clear previous hover
+      if (lastEl && lastEl !== this) {
+        d3.select(lastEl).classed("hovered", false);
+      }
+      d3.select(this).classed("hovered", true);
+      lastEl = this;
+
+      if (highlight) highlight(d3.select(this), d);
+
+      // show / move tooltip
+      const html = contentFn(d, this, event);
+      chartStyles.tooltip.show(tooltip, event, html);
+    })
+    .on("mouseout", function () {
+      d3.select(this).classed("hovered", false);
+      if (highlight) highlight(d3.select(this), null);
+      chartStyles.tooltip.hide(tooltip);
+      lastEl = null;
+    });
 }

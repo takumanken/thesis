@@ -10,6 +10,7 @@ import {
   setupResizeHandler,
   validateRenderingContext,
   setupDimensionSwapHandler,
+  attachMouseTooltip,
 } from "./utils/chartUtils.js";
 import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js";
 
@@ -229,42 +230,34 @@ function renderChart(elements, dataset, sortedGroups, scales, config, groupKey, 
  * Draw grouped bars with tooltips
  */
 function drawBars(svg, dataset, scales, config, groupKey, subGroupKey, measure, tooltip) {
-  const { outerY, innerY, x, color, groupPositionsArray } = scales;
-  const { margin } = config;
-
-  svg
-    .append("g")
-    .selectAll("g")
-    .data(groupPositionsArray)
-    .join("g")
-    .attr("transform", (d) => `translate(0, ${d.position})`)
+  const bars = svg
     .selectAll("rect")
-    .data((d) => {
-      const groupData = dataset.filter((item) => item[groupKey] === d.group);
-      return groupData.map((item) => ({
-        [groupKey]: item[groupKey],
-        [subGroupKey]: item[subGroupKey],
-        [measure]: item[measure],
-        yPos: innerY(item[subGroupKey]),
-      }));
-    })
+    .data(
+      dataset.map((d) => ({
+        group: d[groupKey],
+        sub: d[subGroupKey],
+        val: d[measure],
+        y: scales.groupPositions[d[groupKey]] + scales.innerY(d[subGroupKey]),
+      }))
+    )
     .join("rect")
-    .attr("y", (d) => d.yPos)
-    .attr("x", margin.left)
-    .attr("width", (d) => Math.max(0, x(d[measure]) - margin.left))
-    .attr("height", innerY.bandwidth())
-    .attr("fill", (d) => color(d[subGroupKey]))
-    .attr("rx", chartStyles.barChart.bar.cornerRadius)
-    .on("mouseover", function (event, d) {
-      chartStyles.tooltip.show(
-        tooltip,
-        event,
-        `<strong>${groupKey}:</strong> ${d[groupKey]}<br>
-         <strong>${subGroupKey}:</strong> ${d[subGroupKey]}<br>
-         <strong>${measure}:</strong> ${formatValue(d[measure])}`
-      );
-    })
-    .on("mouseout", () => chartStyles.tooltip.hide(tooltip));
+    .attr("x", config.margin.left)
+    .attr("y", (d) => d.y)
+    .attr("width", (d) => Math.max(0, scales.x(d.val) - config.margin.left))
+    .attr("height", scales.innerY.bandwidth())
+    .attr("fill", (d) => scales.color(d.sub))
+    .attr("rx", chartStyles.barChart.bar.cornerRadius);
+
+  attachMouseTooltip(
+    bars,
+    tooltip,
+    (d) => `
+      <strong>${groupKey}:</strong> ${d.group}<br>
+      <strong>${subGroupKey}:</strong> ${d.sub}<br>
+      <strong>${measure}:</strong> ${formatValue(d.val)}
+    `,
+    (el) => el.raise() // bring hovered bar to front
+  );
 }
 
 /**

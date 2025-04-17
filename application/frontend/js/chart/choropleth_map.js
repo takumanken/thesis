@@ -5,7 +5,7 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
-import { formatValue, setupResizeHandler, validateRenderingContext } from "./utils/chartUtils.js";
+import { formatValue, setupResizeHandler, validateRenderingContext, attachMouseTooltip } from "./utils/chartUtils.js";
 
 // Constants
 const SUPPORTED_GEO_DIMENSIONS = ["borough", "neighborhood_name", "county"];
@@ -194,7 +194,7 @@ function processGeoFeatures(geoJson, geoDimension, aggregatedData) {
  * Render map regions with colors and interactions
  */
 function renderMap(svg, geoJson, path, colorScale, geoDimension, measure, tooltip) {
-  svg
+  const regions = svg
     .selectAll("path.region")
     .data(geoJson.features)
     .join("path")
@@ -203,16 +203,32 @@ function renderMap(svg, geoJson, path, colorScale, geoDimension, measure, toolti
     .attr("fill", (d) => colorScale(d.properties.value))
     .attr("stroke", "#ffffff")
     .attr("stroke-width", 0.5)
-    .style("cursor", "pointer")
-    .on("mouseover", function (event, d) {
-      highlightRegion(this);
-      showRegionTooltip(event, d, tooltip, geoDimension, measure);
-    })
-    .on("mousemove", (event) => moveTooltip(event, tooltip))
-    .on("mouseout", function () {
-      resetRegionHighlight(this);
-      chartStyles.tooltip.hide(tooltip);
-    });
+    .style("cursor", "pointer");
+
+  attachMouseTooltip(
+    regions,
+    tooltip,
+    (feature, el, event) => {
+      const p = feature.properties;
+      return geoDimension === "neighborhood_name"
+        ? `
+          <strong>Neighborhood:</strong> ${p.ntaname}<br>
+          <strong>Borough:</strong> ${p.boroname || "Unknown"}<br>
+          <strong>${measure}:</strong> ${formatValue(p.value)}
+        `
+        : `
+          <strong>${p.displayName}</strong><br>
+          <strong>${measure}:</strong> ${formatValue(p.value)}
+        `;
+    },
+    (el, feature) => {
+      if (feature) {
+        highlightRegion(el.node());
+      } else {
+        resetRegionHighlight(el.node());
+      }
+    }
+  );
 }
 
 /**

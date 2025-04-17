@@ -12,6 +12,7 @@ import {
   setupResizeHandler,
   validateRenderingContext,
   setupDimensionSwapHandler,
+  attachMouseTooltip,
 } from "./utils/chartUtils.js";
 
 /**
@@ -327,39 +328,27 @@ function drawVerticalSeparators(svg, config, dimensions, measures, bottomY) {
  * Draws a single measure bar with value
  */
 function drawMeasureBar(svg, measure, segment, category, xScale, y, rowHeight, color, tooltip) {
-  const value = segment.measures[measure];
-  const startX = xScale.range()[0];
-  const barWidth = Math.max(1, xScale(value) - startX);
+  const val = segment.measures[measure];
+  const start = xScale.range()[0];
+  const width = Math.max(1, xScale(val) - start);
 
-  // Bar rectangle
-  svg
+  const bar = svg
     .append("rect")
-    .attr("x", startX)
+    .attr("x", start)
     .attr("y", y + rowHeight * 0.15)
-    .attr("width", barWidth)
+    .attr("width", width)
     .attr("height", rowHeight * 0.7)
     .attr("rx", chartStyles.barChart.bar.cornerRadius)
-    .attr("fill", color)
-    .on("mouseover", (event) => {
-      chartStyles.tooltip.show(
-        tooltip,
-        event,
-        `${category.name}${segment.name ? " > " + segment.name : ""}<br>${measure}: ${formatValue(value)}`
-      );
-    })
-    .on("mouseout", () => chartStyles.tooltip.hide(tooltip));
+    .attr("fill", color);
 
-  // Value label - always to the right of the bar
-  svg
-    .append("text")
-    .attr("x", xScale(value) + chartStyles.barChart.valueGap)
-    .attr("y", y + rowHeight / 2)
-    .attr("font-family", chartStyles.fontFamily)
-    .attr("font-size", chartStyles.fontSize.axisLabel)
-    .attr("dominant-baseline", "middle")
-    .attr("text-anchor", "start")
-    .attr("fill", chartStyles.colors.text)
-    .text(formatValue(value));
+  attachMouseTooltip(
+    bar,
+    tooltip,
+    () => `
+      <strong>${category.name}${segment.name ? " → " + segment.name : ""}</strong><br>
+      <strong>${measure}:</strong> ${formatValue(val)}
+    `
+  );
 }
 
 /**

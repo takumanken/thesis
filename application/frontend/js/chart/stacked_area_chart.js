@@ -5,7 +5,7 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
-import { formatValue, setupResizeHandler, validateRenderingContext } from "./utils/chartUtils.js";
+import { formatValue, setupResizeHandler, validateRenderingContext, attachMouseTooltip } from "./utils/chartUtils.js";
 import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js";
 
 /**
@@ -283,49 +283,37 @@ function renderChart(
     .curve(d3.curveCardinal.tension(0.7)); // Less pronounced curve
 
   // Draw areas
-  svg
+  const areas = svg
     .selectAll(".area")
     .data(stackedData)
     .join("path")
     .attr("class", "area")
     .attr("fill", (d) => colorScale(d.key))
     .attr("d", area)
-    .attr("opacity", 0.8)
-    .on("mouseover", function (event, d) {
-      d3.select(this).attr("opacity", 1);
-      showAreaTooltip(
-        event,
-        d,
-        scales,
-        data,
-        colorScale,
-        tooltip,
-        isPercentage,
-        isNumericTime,
-        timeDimension,
-        categoricalDimension,
-        measure
-      );
-    })
-    .on("mousemove", function (event, d) {
-      showAreaTooltip(
-        event,
-        d,
-        scales,
-        data,
-        colorScale,
-        tooltip,
-        isPercentage,
-        isNumericTime,
-        timeDimension,
-        categoricalDimension,
-        measure
-      );
-    })
-    .on("mouseout", function () {
-      d3.select(this).attr("opacity", 0.8);
-      chartStyles.tooltip.hide(tooltip);
-    });
+    .attr("opacity", 0.8);
+
+  attachMouseTooltip(
+    areas,
+    tooltip,
+    (layer, el, event) => {
+      // replicate showAreaTooltip’s content
+      const [mouseX] = d3.pointer(event);
+      const timePoint = findClosestDataPoint(mouseX, scales.x, data);
+      if (!timePoint) return "";
+      const category = layer.key;
+      const value = isPercentage ? timePoint[category + "_original"] : timePoint[category];
+      const total = timePoint._total || d3.sum(Object.values(timePoint));
+      const pct = (value / total) * 100;
+      const timeStr = isNumericTime ? timePoint.time : d3.timeFormat("%Y-%m-%d")(timePoint.time);
+      return `
+        <strong>${categoricalDimension}:</strong> ${category}<br>
+        <strong>${timeDimension}:</strong> ${timeStr}<br>
+        <strong>${measure}:</strong> ${formatValue(value)}<br>
+        <strong>Percentage:</strong> ${pct.toFixed(1)}%
+      `;
+    },
+    (el, d) => el.attr("opacity", d ? 1 : 0.8)
+  );
 }
 
 /**

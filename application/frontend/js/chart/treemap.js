@@ -7,6 +7,7 @@ import {
   setupResizeHandler,
   validateRenderingContext,
   setupDimensionSwapHandler,
+  attachMouseTooltip,
 } from "./utils/chartUtils.js";
 import { chartControls } from "./utils/chartControls.js";
 
@@ -179,7 +180,7 @@ function renderCells(container, svg, root, dimensions, measure) {
  * Adds rectangle elements
  */
 function addRectangles(cell, dimensions, colorScale, tooltip, measure, totalValue) {
-  cell
+  const areas = cell
     .append("rect")
     .attr("width", (d) => Math.max(0, d.x1 - d.x0))
     .attr("height", (d) => Math.max(0, d.y1 - d.y0))
@@ -187,19 +188,22 @@ function addRectangles(cell, dimensions, colorScale, tooltip, measure, totalValu
     .attr("stroke", (d) => getStrokeColor(d, dimensions))
     .attr("stroke-width", (d) => getStrokeWidth(d, dimensions))
     .attr("opacity", 0.9)
-    .attr("rx", 2)
-    .on("mouseover", function (event, d) {
-      d3.select(this).attr("opacity", 1).attr("stroke-width", 2);
+    .attr("rx", 2);
 
-      chartStyles.tooltip.show(tooltip, event, getTooltipContent(d, dimensions, measure, totalValue));
-    })
-    .on("mouseout", function (d) {
-      d3.select(this)
-        .attr("opacity", 0.9)
-        .attr("stroke-width", (d) => getStrokeWidth(d, dimensions));
-
-      chartStyles.tooltip.hide(tooltip);
-    });
+  attachMouseTooltip(
+    areas,
+    tooltip,
+    // use your helper to build HTML
+    (d) => getTooltipContent(d, dimensions, measure, totalValue),
+    // simple highlight: full opacity & thicker stroke on hover
+    (el, d) => {
+      if (d) {
+        el.attr("opacity", 1).attr("stroke-width", 2);
+      } else {
+        el.attr("opacity", 0.9).attr("stroke-width", getStrokeWidth(el.datum(), dimensions));
+      }
+    }
+  );
 }
 
 /**
