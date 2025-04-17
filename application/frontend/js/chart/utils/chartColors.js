@@ -9,7 +9,6 @@ export const chartColors = {
     "#C3E8FF", // Light blue
     "#F9D3A0", // Light orange/peach
     "#F79DA8", // Light pink/salmon
-    "#808080", // Gray
     "#D6A3F5", // Light purple
     "#A0E6C5", // Light mint green
     "#FFDDFA", // Light pink
