@@ -56,11 +56,13 @@ function renderTreemap(container) {
  * Creates SVG element
  */
 function createSvg(container) {
+  const containerHeight = container.clientHeight * 0.98; // adjust for making it unscrollable
+
   return d3
     .select(container)
     .append("svg")
     .attr("width", "100%")
-    .attr("height", "100%")
+    .attr("height", containerHeight)
     .attr("class", "viz-treemap-canvas");
 }
 
