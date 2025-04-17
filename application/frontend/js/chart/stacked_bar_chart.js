@@ -1,274 +1,303 @@
+/**
+ * Stacked Bar Chart Component
+ * Displays data stacked by dimension values either as absolute values or percentages
+ */
 import { state } from "../state.js";
-import { CHART_DIMENSIONS } from "../constants.js";
-import { createLegend } from "./utils/legendUtil.js";
-import { chartStyles } from "./utils/chartStyles.js"; // Import the styles
+import { chartStyles } from "./utils/chartStyles.js";
+import { chartColors } from "./utils/chartColors.js";
+import { chartControls } from "./utils/chartControls.js";
+import {
+  formatValue,
+  setupResizeHandler,
+  setupDimensionSwapHandler,
+  validateRenderingContext,
+} from "./utils/chartUtils.js";
+import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js";
 
-function renderStackedBarChart(container, isPercentage = false) {
-  // Clear main container
-  container.innerHTML = "";
+// -------------------------------------------------------------------------
+// CHART DESIGN PARAMETERS
+// -------------------------------------------------------------------------
+const CHART_DESIGN = {
+  barHeight: 20, // Height of each bar in pixels
+  rowSpacing: 15, // Space between rows in pixels
+  cornerRadius: 0, // Rounded corner radius
+  minChartHeight: 400, // Minimum overall chart height
+  maxChartHeight: 650, // Maximum overall chart height
+  percentagePrecision: 1, // Decimal places for percentage values
+};
+// -------------------------------------------------------------------------
 
-  // Create a dedicated controls container that won't be cleared
-  const controlsDiv = document.createElement("div");
-  controlsDiv.className = "chart-controls";
-  container.appendChild(controlsDiv);
+/**
+ * Main render function for stacked bar chart
+ */
+function renderStackedBarChart(container) {
+  if (!validateRenderingContext(container)) return;
 
-  // Create flexible container for legend and chart
-  const flexContainer = document.createElement("div");
-  flexContainer.className = "chart-flex-container";
-  container.appendChild(flexContainer);
+  // Extract data and settings
+  const isPercentage = state.chartType === "stacked_bar_chart_100";
+  const { chartContainer, legendContainer } = createHorizontalLayout(container);
+  const dimensions = chartControls.initDimensionSwap("stacked_bar_chart")
+    ? chartControls.getSwappableDimensions()
+    : state.aggregationDefinition.dimensions;
 
-  // Add swap button to controls div (won't be cleared later)
-  addSwapButton(controlsDiv, container, isPercentage);
-
-  // Prepare data for visualization
-  const { groupKey, stackKey, measure, stackData, sortedGroups, sortedStacks } = prepareData(container, isPercentage);
-
-  // Create color scale
-  const color = d3.scaleOrdinal().domain(sortedStacks).range(d3.schemeCategory10);
-
-  // Create legend and get chart area
-  const { chartArea } = createLegend(flexContainer, sortedStacks, color);
-
-  // Create chart container and elements
-  const { svg, xAxisSvg, config } = setupChartElements(chartArea, sortedGroups);
-
-  // Create scales and draw chart
-  const { x, y } = createScales(sortedGroups, stackData, config, isPercentage);
-
-  // Draw chart
-  drawChart(svg, xAxisSvg, x, y, stackData, sortedStacks, config, groupKey, stackKey, measure, isPercentage, color);
-}
-
-// Simple function that ONLY adds the button without clearing
-function addSwapButton(controlsDiv, parentContainer, isPercentage) {
-  // Initialize swap flag on the main container
-  parentContainer.swapDimensions = parentContainer.swapDimensions || false;
-
-  const swapBtn = document.createElement("button");
-  swapBtn.textContent = "Swap Dimensions";
-  swapBtn.className = "chart-button";
-
-  swapBtn.addEventListener("click", () => {
-    parentContainer.swapDimensions = !parentContainer.swapDimensions;
-    renderStackedBarChart(parentContainer, isPercentage);
-  });
-
-  controlsDiv.appendChild(swapBtn);
-}
-
-// Process data for visualization (keep this function largely the same)
-function prepareData(container, isPercentage) {
   const dataset = state.dataset;
-
-  // Get dimensions (apply swap if needed)
-  let [groupKey, stackKey] = state.aggregationDefinition.dimensions;
-  if (container.swapDimensions) {
-    [groupKey, stackKey] = [stackKey, groupKey];
-  }
+  const [groupKey, stackKey] = dimensions;
   const measure = state.aggregationDefinition.measures[0].alias;
 
-  // Get unique values for each dimension
-  const uniqueGroups = [...new Set(dataset.map((d) => d[groupKey]))];
-  const uniqueStacks = [...new Set(dataset.map((d) => d[stackKey]))];
+  // Process data and create chart
+  const { stackData, sortedGroups, sortedStacks } = processData(dataset, groupKey, stackKey, measure, isPercentage);
+  const config = createConfig(sortedGroups);
+  const scales = createScales(sortedGroups, stackData, config, isPercentage);
+  const elements = createChartElements(chartContainer, config);
 
-  // Sort groups by total measure value
-  const groupTotals = {};
-  uniqueGroups.forEach((group) => {
-    groupTotals[group] = dataset.filter((d) => d[groupKey] === group).reduce((sum, d) => sum + (d[measure] || 0), 0);
-  });
+  // Setup visualization
+  const color = d3.scaleOrdinal().domain(sortedStacks).range(chartColors.mainPalette);
+  const tooltip = chartStyles.createTooltip();
 
-  const sortedGroups = uniqueGroups.sort((a, b) => groupTotals[b] - groupTotals[a]);
-  const sortedStacks = uniqueStacks;
+  // Render chart components
+  renderBars(elements.svg, stackData, sortedStacks, scales, groupKey, stackKey, measure, isPercentage, color, tooltip);
+  renderAxes(elements.svg, elements.xAxisSvg, scales, config, isPercentage);
+  createColorLegend(legendContainer, sortedStacks, color);
+  setupEventHandlers(container);
+}
 
-  // Transform data for D3 stack layout
+/**
+ * Process data for stacked bar chart
+ */
+function processData(dataset, groupKey, stackKey, measure, isPercentage) {
+  // Get unique values and calculate totals
+  const groups = [...new Set(dataset.map((d) => d[groupKey]))];
+  const stacks = [...new Set(dataset.map((d) => d[stackKey]))];
+
+  // Calculate totals and sort groups by total measure value
+  const groupTotals = Object.fromEntries(
+    groups.map((group) => [
+      group,
+      d3.sum(
+        dataset.filter((d) => d[groupKey] === group),
+        (d) => d[measure] || 0
+      ),
+    ])
+  );
+
+  const sortedGroups = [...groups].sort((a, b) => groupTotals[b] - groupTotals[a]);
+
+  // Create data structure for stacking
   const stackData = sortedGroups.map((group) => {
-    // Create object with group as key
+    // Base object with group key
     const obj = { [groupKey]: group };
 
-    // Add measure values for each stack
-    sortedStacks.forEach((stack) => {
-      const match = dataset.find((d) => d[groupKey] === group && d[stackKey] === stack);
-      obj[stack] = match ? match[measure] : 0;
+    // Add values for each stack
+    stacks.forEach((stack) => {
+      const item = dataset.find((d) => d[groupKey] === group && d[stackKey] === stack);
+      obj[stack] = item ? item[measure] || 0 : 0;
     });
 
-    // For 100% charts, calculate percentages
+    // Calculate percentages if needed
     if (isPercentage) {
-      const total = sortedStacks.reduce((sum, key) => sum + obj[key], 0);
+      const total = d3.sum(Object.values(obj).filter((v) => typeof v === "number"));
       if (total > 0) {
-        sortedStacks.forEach((key) => {
-          obj[key + "_original"] = obj[key];
-          obj[key] = (obj[key] / total) * 100;
+        // Store original values and calculate percentages
+        stacks.forEach((stack) => {
+          obj[`${stack}_original`] = obj[stack];
+          obj[stack] = (obj[stack] / total) * 100;
         });
-        obj._total = total;
       }
+      obj._total = total;
     }
 
     return obj;
   });
 
-  return { groupKey, stackKey, measure, stackData, sortedGroups, sortedStacks };
+  return { stackData, sortedGroups, sortedStacks: stacks };
 }
 
-// Setup chart structure
-function setupChartElements(container, sortedGroups) {
-  // Use 100% of the provided container (which is already sized to 80%)
-  const width = CHART_DIMENSIONS.width * 0.8;
-  const height = CHART_DIMENSIONS.height;
-  const margin = { top: 40, right: 20, bottom: 60, left: 200 };
+/**
+ * Create chart configuration
+ */
+function createConfig(sortedGroups) {
+  const margin = chartStyles.getChartMargins("stacked_bar_chart");
 
-  // Calculate full chart height based on number of groups
-  const barHeight = 30;
-  const groupPadding = 10;
-  const fullChartHeight = margin.top + margin.bottom + sortedGroups.length * (barHeight + groupPadding);
+  // Set up fixed row dimensions
+  const barHeight = CHART_DESIGN.barHeight;
+  const rowSpacing = CHART_DESIGN.rowSpacing;
+  const rowHeight = barHeight + rowSpacing;
 
-  // Create container elements
-  const chartContainer = document.createElement("div");
-  chartContainer.style.position = "relative";
-  chartContainer.style.width = "100%";
-  chartContainer.style.height = height + "px";
-  container.appendChild(chartContainer);
+  // Calculate chart dimensions
+  const contentHeight = sortedGroups.length * rowHeight;
+  const fullHeight = margin.top + margin.bottom + contentHeight;
+  const adjustedFullHeight = Math.max(fullHeight, CHART_DESIGN.minChartHeight);
+  const displayHeight = Math.min(adjustedFullHeight, CHART_DESIGN.maxChartHeight);
 
-  // Fixed x-axis container
-  const xAxisDiv = document.createElement("div");
-  xAxisDiv.style.position = "absolute";
-  xAxisDiv.style.top = "0";
-  xAxisDiv.style.width = "100%";
-  xAxisDiv.style.height = margin.top + "px";
-  xAxisDiv.style.zIndex = "2"; // Ensure it's above the scroll area
-  chartContainer.appendChild(xAxisDiv);
-
-  // Scrollable chart area - ADJUST THIS LINE:
-  const scrollDiv = document.createElement("div");
-  scrollDiv.style.position = "absolute";
-  scrollDiv.style.top = margin.top - 1 + "px"; // Move up by 1px to remove gap
-  scrollDiv.style.width = "100%";
-  scrollDiv.style.height = height - margin.top + "px";
-  scrollDiv.style.overflowY = "auto";
-  chartContainer.appendChild(scrollDiv);
-
-  // Create SVGs
-  const svg = d3.select(scrollDiv).append("svg").attr("width", width).attr("height", fullChartHeight);
-
-  const xAxisSvg = d3
-    .select(xAxisDiv)
-    .append("svg")
-    .attr("width", width)
-    .attr("height", margin.top + 30);
-
-  const config = { width, height, margin, fullChartHeight };
-  return { svg, xAxisSvg, config };
+  return {
+    margin,
+    barHeight,
+    rowHeight,
+    rowSpacing,
+    fullHeight: adjustedFullHeight,
+    displayHeight,
+    needsScrolling: adjustedFullHeight > displayHeight,
+  };
 }
 
-// Create scales based on data
+/**
+ * Create scales for the chart
+ */
 function createScales(sortedGroups, stackData, config, isPercentage) {
-  // Y scale for groups
+  // Get chart dimensions
+  const height = config.fullHeight - config.margin.top - config.margin.bottom;
+  const chartEl = document.querySelector(".viz-chart-area");
+  const chartWidth = chartEl?.clientWidth || 800;
+
+  // Y scale - positions each group
   const y = d3
     .scaleBand()
     .domain(sortedGroups)
-    .range([0, config.fullChartHeight - config.margin.top - config.margin.bottom])
-    .padding(0.1);
+    .range([0, height])
+    .padding(config.rowSpacing / (config.rowHeight * 2));
 
-  // X scale based on measure values
+  // X scale - measure values
   const xMax = isPercentage
     ? 100
     : d3.max(stackData, (d) => {
         return d3.sum(
           Object.entries(d)
-            .filter(([key]) => key !== Object.keys(d)[0])
+            .filter(([key]) => key !== sortedGroups[0] && !key.startsWith("_"))
             .map(([_, val]) => val || 0)
         );
       });
 
   const x = d3
     .scaleLinear()
-    .domain([0, xMax])
-    .range([config.margin.left, config.width - config.margin.right])
+    .domain([0, isPercentage ? 100 : xMax * 1.05])
+    .range([config.margin.left, chartWidth - config.margin.right - (isPercentage ? 0 : 10)])
     .nice();
 
   return { x, y };
 }
 
-// Draw the chart with all elements
-function drawChart(
-  svg,
-  xAxisSvg,
-  x,
-  y,
-  stackData,
-  sortedStacks,
-  config,
-  groupKey,
-  stackKey,
-  measure,
-  isPercentage,
-  color
-) {
+/**
+ * Create chart DOM elements
+ */
+function createChartElements(container, config) {
+  // Create container elements
+  const xAxisContainer = document.createElement("div");
+  xAxisContainer.className = "viz-axis-container";
+
+  const scrollContainer = document.createElement("div");
+  scrollContainer.className = "viz-bar-scroll";
+  Object.assign(scrollContainer.style, {
+    position: "absolute",
+    top: `${config.margin.top}px`,
+    bottom: "20px",
+    left: "0",
+    right: "0",
+    overflowY: config.needsScrolling ? "auto" : "hidden",
+    overflowX: "hidden",
+  });
+
+  // Apply styles to main container
+  Object.assign(container.style, {
+    position: "relative",
+    width: "100%",
+  });
+
+  // Add to DOM
+  container.appendChild(xAxisContainer);
+  container.appendChild(scrollContainer);
+
+  // Create SVG elements
+  const svg = d3
+    .select(scrollContainer)
+    .append("svg")
+    .attr("class", "viz-stacked-bar-canvas")
+    .attr("width", "100%")
+    .attr("height", config.fullHeight - config.margin.top);
+
+  const xAxisSvg = d3
+    .select(xAxisContainer)
+    .append("svg")
+    .attr("class", "viz-axis-canvas")
+    .attr("width", "100%")
+    .attr("height", config.margin.top);
+
+  return { svg, xAxisSvg };
+}
+
+/**
+ * Render stacked bars
+ */
+function renderBars(svg, stackData, sortedStacks, scales, groupKey, stackKey, measure, isPercentage, color, tooltip) {
   // Create stack generator
   const stack = d3.stack().keys(sortedStacks).order(d3.stackOrderNone).offset(d3.stackOffsetNone);
-  const stackedData = stack(stackData);
 
-  // Create tooltip using the shared styles
-  const tooltip = chartStyles.createTooltip("body");
-
-  // Draw y-axis with consistent styling
-  svg
-    .append("g")
-    .attr("class", "y-axis")
-    .attr("transform", `translate(${config.margin.left},0)`)
-    .call(d3.axisLeft(y))
-    .call((g) => chartStyles.applyAxisStyles(g));
-
-  // Draw x-axis with consistent styling (matching grouped bar chart)
-  xAxisSvg
-    .append("g")
-    .attr("class", "x-axis")
-    .attr("transform", `translate(0,${config.margin.top - 1})`) // Match grouped bar chart's positioning
-    .call(
-      d3
-        .axisTop(x) // Use axisTop like grouped bar chart instead of axisBottom
-        .ticks(5)
-        .tickFormat((d) => (isPercentage ? d + "%" : d))
-    )
-    .call((g) => chartStyles.applyAxisStyles(g));
-
-  // Draw bars with consistent tooltip behavior
+  // Draw bars
   svg
     .append("g")
     .selectAll("g")
-    .data(stackedData)
+    .data(stack(stackData))
     .join("g")
     .attr("fill", (d) => color(d.key))
     .selectAll("rect")
     .data((d) => d)
     .join("rect")
-    .attr("y", (d) => y(d.data[groupKey]))
-    .attr("x", (d) => x(d[0]))
-    .attr("width", (d) => x(d[1]) - x(d[0]))
-    .attr("height", y.bandwidth())
-    .on("mouseover", function (event, d) {
-      const stackValue = d3.select(this.parentNode).datum().key;
-      const groupValue = d.data[groupKey];
-      const value = isPercentage ? d.data[stackValue + "_original"] : d.data[stackValue];
+    .attr("y", (d) => scales.y(d.data[groupKey]))
+    .attr("x", (d) => scales.x(d[0]))
+    .attr("width", (d) => Math.max(0, scales.x(d[1]) - scales.x(d[0])))
+    .attr("height", scales.y.bandwidth())
+    .attr("rx", CHART_DESIGN.cornerRadius)
+    .on("mouseover", (event, d) => {
+      const stack = d3.select(event.target.parentNode).datum().key;
+      const group = d.data[groupKey];
+      const value = isPercentage ? d.data[`${stack}_original`] : d.data[stack];
       const total = d.data._total || d3.sum(sortedStacks, (s) => d.data[s] || 0);
-      const pct = isPercentage ? d.data[stackValue] : (value / total) * 100;
+      const percentage = isPercentage ? d.data[stack] : (value / total) * 100;
 
-      // Use the shared tooltip behavior
       chartStyles.showTooltip(
         tooltip,
         event,
-        `
-        <strong>${groupKey}:</strong> ${groupValue}<br>
-        <strong>${stackKey}:</strong> ${stackValue}<br>
-        <strong>${measure}:</strong> ${value.toLocaleString()}<br>
-        <strong>Percentage:</strong> ${pct.toFixed(1)}%
-      `
+        `<strong>${groupKey}:</strong> ${group}<br>
+         <strong>${stackKey}:</strong> ${stack}<br>
+         <strong>${measure}:</strong> ${formatValue(value)}<br>
+         <strong>Percentage:</strong> ${percentage.toFixed(CHART_DESIGN.percentagePrecision)}%`
       );
     })
     .on("mouseout", () => chartStyles.hideTooltip(tooltip));
 }
 
-// Export the main rendering function
-export default function (container) {
-  const is100Percent = state.chartType === "stacked_bar_chart_100";
-  renderStackedBarChart(container, is100Percent);
+/**
+ * Render chart axes
+ */
+function renderAxes(svg, xAxisSvg, scales, config, isPercentage) {
+  // Y axis with labels
+  const yAxis = svg
+    .append("g")
+    .attr("class", "y-axis")
+    .attr("transform", `translate(${config.margin.left},0)`)
+    .call(d3.axisLeft(scales.y));
+
+  chartStyles.applyAxisStyles(yAxis);
+
+  // X axis with formatted values
+  const xAxis = xAxisSvg
+    .append("g")
+    .attr("transform", `translate(0,${config.margin.top - 1})`)
+    .call(
+      d3
+        .axisTop(scales.x)
+        .ticks(5)
+        .tickFormat(isPercentage ? (d) => `${d}%` : formatValue)
+    );
+
+  chartStyles.applyAxisStyles(xAxis);
 }
+
+/**
+ * Set up chart event handlers
+ */
+function setupEventHandlers(container) {
+  setupResizeHandler(container, () => renderStackedBarChart(container));
+  setupDimensionSwapHandler(renderStackedBarChart);
+}
+
+export default renderStackedBarChart;
