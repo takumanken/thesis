@@ -324,7 +324,7 @@ function renderChart(
     })
     .on("mouseout", function () {
       d3.select(this).attr("opacity", 0.8);
-      chartStyles.hideTooltip(tooltip);
+      chartStyles.tooltip.hide(tooltip);
     });
 }
 
@@ -374,7 +374,7 @@ function showAreaTooltip(
     <strong>Percentage:</strong> ${percentage.toFixed(1)}%
   `;
 
-  chartStyles.showTooltip(tooltip, event, tooltipContent);
+  chartStyles.tooltip.show(tooltip, event, tooltipContent);
 }
 
 /**

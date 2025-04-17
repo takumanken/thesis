@@ -191,14 +191,14 @@ function addRectangles(cell, dimensions, colorScale, tooltip, measure, totalValu
     .on("mouseover", function (event, d) {
       d3.select(this).attr("opacity", 1).attr("stroke-width", 2);
 
-      chartStyles.showTooltip(tooltip, event, getTooltipContent(d, dimensions, measure, totalValue));
+      chartStyles.tooltip.show(tooltip, event, getTooltipContent(d, dimensions, measure, totalValue));
     })
     .on("mouseout", function (d) {
       d3.select(this)
         .attr("opacity", 0.9)
         .attr("stroke-width", (d) => getStrokeWidth(d, dimensions));
 
-      chartStyles.hideTooltip(tooltip);
+      chartStyles.tooltip.hide(tooltip);
     });
 }
 

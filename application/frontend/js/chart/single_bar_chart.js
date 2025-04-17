@@ -173,11 +173,11 @@ function renderBars(svg, dataset, scales, measure, dimension, config, tooltip) {
         <strong>${dimension}:</strong> ${d[dimension]}<br>
         <strong>${measure}:</strong> ${formatValue(d[measure])}
       `;
-      chartStyles.showTooltip(tooltip, event, tooltipContent);
+      chartStyles.tooltip.show(tooltip, event, tooltipContent);
     })
     .on("mouseout", function () {
       d3.select(this).attr("fill", barColor);
-      chartStyles.hideTooltip(tooltip);
+      chartStyles.tooltip.hide(tooltip);
     });
 }
 

@@ -341,13 +341,13 @@ function drawMeasureBar(svg, measure, segment, category, xScale, y, rowHeight, c
     .attr("rx", chartStyles.barChart.bar.cornerRadius)
     .attr("fill", color)
     .on("mouseover", (event) => {
-      chartStyles.showTooltip(
+      chartStyles.tooltip.show(
         tooltip,
         event,
         `${category.name}${segment.name ? " > " + segment.name : ""}<br>${measure}: ${formatValue(value)}`
       );
     })
-    .on("mouseout", () => chartStyles.hideTooltip(tooltip));
+    .on("mouseout", () => chartStyles.tooltip.hide(tooltip));
 
   // Value label - always to the right of the bar
   svg

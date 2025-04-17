@@ -253,7 +253,7 @@ function renderBars(svg, stackData, sortedStacks, scales, groupKey, stackKey, me
       const total = d.data._total || d3.sum(sortedStacks, (s) => d.data[s] || 0);
       const percentage = isPercentage ? d.data[stack] : (value / total) * 100;
 
-      chartStyles.showTooltip(
+      chartStyles.tooltip.show(
         tooltip,
         event,
         `<strong>${groupKey}:</strong> ${group}<br>
@@ -262,7 +262,7 @@ function renderBars(svg, stackData, sortedStacks, scales, groupKey, stackKey, me
          <strong>Percentage:</strong> ${percentage.toFixed(CHART_DESIGN.percentagePrecision)}%`
       );
     })
-    .on("mouseout", () => chartStyles.hideTooltip(tooltip));
+    .on("mouseout", () => chartStyles.tooltip.hide(tooltip));
 }
 
 /**

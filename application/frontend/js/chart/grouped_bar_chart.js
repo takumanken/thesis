@@ -256,7 +256,7 @@ function drawBars(svg, dataset, scales, config, groupKey, subGroupKey, measure, 
     .attr("fill", (d) => color(d[subGroupKey]))
     .attr("rx", chartStyles.barChart.bar.cornerRadius)
     .on("mouseover", function (event, d) {
-      chartStyles.showTooltip(
+      chartStyles.tooltip.show(
         tooltip,
         event,
         `<strong>${groupKey}:</strong> ${d[groupKey]}<br>
@@ -264,7 +264,7 @@ function drawBars(svg, dataset, scales, config, groupKey, subGroupKey, measure, 
          <strong>${measure}:</strong> ${formatValue(d[measure])}`
       );
     })
-    .on("mouseout", () => chartStyles.hideTooltip(tooltip));
+    .on("mouseout", () => chartStyles.tooltip.hide(tooltip));
 }
 
 /**

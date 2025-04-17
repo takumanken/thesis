@@ -211,7 +211,7 @@ function renderMap(svg, geoJson, path, colorScale, geoDimension, measure, toolti
     .on("mousemove", (event) => moveTooltip(event, tooltip))
     .on("mouseout", function () {
       resetRegionHighlight(this);
-      chartStyles.hideTooltip(tooltip);
+      chartStyles.tooltip.hide(tooltip);
     });
 }
 
@@ -249,7 +249,7 @@ function showRegionTooltip(event, feature, tooltip, geoDimension, measure) {
     `;
   }
 
-  chartStyles.showTooltip(tooltip, event, content);
+  chartStyles.tooltip.show(tooltip, event, content);
 }
 
 /**

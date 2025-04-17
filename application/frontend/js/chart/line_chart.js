@@ -546,25 +546,25 @@ function createInteractionLayer(
           : d3.timeFormat("%Y-%m-%d")(closestPoint.data.parsedTime);
 
         // Show tooltip with formatted data
-        chartStyles.showTooltip(
+        chartStyles.tooltip.show(
           tooltip,
           event,
           `
-        <strong>${groupDimension}:</strong> ${closestPoint.group}<br>
-        <strong>${timeDimension}:</strong> ${timeValue}<br>
-        <strong>${measure}:</strong> ${formatValue(closestPoint.data[measure])}
-      `
+          <strong>${groupDimension}:</strong> ${closestPoint.group}<br>
+          <strong>${timeDimension}:</strong> ${timeValue}<br>
+          <strong>${measure}:</strong> ${formatValue(closestPoint.data[measure])}
+        `
         );
       } else {
         // Hide tooltip when not near any point
         highlight.style("opacity", 0);
-        chartStyles.hideTooltip(tooltip);
+        chartStyles.tooltip.hide(tooltip);
       }
     })
     .on("mouseleave", function () {
       // Hide tooltip when leaving chart area
       highlight.style("opacity", 0);
-      chartStyles.hideTooltip(tooltip);
+      chartStyles.tooltip.hide(tooltip);
     });
 }
 
@@ -623,24 +623,24 @@ function createSingleLineInteraction(svg, data, scales, tooltip, lineGenerator, 
             : d3.timeFormat("%Y-%m-%d")(closestPoint.data.parsedTime);
 
         // Show tooltip with formatted data
-        chartStyles.showTooltip(
+        chartStyles.tooltip.show(
           tooltip,
           event,
           `
-        <strong>${timeDimension}:</strong> ${timeValue}<br>
-        <strong>${measure}:</strong> ${formatValue(closestPoint.data[measure])}
-      `
+          <strong>${timeDimension}:</strong> ${timeValue}<br>
+          <strong>${measure}:</strong> ${formatValue(closestPoint.data[measure])}
+        `
         );
       } else {
         // Hide tooltip when not near any point
         highlight.style("opacity", 0);
-        chartStyles.hideTooltip(tooltip);
+        chartStyles.tooltip.hide(tooltip);
       }
     })
     .on("mouseleave", function () {
       // Hide tooltip when leaving chart area
       highlight.style("opacity", 0);
-      chartStyles.hideTooltip(tooltip);
+      chartStyles.tooltip.hide(tooltip);
     });
 }
 

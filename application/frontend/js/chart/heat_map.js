@@ -213,7 +213,7 @@ function addTooltipFunctionality(map, points, measure) {
       }
     } else if (isTooltipVisible) {
       // Hide tooltip when not near a point
-      chartStyles.hideTooltip(tooltip);
+      chartStyles.tooltip.hide(tooltip);
       isTooltipVisible = false;
 
       // Remove marker when moving away
@@ -226,7 +226,7 @@ function addTooltipFunctionality(map, points, measure) {
 
   // Handle mouse leaving the map
   map.on("mouseout", () => {
-    chartStyles.hideTooltip(tooltip);
+    chartStyles.tooltip.hide(tooltip);
     isTooltipVisible = false;
 
     // Clean up marker
@@ -280,7 +280,7 @@ function showPointTooltip(event, point, measure, tooltip) {
   `;
 
   // Show tooltip
-  chartStyles.showTooltip(tooltip, event, content);
+  chartStyles.tooltip.show(tooltip, event, content);
 }
 
 /**
