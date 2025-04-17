@@ -1,5 +1,11 @@
+/**
+ * Data Visualization Module
+ * Handles rendering of charts and visualizations based on state
+ */
 import { state } from "./state.js";
-import { chartControls } from "./chart/utils/chartControls.js"; // Add this import
+import { chartControls } from "./chart/utils/chartControls.js";
+
+// Import chart renderers
 import renderTable from "./chart/table.js";
 import renderBarChart from "./chart/single_bar_chart.js";
 import renderLineChart from "./chart/line_chart.js";
@@ -12,8 +18,248 @@ import renderTextResponse from "./chart/text_response.js";
 import renderTreemap from "./chart/treemap.js";
 import renderNestedBarChart from "./chart/nested_bar_chart.js";
 
+// Chart type configuration with icons and labels
+const CHART_TYPE_CONFIG = {
+  table: { icon: "table_chart", label: "Table" },
+  single_bar_chart: { icon: "bar_chart", label: "Bar Chart" },
+  line_chart: { icon: "show_chart", label: "Line Chart" },
+  choropleth_map: { icon: "map", label: "Map" },
+  heat_map: { icon: "grain", label: "Heat Map" },
+  grouped_bar_chart: { icon: "view_column", label: "Grouped Bar Chart" },
+  stacked_bar_chart: { icon: "stacked_bar_chart", label: "Stacked Bar Chart" },
+  stacked_bar_chart_100: { icon: "stacked_bar_chart", label: "100% Stacked Bar" },
+  stacked_area_chart: { icon: "area_chart", label: "Area Chart" },
+  stacked_area_chart_100: { icon: "area_chart", label: "100% Area Chart" },
+  treemap: { icon: "grid_view", label: "Treemap" },
+  nested_bar_chart: { icon: "view_list", label: "Nested Bar Chart" },
+  text: { icon: "text_fields", label: "Text Response" },
+};
+
+// Map of chart rendering functions
+const CHART_RENDERERS = {
+  table: renderTable,
+  single_bar_chart: renderBarChart,
+  grouped_bar_chart: renderGroupedBarChart,
+  stacked_bar_chart: renderStackedBarChart,
+  stacked_bar_chart_100: renderStackedBarChart,
+  stacked_area_chart: renderStackedAreaChart,
+  stacked_area_chart_100: renderStackedAreaChart,
+  line_chart: renderLineChart,
+  choropleth_map: renderChoroplethMap,
+  heat_map: renderPointMap,
+  treemap: renderTreemap,
+  nested_bar_chart: renderNestedBarChart,
+  text: renderTextResponse,
+};
+
 /**
- * Cleans up previous visualizations.
+ * Main visualization function - renders the appropriate chart based on state
+ */
+function visualizeData() {
+  // Find and prepare containers
+  const containers = findContainers();
+  if (!containers) return;
+
+  // Reset UI state for new visualization
+  resetUiState();
+
+  // Prepare visualization container
+  setupVisualizationContainer(containers.insightsDiv, containers.insightsContainer);
+
+  // Render the selected chart
+  renderChart();
+}
+
+/**
+ * Find all necessary containers with fallbacks
+ * @returns {Object|null} Container references or null if not found
+ */
+function findContainers() {
+  const insightsContainer =
+    document.getElementById("dataInsightsContainer") ||
+    document.querySelector(".dashboard-panel") ||
+    document.querySelector(".insight-container");
+
+  const insightsDiv =
+    document.getElementById("dataInsights") ||
+    document.querySelector(".visualization-area") ||
+    document.querySelector(".insight-content");
+
+  if (!insightsContainer || !insightsDiv) {
+    console.error("Visualization containers not found. Check HTML structure.");
+    return null;
+  }
+
+  return { insightsContainer, insightsDiv };
+}
+
+/**
+ * Reset UI state before rendering new visualization
+ */
+function resetUiState() {
+  state.dimensionsSwapped = false;
+  chartControls.removeExistingControl();
+}
+
+/**
+ * Set up the visualization container with header and chart area
+ * @param {HTMLElement} insightsDiv - The insights div container
+ * @param {HTMLElement} insightsContainer - The outer insights container
+ */
+function setupVisualizationContainer(insightsDiv, insightsContainer) {
+  // Clear existing content
+  insightsDiv.innerHTML = "";
+
+  // Add header content
+  const headerContent = createHeaderContent();
+  insightsDiv.appendChild(headerContent);
+
+  // Create and add chart container
+  const vizContainer = document.createElement("div");
+  vizContainer.id = "vizContainer";
+  vizContainer.className = "viz-container";
+  insightsDiv.appendChild(vizContainer);
+
+  // Create chart type switcher
+  createChartTypeSwitcher();
+
+  // Display the insights container
+  insightsContainer.style.display = "flex";
+}
+
+/**
+ * Create the header content with title and description
+ * @returns {HTMLElement} The header content element
+ */
+function createHeaderContent() {
+  const headerContent = document.createElement("div");
+  headerContent.className = "insight-header-content";
+
+  // Add title if available
+  if (state.dataInsights?.title) {
+    const titleElement = document.createElement("h3");
+    titleElement.className = "viz-title";
+    titleElement.textContent = state.dataInsights.title;
+    headerContent.appendChild(titleElement);
+  }
+
+  // Add description if available
+  if (state.dataInsights?.dataDescription) {
+    const descriptionElement = document.createElement("p");
+    descriptionElement.className = "viz-description";
+    descriptionElement.textContent = state.dataInsights.dataDescription;
+    headerContent.appendChild(descriptionElement);
+  }
+
+  return headerContent;
+}
+
+/**
+ * Creates and populates the chart type switcher with available chart types
+ */
+function createChartTypeSwitcher() {
+  // Find the selector container
+  const selectorContainer = document.querySelector(".viz-type-selector");
+  if (!selectorContainer) return;
+
+  // Clear existing content
+  selectorContainer.innerHTML = "";
+
+  // Get available chart types or use default
+  const availableChartTypes = state.availableChartTypes || ["table"];
+
+  // Create chart type options
+  availableChartTypes.forEach((typeId) => {
+    // Get config or create default from type ID
+    const config = CHART_TYPE_CONFIG[typeId] || createDefaultConfig(typeId);
+
+    // Create option element
+    const option = document.createElement("div");
+    option.className = `chart-type-option${state.chartType === typeId ? " selected" : ""}`;
+    option.dataset.chartType = typeId;
+    option.innerHTML = `<span class="material-icons">${config.icon}</span>`;
+    option.title = config.label;
+
+    // Add click handler
+    option.addEventListener("click", () => {
+      // Update UI selection
+      selectorContainer.querySelectorAll(".chart-type-option").forEach((opt) => {
+        opt.classList.remove("selected");
+      });
+      option.classList.add("selected");
+
+      // Update state and redraw
+      state.chartType = typeId;
+      visualizeData();
+    });
+
+    selectorContainer.appendChild(option);
+  });
+}
+
+/**
+ * Create default configuration for chart types without predefined config
+ * @param {string} typeId - Chart type ID
+ * @returns {Object} Chart configuration
+ */
+function createDefaultConfig(typeId) {
+  return {
+    icon: "help_outline",
+    label: typeId
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" "),
+  };
+}
+
+/**
+ * Render the currently selected chart
+ */
+function renderChart() {
+  // Get chart container
+  const chartContainer = getChartContainer();
+  if (!chartContainer) return;
+
+  // Clean up any existing charts
+  cleanupVisualization(chartContainer);
+
+  // Get the current chart type
+  const chartType = state.chartType || "single_bar_chart";
+  const renderer = CHART_RENDERERS[chartType];
+
+  // Render the selected chart or show error message
+  try {
+    if (renderer) {
+      renderer(chartContainer);
+    } else {
+      chartContainer.innerHTML = `<p>Chart type "${chartType}" is not supported.</p>`;
+    }
+  } catch (error) {
+    console.error("Error rendering chart:", error);
+    chartContainer.innerHTML = `<p>Error rendering chart: ${error.message}</p>`;
+  }
+}
+
+/**
+ * Get the chart container element
+ * @returns {HTMLElement|null} The chart container or null if not found
+ */
+function getChartContainer() {
+  const chartContainer =
+    document.getElementById("tableContainer") ||
+    document.querySelector(".viz-container") ||
+    document.querySelector("#viz-container");
+
+  if (!chartContainer) {
+    console.error("Chart container not found. Check your HTML structure.");
+    return null;
+  }
+
+  return chartContainer;
+}
+
+/**
+ * Cleans up previous visualizations
  * @param {HTMLElement} container - The container element to clean
  */
 function cleanupVisualization(container) {
@@ -36,236 +282,20 @@ function cleanupVisualization(container) {
 }
 
 /**
- * Renders visualization if data is available
- * @param {HTMLElement} container - The container to render into
- * @param {Function} renderFunction - The chart rendering function
- */
-function renderWithData(container, renderFunction) {
-  if (state.dataset && state.dataset.length > 0) {
-    renderFunction(container);
-  } else {
-    container.innerHTML = "<p>No data available to display.</p>";
-  }
-}
-
-// Modify updateDataInsights function to include chart type selector
-/**
- * Updates the data insights panel with chart information
- * @param {Object} response - The data response containing insights
- */
-function updateDataInsights(response) {
-  // Find containers with fallbacks for different possible IDs/classes
-  const insightsContainer =
-    document.getElementById("dataInsightsContainer") ||
-    document.querySelector(".dashboard-panel") ||
-    document.querySelector(".insight-container");
-
-  // Look for the visualization area with multiple possible selectors
-  const insightsDiv =
-    document.getElementById("dataInsights") ||
-    document.querySelector(".visualization-area") ||
-    document.querySelector(".insight-content");
-
-  // If we couldn't find the containers, log an error and stop
-  if (!insightsContainer || !insightsDiv) {
-    console.error("Visualization containers not found. Check HTML structure.", {
-      insightsContainer,
-      insightsDiv,
-    });
-    return;
-  }
-
-  // Clear existing content
-  insightsDiv.innerHTML = "";
-
-  // Create and add header content
-  const headerContent = document.createElement("div");
-  headerContent.className = "insight-header-content";
-
-  // Add title if available
-  if (response.dataInsights?.title) {
-    const titleElement = document.createElement("h3");
-    titleElement.className = "viz-title";
-    titleElement.textContent = response.dataInsights.title;
-    headerContent.appendChild(titleElement);
-  }
-
-  // Add description if available
-  if (response.dataInsights?.dataDescription) {
-    const descriptionElement = document.createElement("p");
-    descriptionElement.className = "viz-description";
-    descriptionElement.textContent = response.dataInsights.dataDescription;
-    headerContent.appendChild(descriptionElement);
-  }
-
-  // Add header content to insights div
-  insightsDiv.appendChild(headerContent);
-
-  // Create chart container with both possible IDs for compatibility
-  const vizContainer = document.createElement("div");
-  vizContainer.id = "vizContainer";
-  vizContainer.className = "viz-container";
-
-  // Add chart container to insights div
-  insightsDiv.appendChild(vizContainer);
-
-  // Create chart type dropdown in the sidebar
-  createChartTypeSwitcher();
-
-  // Display the insights container
-  insightsContainer.style.display = "flex";
-}
-
-/**
- * Creates and populates the chart type switcher with available chart types
- */
-function createChartTypeSwitcher() {
-  // Find the selector container
-  const selectorContainer = document.querySelector(".viz-type-selector");
-  if (!selectorContainer) {
-    console.error("Chart type selector container not found");
-    return;
-  }
-
-  // Clear existing content
-  selectorContainer.innerHTML = "";
-
-  // Chart type configuration map with icons and labels
-  const chartTypeConfig = {
-    table: { icon: "table_chart", label: "Table" },
-    single_bar_chart: { icon: "bar_chart", label: "Bar Chart" },
-    line_chart: { icon: "show_chart", label: "Line Chart" },
-    choropleth_map: { icon: "map", label: "Map" },
-    heat_map: { icon: "grain", label: "Heat Map" },
-    grouped_bar_chart: { icon: "view_column", label: "Grouped Bar Chart" },
-    stacked_bar_chart: { icon: "stacked_bar_chart", label: "Stacked Bar Chart" },
-    stacked_bar_chart_100: { icon: "stacked_bar_chart", label: "100% Stacked Bar" },
-    stacked_area_chart: { icon: "area_chart", label: "Area Chart" },
-    stacked_area_chart_100: { icon: "area_chart", label: "100% Area Chart" },
-    treemap: { icon: "grid_view", label: "Treemap" },
-    nested_bar_chart: { icon: "view_list", label: "Nested Bar Chart" },
-    text: { icon: "text_fields", label: "Text Response" }, // Add text chart type
-  };
-
-  // Use state.availableChartTypes if available, otherwise fallback to basic types
-  const availableChartTypes = state.availableChartTypes || ["table"];
-
-  console.log("Available chart types:", availableChartTypes);
-
-  // Create chart type options for each available chart type
-  availableChartTypes.forEach((typeId) => {
-    // Get config or use fallback
-    const config = chartTypeConfig[typeId] || {
-      icon: "help_outline",
-      label: typeId
-        .split("_")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" "),
-    };
-
-    const option = document.createElement("div");
-    option.className = `chart-type-option${state.chartType === typeId ? " selected" : ""}`;
-    option.dataset.chartType = typeId;
-    option.innerHTML = `<span class="material-icons">${config.icon}</span>`;
-    option.title = config.label;
-
-    // Add click handler
-    option.addEventListener("click", function () {
-      // Update selection state
-      selectorContainer.querySelectorAll(".chart-type-option").forEach((opt) => {
-        opt.classList.remove("selected");
-      });
-      this.classList.add("selected");
-
-      // Store in state directly
-      state.chartType = typeId;
-
-      // Redraw visualization
-      visualizeData();
-    });
-
-    selectorContainer.appendChild(option);
-  });
-}
-
-/**
- * Switch to a different chart type
+ * Switch to a different chart type (for external use)
  * @param {string} chartType - The type of chart to switch to
  */
 function switchChartType(chartType) {
-  console.log(`Switching to chart type: ${chartType}`);
-
   // Update state directly
   state.chartType = chartType;
 
-  // Redraw visualization using main function
+  // Redraw visualization
   visualizeData();
 }
 
-// Make sure functions are globally available
-window.createChartTypeSwitcher = createChartTypeSwitcher;
-window.switchChartType = switchChartType;
-
-/**
- * Renders the appropriate chart based on state
- */
-function visualizeData() {
-  // Update insights panel if needed
-  updateDataInsights(state);
-
-  // Reset dimension swap state when visualizing new data
-  state.dimensionsSwapped = false;
-  chartControls.removeExistingControl();
-
-  // Get chart container with multiple fallbacks
-  const chartContainer =
-    document.getElementById("tableContainer") ||
-    document.querySelector(".viz-container") ||
-    document.querySelector("#viz-container");
-
-  // Check if container exists before proceeding
-  if (!chartContainer) {
-    console.error("Chart container not found. Check your HTML structure.");
-    return;
-  }
-
-  // Clean up any existing charts
-  cleanupVisualization(chartContainer);
-
-  // Get the current chart type
-  const chartType = state.chartType || "single_bar_chart";
-
-  console.log(`Rendering chart type: ${chartType}`);
-
-  // Map chart types to their rendering functions
-  const renderers = {
-    table: renderTable,
-    single_bar_chart: renderBarChart,
-    grouped_bar_chart: renderGroupedBarChart,
-    stacked_bar_chart: renderStackedBarChart,
-    stacked_bar_chart_100: renderStackedBarChart,
-    stacked_area_chart: renderStackedAreaChart,
-    stacked_area_chart_100: renderStackedAreaChart,
-    line_chart: renderLineChart,
-    choropleth_map: renderChoroplethMap,
-    heat_map: renderPointMap,
-    treemap: renderTreemap,
-    nested_bar_chart: renderNestedBarChart,
-    text: renderTextResponse,
-  };
-
-  // Render the selected chart type
-  try {
-    const renderer = renderers[chartType];
-    if (renderer) {
-      renderer(chartContainer);
-    } else {
-      chartContainer.innerHTML = `<p>Chart type "${chartType}" is not supported.</p>`;
-    }
-  } catch (error) {
-    console.error("Error rendering chart:", error);
-    chartContainer.innerHTML = `<p>Error rendering chart: ${error.message}</p>`;
-  }
-}
-
+// Export function for direct access
 export default visualizeData;
+
+// Make specific functions available globally if needed
+window.switchChartType = switchChartType;
+window.createChartTypeSwitcher = createChartTypeSwitcher;
