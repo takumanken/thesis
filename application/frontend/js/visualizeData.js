@@ -144,6 +144,7 @@ function createChartTypeSwitcher() {
     stacked_area_chart_100: { icon: "area_chart", label: "100% Area Chart" },
     treemap: { icon: "grid_view", label: "Treemap" },
     nested_bar_chart: { icon: "view_list", label: "Nested Bar Chart" },
+    text: { icon: "text_fields", label: "Text Response" }, // Add text chart type
   };
 
   // Use state.availableChartTypes if available, otherwise fallback to basic types
@@ -250,6 +251,7 @@ function visualizeData() {
     heat_map: renderPointMap,
     treemap: renderTreemap,
     nested_bar_chart: renderNestedBarChart,
+    text: renderTextResponse,
   };
 
   // Render the selected chart type
