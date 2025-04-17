@@ -1,310 +1,236 @@
+/**
+ * Grouped Bar Chart Component
+ */
 import { state } from "../state.js";
-import { CHART_DIMENSIONS } from "../constants.js";
-import { createLegend } from "./utils/legendUtil.js";
-import { chartStyles } from "./utils/chartStyles.js"; // Import the styles
+import { chartStyles } from "./utils/chartStyles.js";
+import { chartColors } from "./utils/chartColors.js";
+import { chartControls } from "./utils/chartControls.js";
+import { formatValue, setupResizeHandler, validateRenderingContext } from "./utils/chartUtils.js";
+import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js";
 
+/**
+ * Main render function for grouped bar chart
+ */
 function renderGroupedBarChart(container) {
-  // Clear main container
-  container.innerHTML = "";
+  if (!validateRenderingContext(container)) return;
 
-  // Create a dedicated controls container that won't be cleared
-  const controlsDiv = document.createElement("div");
-  controlsDiv.className = "chart-controls";
-  container.appendChild(controlsDiv);
+  // Setup layout and extract dimensions
+  const { chartContainer, legendContainer } = createHorizontalLayout(container);
+  const dimensions = chartControls.initDimensionSwap("grouped_bar_chart")
+    ? chartControls.getSwappableDimensions()
+    : state.aggregationDefinition.dimensions;
 
-  // Create flexible container for legend and chart
-  const flexContainer = document.createElement("div");
-  flexContainer.className = "chart-flex-container";
-  container.appendChild(flexContainer);
-
-  // Add swap button to controls div (won't be cleared later)
-  addSwapButton(controlsDiv, container);
-
+  // Get data and keys
   const dataset = state.dataset;
-  const { groupKey, subGroupKey, measure } = extractDimensions(container);
-  const { sortedGroups, sortedSubGroups } = computeSortedGroups(dataset, groupKey, subGroupKey, measure);
-  const color = createColorScale(sortedSubGroups);
+  const [groupKey, subGroupKey = null] = dimensions;
+  const measure = state.aggregationDefinition.measures[0].alias;
 
-  // Create legend and get chart area
-  const { chartArea } = createLegend(flexContainer, sortedSubGroups, color);
+  // Process data and render chart
+  const { sortedGroups, sortedSubGroups } = processData(dataset, groupKey, subGroupKey, measure);
+  const config = createConfig(sortedGroups, dataset, groupKey, subGroupKey);
+  const scales = createScales(sortedGroups, sortedSubGroups, dataset, measure, config);
 
-  // Setup chart parameters with group and subgroup info
-  const config = setupConfig(sortedGroups, sortedSubGroups, dataset, groupKey, subGroupKey);
+  // Render chart content
+  setupContainer(chartContainer);
+  const elements = createChartElements(chartContainer, config);
+  renderChart(elements, dataset, sortedGroups, scales, config, groupKey, subGroupKey, measure);
 
-  // Create scales for the chart with the new parameters
-  const scales = createScales(sortedGroups, sortedSubGroups, dataset, measure, config, groupKey, subGroupKey);
-
-  // Setup chart structure and get references
-  const { chartContainer, xAxisDiv, scrollDiv, svg, xAxisSvg } = setupChartStructure(
-    chartArea, // Use chartArea instead of container
-    config.width,
-    config.totalHeight,
-    config.margin,
-    config.fullChartHeight
-  );
-
-  // Create tooltip
-  const tooltip = createTooltip(chartArea); // Use chartArea instead of container
-
-  // Draw the chart elements with the updated positioning
-  drawBars(
-    svg,
-    dataset,
-    scales.outerY,
-    scales.innerY,
-    scales.x,
-    config.margin,
-    groupKey,
-    subGroupKey,
-    measure,
-    color,
-    tooltip,
-    scales.groupPositionsArray // Use array format here
-  );
-
-  // Add axes (but no legend)
-  addYAxis(svg, scales.outerY, sortedGroups, scales.groupPositions, config);
-  addXAxis(xAxisSvg, scales.x, config.margin);
+  // Create legend and setup events
+  createColorLegend(legendContainer, sortedSubGroups, scales.color);
+  setupEventHandlers(container);
 }
 
-// Simple function that ONLY adds the button without clearing
-function addSwapButton(controlsDiv, parentContainer) {
-  // Initialize swap flag on the main container
-  parentContainer.swapDimensions = parentContainer.swapDimensions || false;
+/**
+ * Process and sort data
+ */
+function processData(dataset, groupKey, subGroupKey, measure) {
+  // Reusable functions for data processing
+  const sum = (v) => d3.sum(v, (d) => d[measure]);
+  const byValue = (a, b) => d3.descending(a.sum, b.sum);
+  const getKey = (d) => d.key;
 
-  const swapBtn = document.createElement("button");
-  swapBtn.textContent = "Swap Dimensions";
-  swapBtn.className = "chart-button";
+  // Process main groups
+  const groupData = Array.from(
+    d3.rollup(dataset, sum, (d) => d[groupKey]),
+    ([key, sum]) => ({ key, sum })
+  )
+    .sort(byValue)
+    .map(getKey);
 
-  swapBtn.addEventListener("click", () => {
-    parentContainer.swapDimensions = !parentContainer.swapDimensions;
-    renderGroupedBarChart(parentContainer);
-  });
-
-  controlsDiv.appendChild(swapBtn);
-}
-
-function setupSwapButton(container) {
-  // Initialize local swap flag on container
-  if (container.swapDimensions === undefined) {
-    container.swapDimensions = false;
-  }
-
-  // Create swap button
-  const swapBtn = document.createElement("button");
-  swapBtn.textContent = "Swap Dimensions";
-  swapBtn.style.marginBottom = "10px";
-  swapBtn.addEventListener("click", () => {
-    container.swapDimensions = !container.swapDimensions;
-    renderGroupedBarChart(container);
-  });
-
-  // Clear existing content and add button
-  container.innerHTML = "";
-  container.appendChild(swapBtn);
-}
-
-function extractDimensions(container) {
-  // Extract dimensions from state
-  let groupKey = state.aggregationDefinition.dimensions[0]; // e.g. "neighborhood"
-  let subGroupKey = state.aggregationDefinition.dimensions[1]; // e.g. "complaint_type_large"
-
-  // Swap dimensions if flag is on
-  if (container.swapDimensions) {
-    [groupKey, subGroupKey] = [subGroupKey, groupKey];
-  }
-
-  const measure = state.aggregationDefinition.measures[0].alias; // e.g. "num_of_requests"
-
-  return { groupKey, subGroupKey, measure };
-}
-
-function setupConfig(sortedGroups, sortedSubGroups, dataset, groupKey, subGroupKey) {
-  // Get base dimensions
-  const baseWidth = CHART_DIMENSIONS.width;
-  const totalHeight = CHART_DIMENSIONS.height;
-
-  // Adjust width for legend if we're using the chartArea
-  const width = document.querySelector(".chart-area")
-    ? baseWidth * 0.8 // If using legend, use 80% of width
-    : baseWidth; // Otherwise use full width
-
-  // Reserve top margin for fixed x-axis
-  const margin = { top: 40, right: 20, bottom: 20, left: 200 };
-
-  // Set a fixed height for each subgroup bar
-  const subGroupBarHeight = 10;
-  const groupPadding = 20; // Space between groups
-
-  // Calculate total chart height based on the number of subgroups in each group
-  let fullChartHeight = margin.top + margin.bottom;
-
-  // For each group, calculate its height based on the number of subgroups it contains
-  const groupHeights = {};
-  sortedGroups.forEach((group) => {
-    // Count how many subgroups appear in this group
-    const subGroupsInThisGroup = new Set();
-    dataset
-      .filter((d) => d[groupKey] === group)
-      .forEach((d) => {
-        subGroupsInThisGroup.add(d[subGroupKey]);
-      });
-
-    const groupHeight = subGroupsInThisGroup.size * subGroupBarHeight + groupPadding;
-    groupHeights[group] = groupHeight;
-    fullChartHeight += groupHeight;
-  });
+  // Process subgroups if available
+  const subGroupData = subGroupKey
+    ? Array.from(
+        d3.rollup(dataset, sum, (d) => d[subGroupKey]),
+        ([key, sum]) => ({ key, sum })
+      )
+        .sort(byValue)
+        .map(getKey)
+    : [];
 
   return {
-    width,
-    totalHeight,
-    margin,
-    subGroupBarHeight,
-    groupPadding,
-    groupHeights,
-    fullChartHeight,
+    sortedGroups: groupData,
+    sortedSubGroups: subGroupData,
   };
 }
 
-function computeSortedGroups(dataset, groupKey, subGroupKey, measure) {
-  // Compute sorted unique groups based on total measure (desc)
-  const groupSums = d3.rollup(
-    dataset,
-    (v) => d3.sum(v, (d) => d[measure]),
-    (d) => d[groupKey]
+/**
+ * Create chart configuration
+ */
+function createConfig(sortedGroups, dataset, groupKey, subGroupKey) {
+  const margin = chartStyles.getChartMargins("grouped_bar_chart");
+  const barHeight = chartStyles.barChart.bar.height * 0.6;
+  const groupPadding = chartStyles.barChart.bar.height * 0.8;
+
+  // Calculate heights for each group
+  const groupHeights = Object.fromEntries(
+    sortedGroups.map((group) => {
+      const uniqueSubgroups = subGroupKey
+        ? new Set(dataset.filter((d) => d[groupKey] === group).map((d) => d[subGroupKey])).size
+        : 1;
+
+      return [group, uniqueSubgroups * barHeight + groupPadding];
+    })
   );
 
-  const sortedGroups = Array.from(groupSums, ([key, sum]) => ({ key, sum }))
-    .sort((a, b) => d3.descending(a.sum, b.sum))
-    .map((d) => d.key);
+  // Calculate overall dimensions
+  const contentHeight = Object.values(groupHeights).reduce((sum, h) => sum + h, 0);
+  const minHeight = 500; // Consistent with other charts
+  const fullHeight = Math.max(margin.top + margin.bottom + contentHeight, minHeight);
+  const displayHeight = Math.min(fullHeight, chartStyles.barChart.maxHeight);
 
-  // Compute sorted unique subgroups based on total measure (desc) - global ordering
-  const subGroupSums = d3.rollup(
-    dataset,
-    (v) => d3.sum(v, (d) => d[measure]),
-    (d) => d[subGroupKey]
-  );
-
-  const sortedSubGroups = Array.from(subGroupSums, ([key, sum]) => ({ key, sum }))
-    .sort((a, b) => d3.descending(a.sum, b.sum))
-    .map((d) => d.key);
-
-  return { sortedGroups, sortedSubGroups };
+  return {
+    margin,
+    barHeight,
+    groupPadding,
+    groupHeights,
+    fullHeight,
+    displayHeight,
+    needsScrolling: fullHeight > displayHeight,
+  };
 }
 
-function createScales(sortedGroups, sortedSubGroups, dataset, measure, config, groupKey, subGroupKey) {
+/**
+ * Create chart scales
+ */
+function createScales(sortedGroups, sortedSubGroups, dataset, measure, config) {
   // Calculate positions for each group
-  let currentPosition = config.margin.top;
+  let yPosition = config.margin.top;
   const groupPositions = {};
-  // Create an array format for D3 to use
   const groupPositionsArray = [];
 
-  sortedGroups.forEach((group) => {
-    groupPositions[group] = currentPosition;
-    // Add entry to array with proper format
-    groupPositionsArray.push({
-      group: group,
-      position: currentPosition,
-      height: config.groupHeights[group],
-    });
-    currentPosition += config.groupHeights[group];
+  for (const group of sortedGroups) {
+    groupPositions[group] = yPosition;
+    groupPositionsArray.push({ group, position: yPosition, height: config.groupHeights[group] });
+    yPosition += config.groupHeights[group];
+  }
+
+  // Get width from container or use default if not found
+  const chartEl = document.querySelector(".viz-chart-area");
+  const chartWidth = chartEl?.clientWidth || 800; // Fallback width
+
+  // Create scales
+  return {
+    outerY: d3
+      .scaleOrdinal()
+      .domain(sortedGroups)
+      .range(sortedGroups.map((g) => groupPositions[g])),
+
+    innerY: d3
+      .scaleBand()
+      .domain(sortedSubGroups)
+      .range([0, d3.max(Object.values(config.groupHeights)) - config.groupPadding])
+      .padding(chartStyles.barChart.bar.padding),
+
+    x: d3
+      .scaleLinear()
+      .domain([0, d3.max(dataset, (d) => d[measure] || 0) * 1.05])
+      .range([config.margin.left, chartWidth - config.margin.right - 10])
+      .nice(),
+
+    color: d3.scaleOrdinal().domain(sortedSubGroups).range(chartColors.mainPalette),
+
+    groupPositions,
+    groupPositionsArray,
+  };
+}
+
+/**
+ * Set up container styles
+ */
+function setupContainer(container) {
+  // Don't set a fixed pixel height - let it use 100% from layout utility
+  Object.assign(container.style, {
+    position: "relative",
+    width: "100%",
+    // height is already set to 100% by createHorizontalLayout
+  });
+}
+
+/**
+ * Create chart DOM elements
+ */
+function createChartElements(container, config) {
+  // Create containers
+  const xAxisContainer = document.createElement("div");
+  xAxisContainer.className = "viz-axis-container";
+
+  const scrollContainer = document.createElement("div");
+  scrollContainer.className = "viz-bar-scroll";
+  Object.assign(scrollContainer.style, {
+    position: "absolute",
+    top: `${config.margin.top}px`,
+    bottom: "20px",
+    left: "0",
+    right: "0",
+    overflowY: config.needsScrolling ? "auto" : "hidden",
+    overflowX: "hidden",
   });
 
-  // Outer y-scale for groups - custom positions based on varying heights
-  const outerY = d3
-    .scaleOrdinal()
-    .domain(sortedGroups)
-    .range(sortedGroups.map((group) => groupPositions[group]));
+  container.appendChild(xAxisContainer);
+  container.appendChild(scrollContainer);
 
-  // Inner y-scale for subgroups within each group
-  const innerY = d3
-    .scaleBand()
-    .domain(sortedSubGroups)
-    .range([0, d3.max(Object.values(config.groupHeights)) - config.groupPadding])
-    .padding(0.1);
-
-  // X scale based on measure values
-  const xMax = d3.max(dataset, (d) => d[measure]);
-  const x = d3
-    .scaleLinear()
-    .domain([0, xMax])
-    .range([config.margin.left, config.width - config.margin.right])
-    .nice();
-
-  return { outerY, innerY, x, groupPositions, groupPositionsArray };
-}
-
-// In setupChartStructure function of grouped_bar_chart.js
-function setupChartStructure(container, width, totalHeight, margin, fullChartHeight) {
-  // Create the main container
-  const chartContainer = document.createElement("div");
-  chartContainer.style.position = "relative";
-  chartContainer.style.width = "100%";
-  chartContainer.style.height = totalHeight + "px";
-  container.appendChild(chartContainer);
-
-  // Fixed header for x-axis
-  const xAxisDiv = document.createElement("div");
-  xAxisDiv.style.position = "absolute";
-  xAxisDiv.style.top = "0";
-  xAxisDiv.style.width = "100%";
-  xAxisDiv.style.height = margin.top + "px";
-  xAxisDiv.style.zIndex = "2";
-  chartContainer.appendChild(xAxisDiv);
-
-  // Scrollable content area - ADJUST THIS LINE:
-  const scrollDiv = document.createElement("div");
-  scrollDiv.style.position = "absolute";
-  scrollDiv.style.top = margin.top - 1 + "px"; // Move up by 1px to remove gap
-  scrollDiv.style.width = "100%";
-  scrollDiv.style.height = totalHeight - margin.top + "px";
-  scrollDiv.style.overflowY = "auto";
-  chartContainer.appendChild(scrollDiv);
-
-  // Rest of the function remains the same...
-
-  // Append an SVG to the scrollable container
+  // Create SVG elements
   const svg = d3
-    .select(scrollDiv)
+    .select(scrollContainer)
     .append("svg")
-    .attr("width", width)
-    .attr("height", fullChartHeight - margin.top);
+    .attr("class", "viz-grouped-bar-canvas")
+    .attr("width", "100%")
+    .attr("height", config.fullHeight - config.margin.top);
 
-  // Create an SVG for the fixed x-axis
-  const xAxisSvg = d3.select(xAxisDiv).append("svg").attr("width", width).attr("height", margin.top);
+  const xAxisSvg = d3
+    .select(xAxisContainer)
+    .append("svg")
+    .attr("class", "viz-axis-canvas")
+    .attr("width", "100%")
+    .attr("height", config.margin.top);
 
-  return { chartContainer, xAxisDiv, scrollDiv, svg, xAxisSvg };
+  return { svg, xAxisSvg };
 }
 
-function createColorScale(sortedSubGroups) {
-  return d3.scaleOrdinal(d3.schemeCategory10).domain(sortedSubGroups);
+/**
+ * Render all chart content
+ */
+function renderChart(elements, dataset, sortedGroups, scales, config, groupKey, subGroupKey, measure) {
+  const { svg, xAxisSvg } = elements;
+  const tooltip = chartStyles.createTooltip();
+
+  // Draw chart elements
+  drawBars(svg, dataset, scales, config, groupKey, subGroupKey, measure, tooltip);
+  drawYAxis(svg, sortedGroups, scales.groupPositions, config);
+  drawXAxis(xAxisSvg, scales.x, config.margin);
 }
 
-// Fix the createTooltip function to use chartStyles:
-function createTooltip(container) {
-  return chartStyles.createTooltip(container);
-}
+/**
+ * Draw grouped bars with tooltips
+ */
+function drawBars(svg, dataset, scales, config, groupKey, subGroupKey, measure, tooltip) {
+  const { outerY, innerY, x, color, groupPositionsArray } = scales;
+  const { margin } = config;
 
-// Update the drawBars function to handle the array correctly:
-function drawBars(
-  svg,
-  dataset,
-  outerY,
-  innerY,
-  x,
-  margin,
-  groupKey,
-  subGroupKey,
-  measure,
-  color,
-  tooltip,
-  groupPositionsArray
-) {
-  // Draw bars with consistent styling
   svg
     .append("g")
     .selectAll("g")
-    .data(groupPositionsArray) // Use the array format
+    .data(groupPositionsArray)
     .join("g")
     .attr("transform", (d) => `translate(0, ${d.position})`)
     .selectAll("rect")
@@ -320,51 +246,86 @@ function drawBars(
     .join("rect")
     .attr("y", (d) => d.yPos)
     .attr("x", margin.left)
-    .attr("width", (d) => x(d[measure]) - margin.left)
+    .attr("width", (d) => Math.max(0, x(d[measure]) - margin.left))
     .attr("height", innerY.bandwidth())
     .attr("fill", (d) => color(d[subGroupKey]))
+    .attr("rx", chartStyles.barChart.bar.cornerRadius)
     .on("mouseover", function (event, d) {
       chartStyles.showTooltip(
         tooltip,
         event,
-        `
-        <strong>${groupKey}:</strong> ${d[groupKey]}<br>
-        <strong>${subGroupKey}:</strong> ${d[subGroupKey]}<br>
-        <strong>${measure}:</strong> ${d[measure].toLocaleString()}
-      `
+        `<strong>${groupKey}:</strong> ${d[groupKey]}<br>
+         <strong>${subGroupKey}:</strong> ${d[subGroupKey]}<br>
+         <strong>${measure}:</strong> ${formatValue(d[measure])}`
       );
     })
     .on("mouseout", () => chartStyles.hideTooltip(tooltip));
 }
 
-function addYAxis(svg, outerY, sortedGroups, groupPositions, config) {
-  // Add y-axis with consistent styling
-  const yAxis = svg.append("g").attr("class", "y-axis").attr("transform", `translate(${config.margin.left}, 0)`);
+/**
+ * Draw Y axis with labels
+ */
+function drawYAxis(svg, sortedGroups, groupPositions, config) {
+  const yAxisGroup = svg.append("g").attr("class", "y-axis").attr("transform", `translate(${config.margin.left}, 0)`);
 
-  // Add group labels
-  yAxis
+  // Add vertical axis line (unchanged)
+  yAxisGroup
+    .append("line")
+    .attr("x1", 0)
+    .attr("y1", 0)
+    .attr("x2", 0)
+    .attr("y2", config.fullHeight - config.margin.top - config.margin.bottom)
+    .attr("stroke", chartStyles.colors.axisLine)
+    .attr("stroke-width", 1)
+    .attr("shape-rendering", "crispEdges");
+
+  // Calculate the actual visual center of each group's bars
+  yAxisGroup
     .selectAll(".group-label")
     .data(sortedGroups)
     .join("text")
     .attr("class", "group-label")
     .attr("x", -10)
-    .attr("y", (d) => groupPositions[d] + config.groupHeights[d] / 2)
+    .attr("y", (d) => {
+      // Get the effective height of bars without padding
+      const effectiveBarsHeight = config.groupHeights[d] - config.groupPadding;
+      return groupPositions[d] + effectiveBarsHeight / 2;
+    })
     .attr("text-anchor", "end")
     .attr("dominant-baseline", "middle")
     .text((d) => d)
     .style("font-family", chartStyles.fontFamily)
-    .style("font-size", chartStyles.fontSize.axisLabel);
-
-  return yAxis;
+    .style("font-size", chartStyles.fontSize.axisLabel)
+    .style("font-weight", "500")
+    .style("fill", chartStyles.colors.text);
 }
 
-function addXAxis(xAxisSvg, x, margin) {
-  // Create x-axis with consistent styling
-  xAxisSvg
+/**
+ * Draw X axis
+ */
+function drawXAxis(xAxisSvg, xScale, margin) {
+  const axis = xAxisSvg
     .append("g")
     .attr("transform", `translate(0,${margin.top - 1})`)
-    .call(d3.axisTop(x))
-    .call((g) => chartStyles.applyAxisStyles(g)); // Apply shared axis styling
+    .call(d3.axisTop(xScale).ticks(5).tickFormat(formatValue));
+
+  chartStyles.applyAxisStyles(axis);
+}
+
+/**
+ * Set up event handlers
+ */
+function setupEventHandlers(container) {
+  setupResizeHandler(container, () => renderGroupedBarChart(container));
+
+  // Single handler reference for dimension swap
+  const handleDimensionSwap = () => {
+    const vizContainer = document.querySelector(".viz-container");
+    if (vizContainer) renderGroupedBarChart(vizContainer);
+  };
+
+  document.removeEventListener("dimensionSwap", handleDimensionSwap);
+  document.addEventListener("dimensionSwap", handleDimensionSwap);
 }
 
 export default renderGroupedBarChart;
