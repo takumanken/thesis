@@ -117,20 +117,26 @@ export function validateRenderingContext(container, noDataMessage = "No data ava
   return true;
 }
 
+// Store the current handler at module level
+let currentDimensionSwapHandler = null;
+
 /**
  * Sets up a dimension swap event handler
  * @param {Function} renderCallback - Function to call when dimensions are swapped
  */
 export function setupDimensionSwapHandler(renderCallback) {
-  // Create handler that finds the container and calls the render function
-  const handleDimensionSwap = () => {
+  // Always clean up previous handler if it exists
+  if (currentDimensionSwapHandler) {
+    document.removeEventListener("dimensionSwap", currentDimensionSwapHandler);
+    currentDimensionSwapHandler = null;
+  }
+
+  // Create a debounced handler to prevent rapid executions
+  currentDimensionSwapHandler = debounce(() => {
     const container = document.querySelector(".viz-container");
     if (container) renderCallback(container);
-  };
+  }, 100);
 
-  // Remove any existing handler and add the new one
-  document.removeEventListener("dimensionSwap", handleDimensionSwap);
-  document.addEventListener("dimensionSwap", handleDimensionSwap);
-
-  return handleDimensionSwap; // Return for potential cleanup
+  // Add the new handler
+  document.addEventListener("dimensionSwap", currentDimensionSwapHandler);
 }
