@@ -124,7 +124,7 @@ function renderChartContent(container, data, dimensions, measures, config) {
     .select(container)
     .append("svg")
     .attr("width", config.width)
-    .attr("height", config.height)
+    .attr("height", config.fullHeight)
     .attr("class", "viz-nested-bar-chart");
 
   const tooltip = chartStyles.createTooltip();
