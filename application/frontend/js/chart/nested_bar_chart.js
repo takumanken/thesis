@@ -7,7 +7,12 @@ import { CHART_DIMENSIONS } from "../constants.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
 import { chartControls } from "./utils/chartControls.js";
-import { formatValue, setupResizeHandler, validateRenderingContext } from "./utils/chartUtils.js";
+import {
+  formatValue,
+  setupResizeHandler,
+  validateRenderingContext,
+  setupDimensionSwapHandler,
+} from "./utils/chartUtils.js";
 
 /**
  * Main render function for nested bar chart
@@ -460,18 +465,7 @@ function getLongestText(textArray) {
  */
 function setupEventHandlers(container) {
   setupResizeHandler(container, () => renderNestedBarChart(container));
-
-  // Set up dimension swap handler
-  document.removeEventListener("dimensionSwap", handleDimensionSwap);
-  document.addEventListener("dimensionSwap", handleDimensionSwap);
-}
-
-/**
- * Handles dimension swap event
- */
-function handleDimensionSwap() {
-  const container = document.querySelector(".viz-container");
-  if (container) renderNestedBarChart(container);
+  setupDimensionSwapHandler(renderNestedBarChart);
 }
 
 /**

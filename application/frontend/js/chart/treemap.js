@@ -1,7 +1,13 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
-import { truncateLabel, formatValue, setupResizeHandler, validateRenderingContext } from "./utils/chartUtils.js";
+import {
+  truncateLabel,
+  formatValue,
+  setupResizeHandler,
+  validateRenderingContext,
+  setupDimensionSwapHandler,
+} from "./utils/chartUtils.js";
 import { chartControls } from "./utils/chartControls.js";
 
 // Constants
@@ -10,26 +16,12 @@ const CELL_PADDING = { outer: 3, inner: 2, top: 19 };
 const MARGIN = { top: 10, right: 10, bottom: 10, left: 10 };
 
 /**
- * Handler for dimension swap events - defined at module level
- */
-function handleDimensionSwap() {
-  const container = document.querySelector(".viz-container");
-  if (container) {
-    renderTreemap(container);
-  }
-}
-
-/**
  * Set up event handlers for treemap
  * @param {HTMLElement} container - Container element
  */
 function setupEventHandlers(container) {
-  // Handle resize events
   setupResizeHandler(container, () => renderTreemap(container));
-
-  // Handle dimension swap events with consistent reference
-  document.removeEventListener("dimensionSwap", handleDimensionSwap);
-  document.addEventListener("dimensionSwap", handleDimensionSwap);
+  setupDimensionSwapHandler(renderTreemap);
 }
 
 /**

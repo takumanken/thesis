@@ -5,7 +5,12 @@ import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
 import { chartControls } from "./utils/chartControls.js";
-import { formatValue, setupResizeHandler, validateRenderingContext } from "./utils/chartUtils.js";
+import {
+  formatValue,
+  setupResizeHandler,
+  validateRenderingContext,
+  setupDimensionSwapHandler,
+} from "./utils/chartUtils.js";
 import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js";
 
 /**
@@ -317,15 +322,7 @@ function drawXAxis(xAxisSvg, xScale, margin) {
  */
 function setupEventHandlers(container) {
   setupResizeHandler(container, () => renderGroupedBarChart(container));
-
-  // Single handler reference for dimension swap
-  const handleDimensionSwap = () => {
-    const vizContainer = document.querySelector(".viz-container");
-    if (vizContainer) renderGroupedBarChart(vizContainer);
-  };
-
-  document.removeEventListener("dimensionSwap", handleDimensionSwap);
-  document.addEventListener("dimensionSwap", handleDimensionSwap);
+  setupDimensionSwapHandler(renderGroupedBarChart);
 }
 
 export default renderGroupedBarChart;
