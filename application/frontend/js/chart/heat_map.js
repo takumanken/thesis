@@ -3,9 +3,9 @@
  * Displays geospatial data using a heat/intensity map
  */
 import { state } from "../state.js";
+import { CHART_DIMENSIONS } from "../constants.js";
 import { chartStyles } from "./utils/chartStyles.js";
-import { chartColors } from "./utils/chartColors.js";
-import { formatValue, setupResizeHandler, validateRenderingContext } from "./utils/chartUtils.js";
+import { setupResizeHandler, validateRenderingContext } from "./utils/chartUtils.js";
 
 /**
  * Main render function for heat map
@@ -14,81 +14,52 @@ import { formatValue, setupResizeHandler, validateRenderingContext } from "./uti
 function renderHeatMap(container) {
   if (!validateRenderingContext(container, "No location data available for display")) return;
 
-  // Extract data and dimensions
-  const { dataset, geoDimension, measure } = extractChartData();
+  // Clear container and get configuration
+  container.innerHTML = "";
+  const { width, height } = CHART_DIMENSIONS;
+
+  // Extract data from state
+  const dataset = state.dataset;
+  const geoDim = state.aggregationDefinition.geoDimension[0];
+  const measure = state.aggregationDefinition.measures[0].alias;
 
   // Process data for visualization
-  const points = processLocationData(dataset, geoDimension, measure);
+  const points = processLocationData(dataset, geoDim, measure);
   if (points.length === 0) {
     container.innerHTML = "<p>No valid location data available to display.</p>";
     return;
   }
 
-  // Set up map container with responsive dimensions
-  const config = createChartConfig(container);
-  const mapContainer = createMapContainer(container, config);
-
-  // Create map and add data layer
-  const map = initializeMap(mapContainer);
-  addHeatLayer(map, points);
+  // Setup and render map
+  const mapContainer = createMapContainer(container, width, height);
+  const map = setupLeafletMap(mapContainer);
+  addHeatLayer(map, points, measure);
   fitMapToPoints(map, points);
 
   // Setup resize handling
   setupResizeHandler(container, () => renderHeatMap(container));
 }
 
-/**
- * Extract chart data from state
- */
-function extractChartData() {
-  const dataset = state.dataset;
-  const geoDimension = state.aggregationDefinition.geoDimension?.[0];
-  const measure = state.aggregationDefinition.measures?.[0]?.alias;
-
-  if (!geoDimension || !measure) {
-    throw new Error("Missing required dimensions or measures for heat map");
-  }
-
-  return { dataset, geoDimension, measure };
-}
-
-/**
- * Create chart configuration based on container
- */
-function createChartConfig(container) {
-  return {
-    width: container.clientWidth,
-    height: container.clientHeight || 500,
-  };
-}
+// ===== DATA PROCESSING =====
 
 /**
  * Process raw data into point data with coordinates and values
  */
-function processLocationData(dataset, geoDimension, measure) {
+function processLocationData(dataset, geoDim, measure) {
   const points = [];
 
   dataset.forEach((record) => {
-    const locationData = record[geoDimension];
+    const locationData = record[geoDim];
     if (!locationData || locationData === "Unspecified") return;
 
-    // Handle various location data formats
-    let lat, lng;
+    // Extract coordinates from location data
+    let lat = parseFloat(locationData.x);
+    let lng = parseFloat(locationData.y);
 
-    // If location is an object with x/y properties
-    if (typeof locationData === "object" && locationData !== null) {
-      lat = parseFloat(locationData.x);
-      lng = parseFloat(locationData.y);
-    }
-    // If location is a string with comma-separated coordinates
-    else if (typeof locationData === "string" && locationData.includes(",")) {
-      const [latStr, lngStr] = locationData.split(",");
-      lat = parseFloat(latStr.trim());
-      lng = parseFloat(lngStr.trim());
-    }
-
+    // Skip invalid coordinates
     if (isNaN(lat) || isNaN(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return;
 
+    // Add valid point to the array
     points.push({
       lat,
       lng,
@@ -99,27 +70,26 @@ function processLocationData(dataset, geoDimension, measure) {
   return points;
 }
 
+// ===== MAP SETUP =====
+
 /**
  * Create a container element for the Leaflet map
  */
-function createMapContainer(container, config) {
-  // Clear container
-  container.innerHTML = "";
-
-  // Create responsive wrapper
+function createMapContainer(container, width, height) {
+  // Create wrapper div for map and legend
   const wrapperDiv = document.createElement("div");
   wrapperDiv.className = "heat-map-wrapper";
   wrapperDiv.style.width = "100%";
+  wrapperDiv.style.maxWidth = "100%";
   wrapperDiv.style.position = "relative";
   wrapperDiv.style.overflow = "hidden";
   container.appendChild(wrapperDiv);
 
-  // Create map container with unique ID
+  // Create the map container with unique ID
   const mapContainer = document.createElement("div");
-  mapContainer.id = "heat-map-" + Date.now();
-  mapContainer.className = "heat-map-container";
+  mapContainer.id = "leaflet-map-" + Date.now();
   mapContainer.style.width = "100%";
-  mapContainer.style.height = `${config.height}px`;
+  mapContainer.style.height = `${height}px`;
   mapContainer.style.boxSizing = "border-box";
   wrapperDiv.appendChild(mapContainer);
 
@@ -129,16 +99,11 @@ function createMapContainer(container, config) {
 /**
  * Initialize the Leaflet map with appropriate base layer
  */
-function initializeMap(mapContainer) {
-  // Create map centered on US
-  const map = L.map(mapContainer.id, {
-    center: [39.8283, -98.5795], // Center of the US
-    zoom: 4,
-    zoomControl: true,
-    scrollWheelZoom: true,
-  });
+function setupLeafletMap(mapContainer) {
+  // Create map with initial view
+  const map = L.map(mapContainer.id).setView([39.8283, -98.5795], 4); // Center of US with zoom level
 
-  // Add a clean, light-colored tile layer
+  // Add light-colored tile layer
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -150,112 +115,188 @@ function initializeMap(mapContainer) {
 }
 
 /**
- * Add heatmap layer to the map using point data
- */
-function addHeatLayer(map, points) {
-  if (!points || points.length === 0) return;
-
-  // Convert points to heatmap format [lat, lng, intensity]
-  const heatData = points.map((point) => [point.lat, point.lng, point.value]);
-
-  // Get max value for scaling
-  const maxValue = Math.max(...points.map((p) => p.value));
-
-  // Create custom gradient matching the screenshot (blue-purple-red-yellow)
-  const gradient = {
-    0.0: "#A1B1F3", // Light blue/purple
-    0.2: "#D6A3F5", // Light purple
-    0.4: "#B298DC", // Medium purple
-    0.6: "#F79DA8", // Light salmon
-    0.8: "#F9D3A0", // Light peach
-    1.0: "#FFEA85", // Yellow
-  };
-
-  // Create and add heatmap layer with custom settings
-  L.heatLayer(heatData, {
-    radius: 12, // Size of each point's influence
-    blur: 15, // Smoothing effect
-    maxZoom: 17, // Maximum zoom level for heatmap
-    max: maxValue * 0.7, // Scale intensity for better visualization
-    gradient: gradient, // Custom gradient
-  }).addTo(map);
-}
-
-/**
  * Adjust map viewport to fit all data points
  */
 function fitMapToPoints(map, points) {
   if (!points || points.length === 0) return;
 
-  // Create bounds that contain all points
+  // Create bounds containing all points
   const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]));
 
-  // Fit map to these bounds with some padding
+  // Fit map to these bounds with padding
   map.fitBounds(bounds, {
     padding: [50, 50],
-    maxZoom: 12, // Limit zoom level for better context
+    maxZoom: 15, // Limit zoom level for better context
+  });
+}
+
+// ===== VISUALIZATION =====
+
+/**
+ * Add heatmap layer to the map using point data
+ */
+function addHeatLayer(map, points, measure) {
+  // Get value range from data points
+  const values = points.map((p) => p.value);
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+
+  // Convert points to heatmap format [lat, lng, intensity]
+  const heatData = points.map((point) => {
+    // Normalize value to improve visualization
+    const normalizedIntensity = point.value;
+    return [point.lat, point.lng, normalizedIntensity];
+  });
+
+  // Update gradient to match the screenshot (blue-purple-yellow)
+  const gradient = {
+    0: "navy",
+    0.25: "cyan",
+    0.5: "yellow",
+    0.75: "orange",
+    1.0: "red",
+  };
+
+  // Create and add heatmap layer with custom settings
+  L.heatLayer(heatData, {
+    radius: 6,
+    blur: 6,
+    maxZoom: 1,
+    gradient: gradient,
+    max: maxValue,
+    minOpacity: 0.5,
+  }).addTo(map);
+
+  // Add tooltip functionality
+  addTooltipFunctionality(map, points, measure);
+}
+
+// ===== INTERACTIVITY =====
+
+/**
+ * Add tooltip functionality to the map
+ */
+function addTooltipFunctionality(map, points, measure) {
+  if (!points || points.length === 0) return;
+
+  // Create tooltip element
+  const tooltip = chartStyles.createTooltip();
+
+  // Keep track of tooltip state
+  let isTooltipVisible = false;
+  let tooltipMarker = null;
+
+  // Add event listener for mouse movement
+  map.on("mousemove", (e) => {
+    // Find the closest point to mouse position
+    const closestPoint = findClosestPoint(e.latlng, points);
+
+    // Use a smaller threshold for precise point detection (approx 1km)
+    const proximityThreshold = 0.01;
+
+    if (closestPoint && closestPoint.distance < proximityThreshold) {
+      // Show tooltip with point information
+      showPointTooltip(e.originalEvent, closestPoint.point, measure, tooltip);
+      isTooltipVisible = true;
+
+      // Add or update marker at the point location
+      if (!tooltipMarker) {
+        tooltipMarker = L.circleMarker([closestPoint.point.lat, closestPoint.point.lng], {
+          radius: 4,
+          color: "#333",
+          weight: 1,
+          fillColor: "#fff",
+          fillOpacity: 0.8,
+        }).addTo(map);
+      } else {
+        tooltipMarker.setLatLng([closestPoint.point.lat, closestPoint.point.lng]);
+      }
+    } else if (isTooltipVisible) {
+      // Hide tooltip when not near a point
+      chartStyles.hideTooltip(tooltip);
+      isTooltipVisible = false;
+
+      // Remove marker when moving away
+      if (tooltipMarker) {
+        map.removeLayer(tooltipMarker);
+        tooltipMarker = null;
+      }
+    }
+  });
+
+  // Handle mouse leaving the map
+  map.on("mouseout", () => {
+    chartStyles.hideTooltip(tooltip);
+    isTooltipVisible = false;
+
+    // Clean up marker
+    if (tooltipMarker) {
+      map.removeLayer(tooltipMarker);
+      tooltipMarker = null;
+    }
   });
 }
 
 /**
- * Add color legend to explain heat intensity
+ * Find the closest data point to a given location
  */
-function addColorLegend(container, measure) {
-  const wrapperDiv = container.querySelector(".heat-map-wrapper");
-  if (!wrapperDiv) return;
+function findClosestPoint(latlng, points) {
+  if (!points || points.length === 0) return null;
 
-  // Create legend container
-  const legendContainer = document.createElement("div");
-  legendContainer.className = "heat-map-legend";
-  Object.assign(legendContainer.style, {
-    position: "absolute",
-    bottom: "10px",
-    right: "10px",
-    padding: "8px 12px",
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
-    borderRadius: "4px",
-    boxShadow: "0 0 5px rgba(0, 0, 0, 0.2)",
-    zIndex: "1000",
-    fontFamily: chartStyles.fontFamily,
-    fontSize: "12px",
+  let closestPoint = null;
+  let closestDistance = Infinity;
+
+  points.forEach((point) => {
+    // Calculate distance between points accounting for longitude distortion
+    const distance = Math.sqrt(
+      Math.pow(point.lat - latlng.lat, 2) +
+        Math.pow((point.lng - latlng.lng) * Math.cos((Math.PI * latlng.lat) / 180), 2)
+    );
+
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestPoint = point;
+    }
   });
 
-  // Legend title
-  const title = document.createElement("div");
-  title.textContent = `${measure} Intensity`;
-  title.style.fontWeight = "bold";
-  title.style.marginBottom = "5px";
-  legendContainer.appendChild(title);
+  return {
+    point: closestPoint,
+    distance: closestDistance,
+  };
+}
 
-  // Gradient bar
-  const gradientBar = document.createElement("div");
-  Object.assign(gradientBar.style, {
-    width: "150px",
-    height: "15px",
-    marginBottom: "5px",
-    background: "linear-gradient(to right, #A1B1F3, #D6A3F5, #B298DC, #F79DA8, #F9D3A0, #FFEA85)",
-  });
-  legendContainer.appendChild(gradientBar);
+/**
+ * Show tooltip with information about a specific point
+ */
+function showPointTooltip(event, point, measure, tooltip) {
+  // Format coordinates with 4 decimal places (approx. 10m precision)
+  const lat = point.lat.toFixed(4);
+  const lng = point.lng.toFixed(4);
 
-  // Labels container
-  const labelsDiv = document.createElement("div");
-  labelsDiv.style.display = "flex";
-  labelsDiv.style.justifyContent = "space-between";
+  // Create tooltip content
+  const content = `
+    <strong>Location:</strong> ${lat}, ${lng}<br>
+    <strong>${measure}:</strong> ${formatValue(point.value)}
+  `;
 
-  // Low label
-  const lowLabel = document.createElement("div");
-  lowLabel.textContent = "Low";
+  // Show tooltip
+  chartStyles.showTooltip(tooltip, event, content);
+}
 
-  // High label
-  const highLabel = document.createElement("div");
-  highLabel.textContent = "High";
-
-  labelsDiv.appendChild(lowLabel);
-  labelsDiv.appendChild(highLabel);
-  legendContainer.appendChild(labelsDiv);
-
-  // Add legend to wrapper
-  wrapperDiv.appendChild(legendContainer);
+/**
+ * Format a value with appropriate units
+ */
+function formatValue(value) {
+  // Format based on value magnitude
+  if (Math.abs(value) >= 1000000) {
+    return (value / 1000000).toFixed(1) + "M";
+  } else if (Math.abs(value) >= 1000) {
+    return (value / 1000).toFixed(1) + "K";
+  } else if (Number.isInteger(value)) {
+    return value.toString();
+  } else {
+    return value.toFixed(2);
+  }
 }
 
 export default renderHeatMap;
