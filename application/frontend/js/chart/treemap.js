@@ -10,6 +10,29 @@ const CELL_PADDING = { outer: 3, inner: 2, top: 19 };
 const MARGIN = { top: 10, right: 10, bottom: 10, left: 10 };
 
 /**
+ * Handler for dimension swap events - defined at module level
+ */
+function handleDimensionSwap() {
+  const container = document.querySelector(".viz-container");
+  if (container) {
+    renderTreemap(container);
+  }
+}
+
+/**
+ * Set up event handlers for treemap
+ * @param {HTMLElement} container - Container element
+ */
+function setupEventHandlers(container) {
+  // Handle resize events
+  setupResizeHandler(container, () => renderTreemap(container));
+
+  // Handle dimension swap events with consistent reference
+  document.removeEventListener("dimensionSwap", handleDimensionSwap);
+  document.addEventListener("dimensionSwap", handleDimensionSwap);
+}
+
+/**
  * Renders a treemap visualization
  */
 function renderTreemap(container) {
@@ -34,8 +57,7 @@ function renderTreemap(container) {
   renderCells(container, svg, hierarchyData, dimensions, measure);
 
   // Set up event handlers
-  setupResizeHandler(container, () => renderTreemap(container));
-  setupDimensionSwapHandler();
+  setupEventHandlers(container);
 }
 
 /**
@@ -48,20 +70,6 @@ function createSvg(container) {
     .attr("width", "100%")
     .attr("height", "100%")
     .attr("class", "viz-treemap-canvas");
-}
-
-/**
- * Sets up dimension swap event handler
- */
-function setupDimensionSwapHandler() {
-  // Remove any existing handlers first to prevent duplicates
-  document.removeEventListener("dimensionSwap", redrawHandler);
-  document.addEventListener("dimensionSwap", redrawHandler);
-
-  function redrawHandler() {
-    const container = document.querySelector(".viz-container");
-    if (container) renderTreemap(container);
-  }
 }
 
 /**

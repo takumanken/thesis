@@ -4,31 +4,29 @@ import { state } from "../../state.js";
  * Chart control utilities for reusable chart UI components
  */
 export const chartControls = {
+  //-------------------------------------------------------------------------
+  // PUBLIC API
+  //-------------------------------------------------------------------------
+
   /**
    * Initialize dimension swap control based on chart type
    * @param {string} chartType - Current chart type
    * @returns {boolean} Whether swap control was initialized
    */
   initDimensionSwap(chartType) {
-    // Define supported chart types
-    const swappableChartTypes = ["treemap", "grouped_bar_chart", "stacked_bar_chart"];
-
-    // Check eligibility conditions
-    const supportsSwap = swappableChartTypes.includes(chartType);
+    const swappableChartTypes = ["treemap", "grouped_bar_chart", "stacked_bar_chart", "nested_bar_chart"];
     const hasTwoDimensions = state.aggregationDefinition?.dimensions?.length === 2;
-    const shouldShowControl = supportsSwap && hasTwoDimensions;
+    const shouldShowControl = swappableChartTypes.includes(chartType) && hasTwoDimensions;
 
-    // Clean up existing control regardless of what happens next
+    // Clean up existing control
     this.removeExistingControl();
 
-    // Reset swap state if not eligible
     if (!shouldShowControl) {
       state.dimensionsSwapped = false;
       return false;
     }
 
-    // Create the control
-    this.createDimensionSwapControl();
+    this._createDimensionSwapControl();
     return true;
   },
 
@@ -39,7 +37,6 @@ export const chartControls = {
   getSwappableDimensions() {
     const dimensions = state.aggregationDefinition?.dimensions || [];
 
-    // Return swapped dimensions if applicable
     if (dimensions.length === 2 && state.dimensionsSwapped) {
       return [dimensions[1], dimensions[0]];
     }
@@ -49,39 +46,37 @@ export const chartControls = {
 
   /**
    * Remove any existing dimension swap control
+   * Note: This is used externally in visualizeData.js
    */
   removeExistingControl() {
     document.querySelector(".viz-dimension-swap")?.remove();
   },
 
+  //-------------------------------------------------------------------------
+  // PRIVATE HELPERS
+  //-------------------------------------------------------------------------
+
   /**
    * Creates dimension swap control in sidebar
+   * @private
+   * @returns {HTMLElement|null} The created control or null if insertion failed
    */
-  createDimensionSwapControl() {
-    // Find insertion points
+  _createDimensionSwapControl() {
     const controlPanel = document.querySelector(".viz-controls");
     if (!controlPanel) return null;
 
-    const chartDefSection = document.querySelector(".viz-definition");
-
-    // Create control container
+    // Create control elements
     const swapSection = document.createElement("div");
     swapSection.className = "viz-dimension-swap";
     swapSection.style.marginBottom = "20px";
-
-    // Add heading
     swapSection.innerHTML = '<h3 class="control-heading">Dimension Order</h3>';
 
-    // Create button
-    const swapButton = this.createSwapButton();
-    swapSection.appendChild(swapButton);
+    // Create and add button
+    swapSection.appendChild(this._createSwapButton());
 
-    // Insert into DOM
-    if (chartDefSection) {
-      controlPanel.insertBefore(swapSection, chartDefSection);
-    } else {
-      controlPanel.appendChild(swapSection);
-    }
+    // Insert into DOM in proper location
+    const insertPoint = document.querySelector(".viz-definition");
+    insertPoint ? controlPanel.insertBefore(swapSection, insertPoint) : controlPanel.appendChild(swapSection);
 
     return swapSection;
   },
@@ -89,48 +84,48 @@ export const chartControls = {
   /**
    * Creates the swap button element
    * @private
+   * @returns {HTMLElement} Button element
    */
-  createSwapButton() {
+  _createSwapButton() {
     const swapButton = document.createElement("button");
     swapButton.textContent = "Swap Dimensions";
     swapButton.className = "dimension-swap-btn";
 
-    // Apply styles
-    Object.assign(swapButton.style, {
-      padding: "8px 12px",
-      border: "1px solid var(--color-border)",
-      borderRadius: "4px",
-      backgroundColor: state.dimensionsSwapped ? "var(--color-primary-light)" : "white",
-      borderColor: state.dimensionsSwapped ? "var(--color-primary)" : "var(--color-border)",
-      cursor: "pointer",
-      fontSize: "12px",
-      width: "100%",
-    });
+    // Apply styles and add click handler
+    this._applyButtonStyles(swapButton);
+    swapButton.addEventListener("click", () => {
+      // Toggle state and update UI
+      state.dimensionsSwapped = !state.dimensionsSwapped;
+      this._applyButtonStyles(swapButton);
 
-    // Add click handler
-    swapButton.addEventListener("click", () => this.handleSwapButtonClick(swapButton));
+      // Notify listeners
+      document.dispatchEvent(
+        new CustomEvent("dimensionSwap", {
+          detail: { swapped: state.dimensionsSwapped },
+        })
+      );
+    });
 
     return swapButton;
   },
 
   /**
-   * Handles swap button clicks
-   * @param {HTMLElement} button - The button element
+   * Apply proper styles to the swap button
    * @private
+   * @param {HTMLElement} button - The button to style
    */
-  handleSwapButtonClick(button) {
-    // Toggle state
-    state.dimensionsSwapped = !state.dimensionsSwapped;
+  _applyButtonStyles(button) {
+    const isActive = state.dimensionsSwapped;
 
-    // Update button appearance
-    button.style.backgroundColor = state.dimensionsSwapped ? "var(--color-primary-light)" : "white";
-    button.style.borderColor = state.dimensionsSwapped ? "var(--color-primary)" : "var(--color-border)";
-
-    // Trigger redraw event
-    document.dispatchEvent(
-      new CustomEvent("dimensionSwap", {
-        detail: { swapped: state.dimensionsSwapped },
-      })
-    );
+    Object.assign(button.style, {
+      padding: "8px 12px",
+      border: "1px solid var(--color-border)",
+      borderRadius: "4px",
+      backgroundColor: isActive ? "var(--color-primary-light)" : "white",
+      borderColor: isActive ? "var(--color-primary)" : "var(--color-border)",
+      cursor: "pointer",
+      fontSize: "12px",
+      width: "100%",
+    });
   },
 };
