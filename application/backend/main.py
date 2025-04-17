@@ -119,7 +119,7 @@ def classify_dimensions(dimensions: list[str]) -> tuple[list[str], list[str], li
     """
     time_dim = [dim for dim in dimensions if dim in TIME_DIMENSIONS]
     geo_dim = [dim for dim in dimensions if dim in GEO_DIMENSIONS]
-    cat_dim = [dim for dim in dimensions if dim not in time_dim]
+    cat_dim = [dim for dim in dimensions if dim not in time_dim and dim != "location"]
     return time_dim, geo_dim, cat_dim
 
 def is_measure_additive(measure_alias: str) -> bool:
@@ -201,7 +201,7 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
     high_cardinality = dimension_stats and all_dimensions_exceed_cardinality(dimensions, dimension_stats)
     
     # Add chart types based on data characteristics
-    if dim_count == 1 and measure_count == 1 and time_count == 0:
+    if dim_count == 1 and measure_count == 1 and time_count == 0 and dimensions[0] != "location":
         available.append("single_bar_chart")
     
     if time_count == 1 and cat_count <= 1 and measure_count == 1 and not high_cardinality:
@@ -224,12 +224,7 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
     if 1 <= cat_count <= 2 and measure_count == 1 and time_count == 0 and additive_measure_count == measure_count:
         if cat_count < 2 or not high_cardinality:
             available.append("treemap")
-    
-    if geo_count == 1 and len(dimensions) == 1 and measure_count == 1 and additive_measure_count == measure_count:
-        geo_name = geo_dim[0].lower()
-        if "location" in geo_name:
-            available.append("heat_map")
-    
+        
     if geo_count == 1 and len(dimensions) == 1 and measure_count == 1 and additive_measure_count == measure_count:
         geo_name = geo_dim[0].lower()
         if any(area in geo_name for area in ["borough", "county", "neighborhood"]):
@@ -238,9 +233,11 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
     # Select ideal chart based on hierarchical rules
     if geo_count == 1 and len(dimensions) == 1 and measure_count == 1 and additive_measure_count == measure_count:
         geo_name = geo_dim[0].lower()
-        if "location" in geo_name:
+        if geo_name == "location":
+            available.append("heat_map")
+            available.remove("table")
             ideal = "heat_map"
-        elif any(area in geo_name for area in ["borough", "county", "neighborhood"]):
+        elif geo_name in ["borough", "county", "neighborhood"]:
             ideal = "choropleth_map"
     
     elif time_count == 1 and cat_count <= 1 and measure_count == 1:
@@ -249,9 +246,7 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
             ideal = "stacked_area_chart"
     
     else:
-        if dim_count == 1 and measure_count == 1 and time_count == 0:
-            ideal = "single_bar_chart"
-        elif 1 <= cat_count <= 2 and 1 <= measure_count <= 2 and (cat_count + measure_count) <= 4:
+        if 1 <= cat_count <= 2 and 1 <= measure_count <= 2 and (cat_count + measure_count) <= 4:
             ideal = "nested_bar_chart"
         elif cat_count == 2 and measure_count == 1:
             ideal = "grouped_bar_chart"
