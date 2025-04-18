@@ -90,9 +90,13 @@ export const chartControls = {
     const swapButton = document.createElement("button");
     swapButton.className = "dimension-swap-btn";
 
-    // Create button with Material Icons for better accessibility and consistency
-    swapButton.innerHTML =
-      '<span class="material-icons" style="font-size: 16px; vertical-align: text-bottom; margin-right: 4px;">swap_horiz</span>Flip Categories';
+    // Create button with Material Icons - wrapped in container span for better alignment
+    swapButton.innerHTML = `
+      <div style="display: inline-flex; align-items: center; justify-content: center;">
+        <span class="material-icons" style="font-size: 16px; margin-right: 6px;">swap_horiz</span>
+        <span>Flip Categories</span>
+      </div>
+    `;
 
     // Apply styles and add click handler
     this._applyButtonStyles(swapButton);
@@ -129,6 +133,10 @@ export const chartControls = {
       cursor: "pointer",
       fontSize: "12px",
       width: "100%",
+      textAlign: "center",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
     });
   },
 };
