@@ -215,7 +215,7 @@ body {
     border-radius: 4px;
     cursor: pointer;
     display: flex;
-    height: 40px;
+    height: 44px; /* Increased from 40px (10% larger) */
     justify-content: center;
     transition: all 0.2s ease;
 }
@@ -231,7 +231,18 @@ body {
 
 .chart-type-option .material-icons {
     color: var(--color-primary);
-    font-size: 20px;
+    font-size: 22px;
+}
+
+.chart-type-option .chart-icon {
+  width: 26px;
+  height: 26px;
+  display: block;
+  margin: auto;
+}
+
+.chart-type-option.selected .chart-icon {
+  filter: brightness(1);
 }
 
 /* 6. SIDEBAR & CONTROLS

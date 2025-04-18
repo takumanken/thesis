@@ -165,6 +165,12 @@ function createChartTypeSwitcher() {
   // Clear existing content
   selectorContainer.innerHTML = "";
 
+  // Create tooltip container (will be reused for all tooltips)
+  const tooltipContainer = document.createElement("div");
+  tooltipContainer.className = "chart-preview-tooltip";
+  tooltipContainer.style.display = "none";
+  document.body.appendChild(tooltipContainer);
+
   // Get available chart types or use default
   const availableChartTypes = state.availableChartTypes || ["table"];
 
@@ -177,8 +183,27 @@ function createChartTypeSwitcher() {
     const option = document.createElement("div");
     option.className = `chart-type-option${state.chartType === typeId ? " selected" : ""}`;
     option.dataset.chartType = typeId;
-    option.innerHTML = `<span class="material-icons">${config.icon}</span>`;
-    option.title = config.label;
+
+    const iconPath = `assets/icons/${typeId}.svg`;
+
+    option.innerHTML = `<img src="${iconPath}" alt="${config.label}" class="chart-icon" onerror="this.onerror=null; this.src='/frontend/assets/icons/default.svg';">`;
+
+    // Simple tooltip hover handlers
+    option.addEventListener("mouseenter", (e) => {
+      // Show the simple tooltip with just the chart name
+      tooltipContainer.innerHTML = `<div class="tooltip-content">${config.label}</div>`;
+
+      // Position the tooltip near the hovered element
+      const rect = option.getBoundingClientRect();
+      tooltipContainer.style.left = rect.right + 10 + "px";
+      tooltipContainer.style.top = rect.top + rect.height / 2 - 15 + "px";
+      tooltipContainer.style.display = "block";
+    });
+
+    option.addEventListener("mouseleave", () => {
+      // Hide the tooltip
+      tooltipContainer.style.display = "none";
+    });
 
     // Add click handler
     option.addEventListener("click", () => {
@@ -191,6 +216,9 @@ function createChartTypeSwitcher() {
       // Update state and redraw
       state.chartType = typeId;
       visualizeData();
+
+      // Hide tooltip after selection
+      tooltipContainer.style.display = "none";
     });
 
     selectorContainer.appendChild(option);
