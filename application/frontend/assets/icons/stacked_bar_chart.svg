@@ -1,8 +1,8 @@
-<svg width="54" height="45" viewBox="0 0 54 45" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect x="16.1238" y="16.8801" width="10.5719" height="15.3463" transform="rotate(90 16.1238 16.8801)" fill="#3A447C"/>
-<rect x="16.1238" y="33.4932" width="10.5719" height="15.3463" transform="rotate(90 16.1238 33.4932)" fill="#3A447C"/>
-<rect x="21.239" y="0.26709" width="10.5719" height="20.4618" transform="rotate(90 21.239 0.26709)" fill="#3A447C"/>
-<rect width="10.5719" height="22.1669" transform="matrix(1.91038e-08 1 1 -1.00016e-07 16.1238 16.8801)" fill="#848AAE"/>
-<rect width="10.5719" height="11.936" transform="matrix(1.75118e-08 1 1 -1.09108e-07 16.1238 33.4932)" fill="#848AAE"/>
-<rect width="10.5719" height="32.3978" transform="matrix(3.18397e-09 1 1 -6.00095e-07 21.239 0.26709)" fill="#848AAE"/>
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="27.3467" y="34.9109" width="9.36799" height="15.3463" transform="rotate(90 27.3467 34.9109)" fill="#3A447C"/>
+<rect x="27.3467" y="49.6321" width="9.36799" height="15.3463" transform="rotate(90 27.3467 49.6321)" fill="#3A447C"/>
+<rect x="34" y="20" width="9.74732" height="22" transform="rotate(90 34 20)" fill="#3A447C"/>
+<rect width="9.36799" height="22.1669" transform="matrix(2.1559e-08 1 1 -8.8626e-08 27.3467 34.9109)" fill="#848AAE"/>
+<rect width="9.36799" height="11.936" transform="matrix(1.97624e-08 1 1 -9.66829e-08 27.3467 49.6321)" fill="#848AAE"/>
+<rect width="9.74733" height="34" transform="matrix(3.80664e-09 1 1 -5.01935e-07 34 20)" fill="#848AAE"/>
 </svg>
