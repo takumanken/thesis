@@ -238,7 +238,7 @@ function drawData(svg, data, dimensions, measures, config, tooltip) {
               y: y + config.rowHeight * 0.15,
               width: Math.max(1, config.xScales[measure](val) - config.xScales[measure].range()[0]),
               height: config.rowHeight * 0.7,
-              color: config.colors[i],
+              color: config.colors(measure),
             },
             tooltip
           );
@@ -331,8 +331,15 @@ function calculateColumnPositions(leftMargin, textMeasurements, hasTwoDimensions
  * Gets color array for measures using the standard color palette
  */
 function getMeasureColors(measures) {
-  // Use the chartColors utility directly to create a standard color scale
-  return chartScales.createColorScale(measures, chartColors.mainPalette);
+  // Create a custom color array with specific assignments for first measures
+  const colorRange = measures.map((_, i) => {
+    if (i === 0) return chartColors.mainPalette[0];
+    if (i === 1) return chartColors.mainPalette[5];
+    return chartColors.mainPalette[i % chartColors.mainPalette.length];
+  });
+
+  // Create a scale with this custom range
+  return chartScales.createColorScale(measures, colorRange);
 }
 
 /**
