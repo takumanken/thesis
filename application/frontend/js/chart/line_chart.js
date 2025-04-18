@@ -10,8 +10,6 @@ import * as chartScales from "./utils/chartScales.js";
 import * as chartAxes from "./utils/chartAxes.js";
 import * as legendUtil from "./utils/legendUtil.js";
 
-// ===== MAIN RENDERING FUNCTION =====
-
 /**
  * Main render function for line chart
  */
@@ -44,7 +42,7 @@ function renderLineChart(container) {
 
   // Draw chart components
   chartAxes.renderTimeAxis(svg, scales.x, config.height, isNumericTime, timeGrain);
-  renderYAxis(svg, scales.y);
+  chartAxes.renderMeasureAxis(svg, scales.y, { orientation: "left", className: "y-axis" });
 
   // Draw data and get sorted groups
   const sortedGroups = drawLines({
@@ -113,12 +111,7 @@ function processData(dataset, timeDimension, groupDimension) {
  * Process numeric time data (years, quarters)
  */
 function processNumericTimeData(dataset, timeDimension) {
-  return dataset
-    .map((d) => ({
-      ...d,
-      parsedTime: +d[timeDimension],
-    }))
-    .filter((d) => !isNaN(d.parsedTime));
+  return dataset.map((d) => ({ ...d, parsedTime: +d[timeDimension] })).filter((d) => !isNaN(d.parsedTime));
 }
 
 /**
@@ -126,12 +119,7 @@ function processNumericTimeData(dataset, timeDimension) {
  */
 function processDateTimeData(dataset, timeDimension) {
   const parseTime = d3.timeParse("%Y-%m-%d");
-  return dataset
-    .map((d) => ({
-      ...d,
-      parsedTime: parseTime(d[timeDimension]),
-    }))
-    .filter((d) => d.parsedTime);
+  return dataset.map((d) => ({ ...d, parsedTime: parseTime(d[timeDimension]) })).filter((d) => d.parsedTime);
 }
 
 // ===== CHART SETUP FUNCTIONS =====
@@ -140,12 +128,10 @@ function processDateTimeData(dataset, timeDimension) {
  * Setup chart layout with chart and legend areas
  */
 function setupChartLayout(container, groupDimension) {
-  // If grouped, set up horizontal layout with legend
   if (groupDimension) {
     return legendUtil.createHorizontalLayout(container);
   }
 
-  // No grouping - just use container
   container.innerHTML = "";
   return { chartContainer: container, legendContainer: null };
 }
@@ -167,19 +153,6 @@ function createChartElements(container, config) {
 }
 
 /**
- * Create scales for the chart
- */
-function createScales(data, measure, isNumericTime, config) {
-  // Use time scale from chartUtils.js (already imported)
-  const x = chartUtils.createTimeScale(data, isNumericTime, config.width, "parsedTime");
-
-  // Use measure scale from chartScales.js
-  const y = chartScales.createMeasureScale(data, measure, [config.height, 0]);
-
-  return { x, y };
-}
-
-/**
  * Create line generator function
  */
 function createLineGenerator(x, y, measure) {
@@ -191,14 +164,6 @@ function createLineGenerator(x, y, measure) {
 }
 
 // ===== DRAWING FUNCTIONS =====
-
-/**
- * Draw chart axes
- */
-function drawAxes(svg, scales, height, isNumericTime, timeGrain) {
-  chartAxes.renderTimeAxis(svg, scales.x, height, isNumericTime, timeGrain);
-  renderYAxis(svg, scales.y);
-}
 
 /**
  * Draw lines based on grouping
@@ -261,8 +226,8 @@ function drawSingleLine(svg, data, scales, lineGenerator, tooltip, timeDimension
     .attr("stroke-width", 2)
     .attr("d", lineGenerator);
 
-  // Create interactive points
-  const points = svg
+  // Create visible points (smaller, just for visual reference)
+  svg
     .selectAll("circle.point")
     .data(data)
     .join("circle")
@@ -273,15 +238,55 @@ function drawSingleLine(svg, data, scales, lineGenerator, tooltip, timeDimension
     .attr("fill", chartColors.mainPalette[0])
     .attr("opacity", 0.7);
 
-  // Attach tooltips to points
-  chartUtils.attachMouseTooltip(points, tooltip, (d) => {
-    const timeValue = isNumericTime ? d.parsedTime : d3.timeFormat("%Y-%m-%d")(d.parsedTime);
-
-    return `
-        <strong>${timeDimension}:</strong> ${timeValue}<br>
-        <strong>${measure}:</strong> ${chartUtils.formatValue(d[measure])}
-      `;
+  // Create interactive overlay and highlight circle
+  const overlay = chartUtils.createInteractionOverlay(svg, {
+    width: scales.x.range()[1],
+    height: scales.y.range()[0],
   });
+  const highlight = chartUtils.createHighlightCircle(svg);
+
+  // Create array of point coordinates for closest point detection
+  const points = data.map((d) => ({
+    x: scales.x(d.parsedTime),
+    y: scales.y(+d[measure] || 0),
+    data: d,
+    group: "main", // Single group for single line
+  }));
+
+  // Setup mouse interaction
+  overlay
+    .on("mousemove", function (event) {
+      const [mouseX, mouseY] = d3.pointer(event);
+      const closestPoint = chartUtils.findClosestDataPoint(mouseX, mouseY, points);
+
+      if (closestPoint && closestPoint.distance < 50) {
+        // Show highlight and tooltip
+        highlight
+          .attr("cx", closestPoint.x)
+          .attr("cy", closestPoint.y)
+          .attr("fill", chartColors.mainPalette[0])
+          .style("opacity", 0.8);
+
+        const timeValue = chartUtils.formatTimeValue(closestPoint.data.parsedTime, isNumericTime);
+
+        chartStyles.tooltip.show(
+          tooltip,
+          event,
+          `
+            <strong>${timeDimension}:</strong> ${timeValue}<br>
+            <strong>${measure}:</strong> ${chartUtils.formatValue(closestPoint.data[measure])}
+          `
+        );
+      } else {
+        // Hide if no point is close
+        highlight.style("opacity", 0);
+        chartStyles.tooltip.hide(tooltip);
+      }
+    })
+    .on("mouseleave", () => {
+      highlight.style("opacity", 0);
+      chartStyles.tooltip.hide(tooltip);
+    });
 }
 
 /**
@@ -511,16 +516,6 @@ function prepareGroupedData(data, groupDimension) {
     key,
     values: [...values].sort((a, b) => a.parsedTime - b.parsedTime),
   }));
-}
-
-/**
- * Render Y axis with appropriate formatting
- */
-function renderYAxis(svg, yScale) {
-  chartAxes.renderMeasureAxis(svg, yScale, {
-    orientation: "left",
-    className: "y-axis",
-  });
 }
 
 export default renderLineChart;
