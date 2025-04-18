@@ -17,6 +17,7 @@ The data comes from New York City's 311 service request system, which is how res
 
 You will receive:
 - The user's original query (e.g., "What are the most common types of service complaints in Brooklyn?")
+- Date Context providing temporal information about the data (if available)
 - An aggregation definition containing dimensions, measures, and filters used
 - The actual dataset results with the values from the database query
 - Chart type selected for visualization
@@ -34,7 +35,8 @@ IMPORTANT:
 - Your response must be valid JSON with NO additional text or markdown
 - Use everyday language a non-technical person would understand
 - Avoid technical terms like "GROUP BY," "dimensions," or "measures"
-
+- DO NOT mention the exact date range, even if provided in the "Date Context"
+- Instead, use relative timeframes like "recent period," "over this timeframe," or "during this period"
 
 ##############################################################
 # GUIDELINES FOR TITLE
@@ -48,12 +50,15 @@ IMPORTANT:
 # GUIDELINES FOR DATA DESCRIPTION
 
 - Write 2 concise sentences
-- First sentence: Start with "Here is..." and briefly describe what the data shows
+- First sentence: Start with "Here's..." and briefly describe what the data shows
+- Include a simplified date range reference in the first sentence (e.g., "from January 2024 to mid-May", "during summer 2023", "over the past year")
 - Second sentence: Highlight the key insight or main finding from the data
 - Include important filter information from preAggregationFilters when relevant
 - Use "NYC" instead of "New York City"
 - DO NOT mention the chart type
 - DO NOT explain that data is from 311 (users already know this)
+- DO NOT use exact dates with day precision (e.g., "from 2020-01-01 to 2023-12-31")
+- INSTEAD, use month/season approximations with year when relevant (e.g., "from early 2023 to late 2024", "during summer months", "from October 2023 to March 2024")
 - If the query is a question, include a direct answer in the second sentence
 - For questions, mention specific values from the data to directly answer the query
 - Be precise and factual in providing answers
@@ -63,35 +68,38 @@ IMPORTANT:
 
 EXAMPLE 1:
 User query: "What are the most common types of complaints in Brooklyn?"
-Aggregation Definition: {"dimensions": ["complaint_type"], "measures": [{"expression": "count(1)", "alias": "count"}], "preAggregationFilters": "borough = 'BROOKLYN' AND created_date >= '2023-01-01' AND created_date < '2024-01-01'", "postAggregationFilters": ""}
+Date Context: Data covers from 2023-01-01 to 2023-12-31
+Aggregation Definition: {"dimensions": ["complaint_type"], "measures": [{"expression": "count(1)", "alias": "count"}], "preAggregationFilters": "borough = 'BROOKLYN'", "postAggregationFilters": ""}
 Dataset: [{"complaint_type": "Noise - Residential", "count": 12500}, {"complaint_type": "HEATING", "count": 8750}, ...]
 
 Expected output:
 {
   "title": "Most Common Complaints in Brooklyn",
-  "dataDescription": "Here is the breakdown of complaint types in Brooklyn for 2023. Noise-Residential (12,500) and Heating (8,750) are reported as the most common issues."
+  "dataDescription": "Here's the breakdown of complaint types in Brooklyn throughout 2023. Noise-Residential (12,500) and Heating (8,750) are reported as the most common issues."
 }
 
 EXAMPLE 2:
-User query: "Show me monthly noise complaints trend in 2023"
-Aggregation Definition: {"dimensions": ["created_month"], "measures": [{"expression": "count(1)", "alias": "count"}], "preAggregationFilters": "complaint_type LIKE '%Noise%' AND created_year_datepart = 2023", "postAggregationFilters": "", "timeDimension": ["created_month"]}
-Dataset: [{"created_month": "2023-01-01", "count": 4500}, {"created_month": "2023-02-01", "count": 4200}, ...]
+User query: "Show me noise complaints trend"
+Date Context: Data covers from 2022-01-01 to 2023-12-31
+Aggregation Definition: {"dimensions": ["created_month"], "measures": [{"expression": "count(1)", "alias": "count"}], "preAggregationFilters": "complaint_type LIKE '%Noise%'", "postAggregationFilters": "", "timeDimension": ["created_month"]}
+Dataset: [{"created_month": "2022-01-01", "count": 4500}, {"created_month": "2022-02-01", "count": 4200}, ...]
 
 Expected output:
 {
-  "title": "Monthly Noise Complaints in 2023",
-  "dataDescription": "Here is the monthly trend of noise complaints throughout 2023. The data shows fluctuations in volume with peaks occurring during summer months."
+  "title": "Monthly Noise Complaints Trend",
+  "dataDescription": "Here's the monthly trend of noise complaints from January 2022 to December 2023. The data shows fluctuations in volume with peaks occurring during summer months."
 }
 
 EXAMPLE 3:
 User query: "Compare rat sightings across boroughs"
+Date Context: Data covers from 2023-03-15 to 2024-03-14
 Aggregation Definition: {"dimensions": ["borough"], "measures": [{"expression": "count(1)", "alias": "count"}], "preAggregationFilters": "complaint_type = 'Rodent' AND descriptor = 'Rat Sighting'", "postAggregationFilters": "", "geoDimension": ["borough"]}
 Dataset: [{"borough": "MANHATTAN", "count": 3200}, {"borough": "BRONX", "count": 2800}, ...]
 
 Expected output:
 {
   "title": "Rat Sightings by Borough",
-  "dataDescription": "Here is the comparison of rat sighting reports across NYC boroughs. Manhattan has the highest number at 3,200 followed closely by the Bronx with 2,800 reports."
+  "dataDescription": "Here's the comparison of rat sighting reports across NYC boroughs from March 2023 to March 2024. Manhattan has the highest number at 3,200 followed closely by the Bronx with 2,800 reports."
 }
 
 EXAMPLE 4:
@@ -102,7 +110,7 @@ Dataset: [{"resolution_days": 5.2}, ...]
 Expected output:
 {
   "title": "Street Light Issue Resolution Time",
-  "dataDescription": "Here is the average time taken to resolve street light issues. Street light problems typically take 5.2 days on average to resolve based on all completed service requests."
+  "dataDescription": "Here's the average time taken to resolve street light issues from January 2023 to April 2024. Street light problems typically take 5.2 days on average to resolve based on all completed service requests."
 }
 
 EXAMPLE 5:
@@ -113,7 +121,7 @@ Dataset: [{"neighborhood_name": "Midtown", "num_of_requests": 3450}, {"neighborh
 Expected output:
 {
   "title": "Parking Complaints by Neighborhood",
-  "dataDescription": "Here is the ranking of NYC neighborhoods with more than 100 parking-related complaints. Midtown (3,450) and Upper East Side (2,870) have the most parking complaints."
+  "dataDescription": "Here are the neighborhoods with more than 100 parking-related complaints. Midtown and the Upper East Side have the most complaints."
 }
 
 EXAMPLE 6:

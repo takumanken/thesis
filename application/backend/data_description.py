@@ -42,10 +42,21 @@ def generate_data_description(
         sample_size = min(100, len(dataset))
         sample_data = dataset[:sample_size]
         
+        # Extract date range information if available
+        date_context = ""
+        if "createdDateRange" in aggregation_definition and aggregation_definition["createdDateRange"]:
+            date_range = aggregation_definition["createdDateRange"]
+            if len(date_range) == 2:
+                date_context = f"""
+Date Context:
+Date range (311 request created date) is from {date_range[0]} to {date_range[1]}
+"""
+        
         # Format input for Gemini
         input_content = f"""
 User Query: "{original_query}"
 Chart Type: {chart_type}
+{date_context}
 Aggregation Definition:
 {json.dumps(aggregation_definition, indent=2)}
 Dataset Sample ({sample_size} of {len(dataset)} rows):
@@ -76,5 +87,7 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
             
     except json.JSONDecodeError as e:
         logger.warning(f"Failed to parse JSON response: {e}")
+        return {"title": "Data Overview", "dataDescription": "Here is a summary of the requested data."}
     except Exception as e:
         logger.error(f"Error generating data description: {e}")
+        return {"title": "Data Overview", "dataDescription": "Here is a summary of the requested data."}
