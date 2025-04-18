@@ -183,7 +183,7 @@ function createChartTypeSwitcher() {
     option.dataset.chartType = typeId;
 
     // Try to load icon
-    const iconPath = `../assets/icons/${typeId}.svg`;
+    const iconPath = `assets/icons/${typeId}.svg`;
     option.innerHTML = `
       <img src="${iconPath}" alt="${config.label}" class="chart-icon"
            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
