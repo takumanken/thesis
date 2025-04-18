@@ -217,12 +217,7 @@ function createChartElements(container, config) {
  */
 function renderBars(svg, stackData, sortedStacks, scales, groupKey, stackKey, measure, isPercentage, color, tooltip) {
   const stackGen = d3.stack().keys(sortedStacks);
-  const groups = svg
-    .append("g")
-    .selectAll("g")
-    .data(stackGen(stackData))
-    .join("g")
-    .attr("fill", (d) => color(d.key));
+  const groups = svg.append("g").selectAll("g").data(stackGen(stackData)).join("g");
 
   const rects = groups
     .selectAll("rect")
@@ -231,7 +226,8 @@ function renderBars(svg, stackData, sortedStacks, scales, groupKey, stackKey, me
     .attr("y", (d) => scales.y(d.data[groupKey]))
     .attr("x", (d) => scales.x(d[0]))
     .attr("width", (d) => Math.max(0, scales.x(d[1]) - scales.x(d[0])))
-    .attr("height", scales.y.bandwidth());
+    .attr("height", scales.y.bandwidth())
+    .attr("fill", (d, i, nodes) => color(d3.select(nodes[i].parentNode).datum().key));
 
   chartUtils.attachMouseTooltip(rects, tooltip, (d, el) => {
     const stackVal = d3.select(el.parentNode).datum().key;
