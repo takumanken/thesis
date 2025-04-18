@@ -236,9 +236,9 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
     if geo_count == 1 and len(dimensions) == 1 and measure_count == 1 and additive_measure_count == measure_count:
         geo_name = geo_dim[0].lower()
         if geo_name == "location":
-            available.append("heat_map")
+            available.append("heatmap")
             available.remove("table")
-            ideal = "heat_map"
+            ideal = "heatmap"
         elif geo_name in ["borough", "county", "neighborhood"]:
             ideal = "choropleth_map"
     

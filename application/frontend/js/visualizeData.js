@@ -14,7 +14,7 @@ import renderGroupedBarChart from "./chart/grouped_bar_chart.js";
 import renderStackedBarChart from "./chart/stacked_bar_chart.js";
 import renderStackedAreaChart from "./chart/stacked_area_chart.js";
 import renderChoroplethMap from "./chart/choropleth_map.js";
-import renderPointMap from "./chart/heat_map.js";
+import renderPointMap from "./chart/heatmap.js";
 import renderTextResponse from "./chart/text_response.js";
 import renderTreemap from "./chart/treemap.js";
 import renderNestedBarChart from "./chart/nested_bar_chart.js";
@@ -25,7 +25,7 @@ const CHART_TYPE_CONFIG = {
   single_bar_chart: { icon: "bar_chart", label: "Bar Chart" },
   line_chart: { icon: "show_chart", label: "Line Chart" },
   choropleth_map: { icon: "map", label: "Map" },
-  heat_map: { icon: "grain", label: "Heat Map" },
+  heatmap: { icon: "grain", label: "Heat Map" },
   grouped_bar_chart: { icon: "view_column", label: "Grouped Bar Chart" },
   stacked_bar_chart: { icon: "stacked_bar_chart", label: "Stacked Bar Chart" },
   stacked_bar_chart_100: { icon: "stacked_bar_chart", label: "100% Stacked Bar" },
@@ -47,7 +47,7 @@ const CHART_RENDERERS = {
   stacked_area_chart_100: renderStackedAreaChart,
   line_chart: renderLineChart,
   choropleth_map: renderChoroplethMap,
-  heat_map: renderPointMap,
+  heatmap: renderPointMap,
   treemap: renderTreemap,
   nested_bar_chart: renderNestedBarChart,
   text: renderTextResponse,
