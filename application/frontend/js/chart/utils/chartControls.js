@@ -88,8 +88,11 @@ export const chartControls = {
    */
   _createSwapButton() {
     const swapButton = document.createElement("button");
-    swapButton.textContent = "Swap Dimensions";
     swapButton.className = "dimension-swap-btn";
+
+    // Create button with Material Icons for better accessibility and consistency
+    swapButton.innerHTML =
+      '<span class="material-icons" style="font-size: 16px; vertical-align: text-bottom; margin-right: 4px;">swap_horiz</span>Flip Categories';
 
     // Apply styles and add click handler
     this._applyButtonStyles(swapButton);
