@@ -143,35 +143,74 @@ export function setupDimensionSwapHandler(renderCallback) {
 }
 
 /**
- * Attach heatmap‑style hover + tooltip to any D3 selection.
+ * Attach heatmap-style hover + tooltip to any D3 selection.
+ * Provides consistent tooltip behavior with automatic "darker fill" highlight
+ * unless a custom highlight function is provided.
  *
- * @param {d3.Selection} sel         – the elements to hover
- * @param {d3.Selection} tooltip     – created via chartStyles.createTooltip()
- * @param {Function}      contentFn  – (d, el, event) ⇒ HTML string
- * @param {Function}      [highlight]– (el, d) ⇒ void, e.g. style change
+ * @param {d3.Selection} sel - D3 selection to attach hover behavior to
+ * @param {d3.Selection} tooltip - Tooltip element created via chartStyles.createTooltip()
+ * @param {Function} contentFn - Function(d, element, event) that returns HTML content
+ * @param {Function} [highlightFn] - Optional custom highlight function(el, d)
  */
-export function attachMouseTooltip(sel, tooltip, contentFn, highlight) {
-  let lastEl = null; // <-- declare per‐call state
+export function attachMouseTooltip(sel, tooltip, contentFn, highlightFn) {
+  if (!sel || sel.empty()) {
+    console.warn("attachMouseTooltip: Empty or invalid selection");
+    return;
+  }
 
-  sel
-    .on("mousemove", function (event, d) {
-      // clear previous hover
-      if (lastEl && lastEl !== this) {
-        d3.select(lastEl).classed("hovered", false);
-      }
-      d3.select(this).classed("hovered", true);
-      lastEl = this;
+  let lastEl = null;
 
-      if (highlight) highlight(d3.select(this), d);
+  // Store original fill color for each element
+  sel.each(function () {
+    const el = d3.select(this);
+    const fill = el.attr("fill");
+    // Only store if fill exists
+    if (fill) el.property("__origFill", fill);
+  });
 
-      // show / move tooltip
-      const html = contentFn(d, this, event);
+  // Default highlight that darkens fill when hovered
+  function defaultHighlight(el, d) {
+    // Get original fill - if undefined, do nothing
+    const origFill = el.property("__origFill");
+    if (!origFill) return;
+
+    if (d) {
+      // Highlight: darken the fill
+      el.attr("fill", d3.color(origFill).darker(0.3));
+    } else {
+      // Reset to original
+      el.attr("fill", origFill);
+    }
+  }
+
+  // Handle mousemove (covers both mouseover and movement)
+  sel.on("mousemove", function (event, d) {
+    // Clear previous highlight
+    if (lastEl && lastEl !== this) {
+      const prev = d3.select(lastEl);
+      (highlightFn || defaultHighlight)(prev, null);
+    }
+
+    // Apply new highlight
+    const cur = d3.select(this);
+    (highlightFn || defaultHighlight)(cur, d);
+    lastEl = this;
+
+    // Show tooltip with content
+    const html = contentFn(d, this, event);
+    if (html) {
       chartStyles.tooltip.show(tooltip, event, html);
-    })
-    .on("mouseout", function () {
-      d3.select(this).classed("hovered", false);
-      if (highlight) highlight(d3.select(this), null);
-      chartStyles.tooltip.hide(tooltip);
-      lastEl = null;
-    });
+    }
+  });
+
+  // Handle mouseout
+  sel.on("mouseout", function () {
+    // Clear highlight
+    const cur = d3.select(this);
+    (highlightFn || defaultHighlight)(cur, null);
+
+    // Hide tooltip
+    chartStyles.tooltip.hide(tooltip);
+    lastEl = null;
+  });
 }

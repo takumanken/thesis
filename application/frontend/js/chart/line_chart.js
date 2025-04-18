@@ -8,40 +8,43 @@ import { chartColors } from "./utils/chartColors.js";
 import { formatValue, setupResizeHandler, validateRenderingContext, attachMouseTooltip } from "./utils/chartUtils.js";
 import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js";
 
+// ===== MAIN RENDERING FUNCTION =====
+
 /**
  * Main render function for line chart
- * @param {HTMLElement} container - DOM element to render the chart
  */
 function renderLineChart(container) {
   if (!validateRenderingContext(container)) return;
 
-  // Extract data and dimensions
-  const dataset = state.dataset;
+  // Extract dimensions and process data
   const { timeDimension, measure, groupDimension } = extractDimensions();
-
-  // Create layout and process data
   const { chartContainer, legendContainer } = setupChartLayout(container, groupDimension);
-  const { processedData, uniqueGroups, isNumericTime, timeGrain } = processData(dataset, timeDimension, groupDimension);
+  const { processedData, uniqueGroups, isNumericTime, timeGrain } = processData(
+    state.dataset,
+    timeDimension,
+    groupDimension
+  );
 
   if (processedData.length === 0) {
     chartContainer.innerHTML = "<p>No valid time data available</p>";
     return;
   }
 
-  // Create chart configuration
+  // Create chart components
   const config = createChartConfig(chartContainer);
-  const elements = createChartElements(chartContainer, config);
+  const svg = createChartElements(chartContainer, config).svg;
   const scales = createScales(processedData, measure, isNumericTime, config);
   const tooltip = chartStyles.createTooltip();
-
-  // Create line generator
   const lineGenerator = createLineGenerator(scales.x, scales.y, measure);
 
-  // Render chart components and get sorted groups for legend
-  const sortedGroups = renderChart(
-    elements,
-    processedData,
-    uniqueGroups,
+  // Draw chart components
+  drawAxes(svg, scales, config.height, isNumericTime, timeGrain);
+
+  // Draw data and get sorted groups
+  const sortedGroups = drawLines({
+    svg,
+    data: processedData,
+    groups: uniqueGroups,
     scales,
     lineGenerator,
     tooltip,
@@ -50,18 +53,19 @@ function renderLineChart(container) {
     measure,
     groupDimension,
     isNumericTime,
-    timeGrain
-  );
+  });
 
-  // Create legend if needed - now using sorted groups
+  // Add legend if grouped data
   if (groupDimension && sortedGroups.length > 0) {
     const colorScale = d3.scaleOrdinal().domain(sortedGroups).range(chartColors.mainPalette);
     createColorLegend(legendContainer, sortedGroups, colorScale);
   }
 
-  // Setup resize handling
+  // Setup resize handler
   setupResizeHandler(container, () => renderLineChart(container));
 }
+
+// ===== DATA EXTRACTION & PROCESSING =====
 
 /**
  * Extract dimensions and measure from state
@@ -70,7 +74,7 @@ function extractDimensions() {
   const timeDimension = state.aggregationDefinition.timeDimension[0];
   const measure = state.aggregationDefinition.measures[0].alias;
 
-  // Look for an additional grouping dimension (either categorical or geo)
+  // Look for grouping dimension
   let groupDimension = null;
   if (state.aggregationDefinition.categoricalDimension?.length > 0) {
     groupDimension = state.aggregationDefinition.categoricalDimension[0];
@@ -82,48 +86,16 @@ function extractDimensions() {
 }
 
 /**
- * Setup chart layout with chart and legend areas
- */
-function setupChartLayout(container, groupDimension) {
-  // If we have grouping, set up horizontal layout with legend
-  if (groupDimension) {
-    return createHorizontalLayout(container);
-  }
-
-  // No grouping - just return the container as the chart container
-  container.innerHTML = "";
-  return { chartContainer: container, legendContainer: null };
-}
-
-/**
  * Process and prepare data for visualization
  */
 function processData(dataset, timeDimension, groupDimension) {
   const isNumericTime = /_datepart$/.test(timeDimension);
-  let processedData = [];
-
-  // Determine time grain from dimension name
   const timeGrain = determineTimeGrain(timeDimension);
 
-  // Process time values appropriately
-  if (isNumericTime) {
-    // For numeric time dimensions, ensure values are numbers
-    processedData = dataset
-      .map((d) => ({
-        ...d,
-        parsedTime: +d[timeDimension],
-      }))
-      .filter((d) => !isNaN(d.parsedTime));
-  } else {
-    // For date-based time dimensions, parse as dates
-    const parseTime = d3.timeParse("%Y-%m-%d");
-    processedData = dataset
-      .map((d) => ({
-        ...d,
-        parsedTime: parseTime(d[timeDimension]),
-      }))
-      .filter((d) => d.parsedTime);
-  }
+  // Process time values - numeric or date
+  const processedData = isNumericTime
+    ? processNumericTimeData(dataset, timeDimension)
+    : processDateTimeData(dataset, timeDimension);
 
   // Extract unique groups if grouping is applied
   const uniqueGroups = groupDimension ? [...new Set(processedData.map((d) => d[groupDimension]))] : [];
@@ -132,34 +104,65 @@ function processData(dataset, timeDimension, groupDimension) {
 }
 
 /**
- * Determine the time grain from the dimension name
- * @param {string} timeDimension - Name of the time dimension
- * @returns {string} - Time grain (day, week, month, year)
+ * Process numeric time data (years, quarters)
+ */
+function processNumericTimeData(dataset, timeDimension) {
+  return dataset
+    .map((d) => ({
+      ...d,
+      parsedTime: +d[timeDimension],
+    }))
+    .filter((d) => !isNaN(d.parsedTime));
+}
+
+/**
+ * Process date-based time data
+ */
+function processDateTimeData(dataset, timeDimension) {
+  const parseTime = d3.timeParse("%Y-%m-%d");
+  return dataset
+    .map((d) => ({
+      ...d,
+      parsedTime: parseTime(d[timeDimension]),
+    }))
+    .filter((d) => d.parsedTime);
+}
+
+/**
+ * Determine the time grain from dimension name
  */
 function determineTimeGrain(timeDimension) {
   const dimensionLower = timeDimension.toLowerCase();
 
-  if (dimensionLower.includes("year")) {
-    return "year";
-  } else if (dimensionLower.includes("month")) {
-    return "month";
-  } else if (dimensionLower.includes("week")) {
-    return "week";
-  } else {
-    return "day";
+  if (dimensionLower.includes("year")) return "year";
+  if (dimensionLower.includes("month")) return "month";
+  if (dimensionLower.includes("week")) return "week";
+  return "day";
+}
+
+// ===== CHART SETUP FUNCTIONS =====
+
+/**
+ * Setup chart layout with chart and legend areas
+ */
+function setupChartLayout(container, groupDimension) {
+  // If grouped, set up horizontal layout with legend
+  if (groupDimension) {
+    return createHorizontalLayout(container);
   }
+
+  // No grouping - just use container
+  container.innerHTML = "";
+  return { chartContainer: container, legendContainer: null };
 }
 
 /**
- * Create chart configuration
+ * Create chart configuration with sizing
  */
 function createChartConfig(container) {
   const margin = { top: 20, right: 20, bottom: 70, left: 70 };
   const width = container.clientWidth - margin.left - margin.right;
-
-  // Use container height instead of fixed CHART_DIMENSIONS.height
-  const containerHeight = container.clientHeight || 500; // Fallback if clientHeight is 0
-  const height = containerHeight - margin.top - margin.bottom;
+  const height = (container.clientHeight || 500) - margin.top - margin.bottom;
 
   return { margin, width, height };
 }
@@ -200,7 +203,7 @@ function createScales(data, measure, isNumericTime, config) {
   // Create y scale for measure values
   const y = d3
     .scaleLinear()
-    .domain([0, d3.max(data, (d) => +d[measure])])
+    .domain([0, d3.max(data, (d) => +d[measure] || 0) * 1.05])
     .range([config.height, 0])
     .nice();
 
@@ -214,109 +217,419 @@ function createLineGenerator(x, y, measure) {
   return d3
     .line()
     .x((d) => x(d.parsedTime))
-    .y((d) => y(+d[measure]))
+    .y((d) => y(+d[measure] || 0))
     .curve(d3.curveCardinal.tension(0.5));
 }
 
+// ===== DRAWING FUNCTIONS =====
+
 /**
- * Render all chart components
+ * Draw chart axes
  */
-function renderChart(
-  elements,
-  data,
-  groups,
-  scales,
-  lineGenerator,
-  tooltip,
-  config,
-  timeDimension,
-  measure,
-  groupDimension,
-  isNumericTime,
-  timeGrain
-) {
-  // Add axes with consistent styling
-  renderXAxis(elements.svg, scales.x, config.height, isNumericTime, timeGrain);
-  renderYAxis(elements.svg, scales.y);
+function drawAxes(svg, scales, height, isNumericTime, timeGrain) {
+  renderXAxis(svg, scales.x, height, isNumericTime, timeGrain);
+  renderYAxis(svg, scales.y);
+}
 
-  // Draw lines based on grouping
+/**
+ * Draw lines based on grouping
+ */
+function drawLines(props) {
+  const {
+    svg,
+    data,
+    groups,
+    scales,
+    lineGenerator,
+    tooltip,
+    config,
+    timeDimension,
+    measure,
+    groupDimension,
+    isNumericTime,
+  } = props;
+
   if (groupDimension && groups.length > 0) {
-    // Sort groups by their values at the last time point
-    const groupsWithFinalValues = getSortedGroupsByFinalValue(data, groups, groupDimension, measure);
+    // Sort groups by final value
+    const sortedGroups = getSortedGroupsByFinalValue(data, groups, groupDimension, measure);
 
-    renderGroupedLines(
-      elements.svg,
+    // Draw grouped lines
+    drawGroupedLines({
+      svg,
       data,
-      groupsWithFinalValues, // Use sorted groups
-      groupDimension,
+      groups: sortedGroups,
       scales,
       lineGenerator,
       tooltip,
       config,
       timeDimension,
       measure,
-      isNumericTime
-    );
+      groupDimension,
+      isNumericTime,
+    });
 
-    // Store the sorted groups in the return value for legend creation
-    return groupsWithFinalValues;
+    return sortedGroups;
   } else {
-    renderSingleLine(elements.svg, data, scales, lineGenerator, tooltip, config, timeDimension, measure);
+    // Draw single line
+    drawSingleLine(svg, data, scales, lineGenerator, tooltip, timeDimension, measure, isNumericTime);
     return groups;
   }
 }
 
 /**
- * Sort groups by their measure values at the last time point
+ * Draw single line chart
+ */
+function drawSingleLine(svg, data, scales, lineGenerator, tooltip, timeDimension, measure, isNumericTime) {
+  // Sort data chronologically
+  const sortedData = [...data].sort((a, b) => a.parsedTime - b.parsedTime);
+
+  // Draw the main line
+  svg
+    .append("path")
+    .datum(sortedData)
+    .attr("fill", "none")
+    .attr("stroke", chartColors.mainPalette[0])
+    .attr("stroke-width", 2)
+    .attr("d", lineGenerator);
+
+  // Create interactive points
+  const points = svg
+    .selectAll("circle.point")
+    .data(data)
+    .join("circle")
+    .attr("class", "point")
+    .attr("cx", (d) => scales.x(d.parsedTime))
+    .attr("cy", (d) => scales.y(+d[measure] || 0))
+    .attr("r", 2)
+    .attr("fill", chartColors.mainPalette[0])
+    .attr("opacity", 0.7);
+
+  // Attach tooltips to points
+  attachMouseTooltip(points, tooltip, (d) => {
+    const timeValue = isNumericTime ? d.parsedTime : d3.timeFormat("%Y-%m-%d")(d.parsedTime);
+
+    return `
+        <strong>${timeDimension}:</strong> ${timeValue}<br>
+        <strong>${measure}:</strong> ${formatValue(d[measure])}
+      `;
+  });
+}
+
+/**
+ * Draw multiple lines for grouped data
+ */
+function drawGroupedLines(props) {
+  const {
+    svg,
+    data,
+    groups,
+    groupDimension,
+    scales,
+    lineGenerator,
+    tooltip,
+    config,
+    timeDimension,
+    measure,
+    isNumericTime,
+  } = props;
+
+  // Create color scale
+  const colorScale = d3.scaleOrdinal().domain(groups).range(chartColors.mainPalette);
+
+  // Group and sort data
+  const groupedData = prepareGroupedData(data, groupDimension);
+
+  // Draw lines - one per group
+  svg
+    .append("g")
+    .attr("class", "lines")
+    .selectAll("path")
+    .data(groupedData)
+    .join("path")
+    .attr("fill", "none")
+    .attr("stroke", (d) => colorScale(d.key))
+    .attr("stroke-width", 2)
+    .attr("d", (d) => lineGenerator(d.values));
+
+  // Add interactive layer
+  addInteractionLayer({
+    svg,
+    groupedData,
+    scales,
+    colorScale,
+    tooltip,
+    config,
+    timeDimension,
+    groupDimension,
+    measure,
+    isNumericTime,
+  });
+}
+
+/**
+ * Add interactive hover effects to grouped lines
+ */
+function addInteractionLayer(props) {
+  const {
+    svg,
+    groupedData,
+    scales,
+    colorScale,
+    tooltip,
+    config,
+    timeDimension,
+    groupDimension,
+    measure,
+    isNumericTime,
+  } = props;
+
+  // Create flattened points array
+  const allPoints = createPointsArray(groupedData, scales, measure);
+
+  // Create invisible overlay and highlight circle
+  const overlay = createOverlay(svg, config);
+  const highlight = createHighlightCircle(svg);
+
+  // Add mouse interaction
+  setupMouseInteraction(
+    overlay,
+    highlight,
+    allPoints,
+    colorScale,
+    tooltip,
+    timeDimension,
+    groupDimension,
+    measure,
+    isNumericTime
+  );
+}
+
+/**
+ * Create array of all points from grouped data
+ */
+function createPointsArray(groupedData, scales, measure) {
+  const points = [];
+
+  groupedData.forEach((group) => {
+    group.values.forEach((d) => {
+      points.push({
+        x: scales.x(d.parsedTime),
+        y: scales.y(+d[measure] || 0),
+        data: d,
+        group: group.key,
+      });
+    });
+  });
+
+  return points;
+}
+
+/**
+ * Create invisible overlay for mouse interaction
+ */
+function createOverlay(svg, config) {
+  return svg
+    .append("rect")
+    .attr("class", "overlay")
+    .attr("width", config.width)
+    .attr("height", config.height)
+    .style("fill", "none")
+    .style("pointer-events", "all");
+}
+
+/**
+ * Create highlight circle for active point
+ */
+function createHighlightCircle(svg) {
+  return svg
+    .append("circle")
+    .attr("class", "highlight")
+    .attr("r", 3)
+    .style("fill", "none")
+    .style("stroke", "#000")
+    .style("stroke-width", 1)
+    .style("opacity", 0.5);
+}
+
+/**
+ * Setup mouse interaction events
+ */
+function setupMouseInteraction(
+  overlay,
+  highlight,
+  points,
+  colorScale,
+  tooltip,
+  timeDimension,
+  groupDimension,
+  measure,
+  isNumericTime
+) {
+  overlay
+    .on("mousemove", function (event) {
+      const [mouseX, mouseY] = d3.pointer(event);
+      const closestPoint = findClosestPoint(mouseX, mouseY, points);
+
+      if (closestPoint && closestPoint.distance < 50) {
+        showPointHighlight(
+          highlight,
+          closestPoint,
+          colorScale,
+          tooltip,
+          event,
+          timeDimension,
+          groupDimension,
+          measure,
+          isNumericTime
+        );
+      } else {
+        hidePointHighlight(highlight, tooltip);
+      }
+    })
+    .on("mouseleave", () => hidePointHighlight(highlight, tooltip));
+}
+
+/**
+ * Find closest data point to mouse position
+ */
+function findClosestPoint(mouseX, mouseY, points) {
+  let closestPoint = null;
+  let minDistance = Infinity;
+
+  points.forEach((point) => {
+    const dx = point.x - mouseX;
+    const dy = point.y - mouseY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestPoint = { ...point, distance };
+    }
+  });
+
+  return closestPoint;
+}
+
+/**
+ * Show highlight and tooltip for a point
+ */
+function showPointHighlight(
+  highlight,
+  point,
+  colorScale,
+  tooltip,
+  event,
+  timeDimension,
+  groupDimension,
+  measure,
+  isNumericTime
+) {
+  // Update highlight position
+  highlight.attr("cx", point.x).attr("cy", point.y).attr("fill", colorScale(point.group)).style("opacity", 0.8);
+
+  // Format time value based on type
+  const timeValue = isNumericTime ? point.data.parsedTime : d3.timeFormat("%Y-%m-%d")(point.data.parsedTime);
+
+  // Show tooltip
+  chartStyles.tooltip.show(
+    tooltip,
+    event,
+    `
+      <strong>${groupDimension}:</strong> ${point.group}<br>
+      <strong>${timeDimension}:</strong> ${timeValue}<br>
+      <strong>${measure}:</strong> ${formatValue(point.data[measure])}
+    `
+  );
+}
+
+/**
+ * Hide highlight and tooltip
+ */
+function hidePointHighlight(highlight, tooltip) {
+  highlight.style("opacity", 0);
+  chartStyles.tooltip.hide(tooltip);
+}
+
+// ===== HELPER FUNCTIONS =====
+
+/**
+ * Sort groups by their final values (descending)
  */
 function getSortedGroupsByFinalValue(data, groups, groupDimension, measure) {
-  // Group data by the dimension
   const groupedData = d3.group(data, (d) => d[groupDimension]);
-
-  // For each group, find the data point with the latest time
   const finalValues = [];
 
   groups.forEach((group) => {
     const groupData = groupedData.get(group);
-    if (groupData && groupData.length > 0) {
-      // Sort by time, ascending
+
+    if (groupData?.length) {
+      // Get the last (most recent) point's value
       const sortedByTime = [...groupData].sort((a, b) => a.parsedTime - b.parsedTime);
-      // Get the last point (most recent)
       const lastPoint = sortedByTime[sortedByTime.length - 1];
 
       finalValues.push({
-        group: group,
-        finalValue: +lastPoint[measure],
+        group,
+        finalValue: +lastPoint[measure] || 0,
       });
     } else {
-      // If no data, push with 0 value
-      finalValues.push({
-        group: group,
-        finalValue: 0,
-      });
+      finalValues.push({ group, finalValue: 0 });
     }
   });
 
-  // Sort by final value (descending)
-  finalValues.sort((a, b) => b.finalValue - a.finalValue);
+  // Sort by final value (descending) and return group names
+  return finalValues.sort((a, b) => b.finalValue - a.finalValue).map((item) => item.group);
+}
 
-  // Return just the group names in the sorted order
-  return finalValues.map((item) => item.group);
+/**
+ * Group and chronologically sort data
+ */
+function prepareGroupedData(data, groupDimension) {
+  const grouped = d3.group(data, (d) => d[groupDimension]);
+
+  return Array.from(grouped, ([key, values]) => ({
+    key,
+    values: [...values].sort((a, b) => a.parsedTime - b.parsedTime),
+  }));
 }
 
 /**
  * Render X axis with appropriate formatting
  */
 function renderXAxis(svg, xScale, height, isNumericTime, timeGrain) {
-  let tickFormat;
-  let rotateLabels = false;
-  let tickCount;
+  // Determine tick format based on data type and grain
+  const { tickFormat, rotateLabels, tickCount } = getXAxisTickSettings(xScale, isNumericTime, timeGrain);
 
-  // Set format based on time grain
+  // Create axis generator
+  const axisGenerator = d3.axisBottom(xScale).tickFormat(tickFormat);
+  if (tickCount) axisGenerator.ticks(tickCount);
+
+  // Add and style axis
+  const axis = svg.append("g").attr("class", "x-axis").attr("transform", `translate(0, ${height})`).call(axisGenerator);
+
+  // Style the axis labels
+  axis
+    .selectAll("text")
+    .attr("dx", "-.8em")
+    .attr("dy", ".15em")
+    .attr("transform", rotateLabels ? "rotate(-45)" : "rotate(0)")
+    .style("text-anchor", rotateLabels ? "end" : "middle");
+
+  // Apply consistent styling
+  chartStyles.applyAxisStyles(axis);
+}
+
+/**
+ * Get tick settings for X axis based on data type
+ */
+function getXAxisTickSettings(xScale, isNumericTime, timeGrain) {
+  let tickFormat,
+    rotateLabels = false,
+    tickCount;
+
   if (isNumericTime) {
     tickFormat = d3.format("d");
   } else {
-    // Choose format based on time grain
+    // Format based on time grain
     switch (timeGrain) {
       case "year":
         tickFormat = d3.timeFormat("%Y");
@@ -334,45 +647,18 @@ function renderXAxis(svg, xScale, height, isNumericTime, timeGrain) {
         rotateLabels = true;
         break;
     }
-  }
 
-  // Adjust tick count based on timeGrain and available width
-  if (!isNumericTime) {
-    const domain = xScale.domain();
-    const timeSpan = domain[1] - domain[0]; // Time span in milliseconds
-
+    // Calculate appropriate tick count
     if (timeGrain === "year") {
-      // Approximately one tick per year
+      const timeSpan = xScale.domain()[1] - xScale.domain()[0];
       tickCount = Math.min(10, Math.ceil(timeSpan / (365 * 24 * 60 * 60 * 1000)));
     } else if (timeGrain === "month") {
-      // Approximately one tick every 1-3 months
+      const timeSpan = xScale.domain()[1] - xScale.domain()[0];
       tickCount = Math.min(12, Math.ceil(timeSpan / (30 * 24 * 60 * 60 * 1000)));
-    } else {
-      // For week and day, let D3 decide based on the scale
-      tickCount = null;
     }
   }
 
-  // Create axis with appropriate tick formatting
-  const axisGenerator = d3.axisBottom(xScale).tickFormat(tickFormat);
-
-  // Apply tick count if specified
-  if (tickCount) {
-    axisGenerator.ticks(tickCount);
-  }
-
-  const axis = svg.append("g").attr("class", "x-axis").attr("transform", `translate(0, ${height})`).call(axisGenerator);
-
-  // Style the axis labels appropriately
-  axis
-    .selectAll("text")
-    .attr("dx", "-.8em")
-    .attr("dy", ".15em")
-    .attr("transform", rotateLabels ? "rotate(-45)" : "rotate(0)")
-    .style("text-anchor", rotateLabels ? "end" : "middle");
-
-  // Apply consistent styling
-  chartStyles.applyAxisStyles(axis);
+  return { tickFormat, rotateLabels, tickCount };
 }
 
 /**
@@ -382,211 +668,6 @@ function renderYAxis(svg, yScale) {
   const axis = svg.append("g").attr("class", "y-axis").call(d3.axisLeft(yScale).tickFormat(formatValue));
 
   chartStyles.applyAxisStyles(axis);
-}
-
-/**
- * Render grouped lines with interactive tooltips
- */
-function renderGroupedLines(
-  svg,
-  data,
-  groups,
-  groupDimension,
-  scales,
-  lineGenerator,
-  tooltip,
-  config,
-  timeDimension,
-  measure,
-  isNumericTime
-) {
-  // Create color scale
-  const colorScale = d3.scaleOrdinal().domain(groups).range(chartColors.mainPalette);
-
-  // Group data
-  const groupedData = d3.group(data, (d) => d[groupDimension]);
-
-  // Process groups for rendering
-  const processedGroups = Array.from(groupedData, ([key, values]) => {
-    // Sort values chronologically
-    return {
-      key,
-      values: values.sort((a, b) => a.parsedTime - b.parsedTime),
-    };
-  });
-
-  // Draw lines - one per group
-  svg
-    .append("g")
-    .attr("class", "lines")
-    .selectAll("path")
-    .data(processedGroups)
-    .join("path")
-    .attr("fill", "none")
-    .attr("stroke", (d) => colorScale(d.key))
-    .attr("stroke-width", 2)
-    .attr("d", (d) => lineGenerator(d.values));
-
-  // Create interactive layer
-  createInteractionLayer(
-    svg,
-    processedGroups,
-    scales,
-    colorScale,
-    tooltip,
-    lineGenerator,
-    config,
-    timeDimension,
-    groupDimension,
-    measure,
-    isNumericTime
-  );
-}
-
-/**
- * Render single line for non-grouped data
- */
-function renderSingleLine(svg, data, scales, lineGenerator, tooltip, config, timeDimension, measure) {
-  // Sort data chronologically
-  const sortedData = data.sort((a, b) => a.parsedTime - b.parsedTime);
-
-  // Draw the main line
-  svg
-    .append("path")
-    .datum(sortedData)
-    .attr("fill", "none")
-    .attr("stroke", chartColors.mainPalette[0])
-    .attr("stroke-width", 2)
-    .attr("d", lineGenerator);
-
-  // Make each actual data-point interactive
-  const pts = svg
-    .selectAll("circle.point")
-    .data(data)
-    .join("circle")
-    .attr("class", "point")
-    .attr("cx", (d) => scales.x(d.parsedTime))
-    .attr("cy", (d) => scales.y(+d[measure]))
-    .attr("r", 0) // invisible but interactive
-    .style("pointer-events", "all");
-
-  attachMouseTooltip(
-    pts,
-    tooltip,
-    (d, _el, event) => {
-      const timeValue = isNumericTime ? d.parsedTime : d3.timeFormat("%Y-%m-%d")(d.parsedTime);
-      return `
-        <strong>${timeDimension}:</strong> ${timeValue}<br>
-        <strong>${measure}:</strong> ${formatValue(d[measure])}
-      `;
-    },
-    (el, d) => el.attr("r", d ? 5 : 0)
-  );
-}
-
-/**
- * Create interaction layer for grouped lines
- */
-function createInteractionLayer(
-  svg,
-  groups,
-  scales,
-  colorScale,
-  tooltip,
-  lineGenerator,
-  config,
-  timeDimension,
-  groupDimension,
-  measure,
-  isNumericTime
-) {
-  // Create flattened array of all points for Voronoi calculation
-  const allPoints = [];
-  groups.forEach((group) => {
-    group.values.forEach((d) => {
-      allPoints.push({
-        x: scales.x(d.parsedTime),
-        y: scales.y(+d[measure]),
-        data: d,
-        group: group.key,
-      });
-    });
-  });
-
-  // Create invisible overlay for mouse interaction
-  const overlay = svg
-    .append("rect")
-    .attr("class", "overlay")
-    .attr("width", config.width)
-    .attr("height", config.height)
-    .style("fill", "none")
-    .style("pointer-events", "all");
-
-  // Create highlight circle for active point
-  const highlight = svg
-    .append("circle")
-    .attr("class", "highlight")
-    .attr("r", 5)
-    .style("fill", "none")
-    .style("stroke", "#000")
-    .style("stroke-width", 2)
-    .style("opacity", 0);
-
-  // Add mouse interaction
-  overlay
-    .on("mousemove", function (event) {
-      const [mouseX, mouseY] = d3.pointer(event);
-
-      // Find closest point to mouse position
-      let closestPoint = null;
-      let minDistance = Infinity;
-
-      allPoints.forEach((point) => {
-        const dx = point.x - mouseX;
-        const dy = point.y - mouseY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestPoint = point;
-        }
-      });
-
-      // Only show tooltip if reasonably close to a point
-      if (closestPoint && minDistance < 50) {
-        // Update highlight position
-        highlight
-          .attr("cx", closestPoint.x)
-          .attr("cy", closestPoint.y)
-          .attr("fill", colorScale(closestPoint.group))
-          .style("opacity", 0.8);
-
-        // Format time value based on type
-        const timeValue = isNumericTime
-          ? closestPoint.data.parsedTime
-          : d3.timeFormat("%Y-%m-%d")(closestPoint.data.parsedTime);
-
-        // Show tooltip with formatted data
-        chartStyles.tooltip.show(
-          tooltip,
-          event,
-          `
-          <strong>${groupDimension}:</strong> ${closestPoint.group}<br>
-          <strong>${timeDimension}:</strong> ${timeValue}<br>
-          <strong>${measure}:</strong> ${formatValue(closestPoint.data[measure])}
-        `
-        );
-      } else {
-        // Hide tooltip when not near any point
-        highlight.style("opacity", 0);
-        chartStyles.tooltip.hide(tooltip);
-      }
-    })
-    .on("mouseleave", function () {
-      // Hide tooltip when leaving chart area
-      highlight.style("opacity", 0);
-      chartStyles.tooltip.hide(tooltip);
-    });
 }
 
 export default renderLineChart;
