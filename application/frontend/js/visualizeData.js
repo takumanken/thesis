@@ -4,6 +4,7 @@
  */
 import { state } from "./state.js";
 import { chartControls } from "./chart/utils/chartControls.js";
+import { chartStyles } from "./chart/utils/chartStyles.js"; // Add this import!
 
 // Import chart renderers
 import renderTable from "./chart/table.js";
@@ -165,11 +166,8 @@ function createChartTypeSwitcher() {
   // Clear existing content
   selectorContainer.innerHTML = "";
 
-  // Create tooltip container (will be reused for all tooltips)
-  const tooltipContainer = document.createElement("div");
-  tooltipContainer.className = "chart-preview-tooltip";
-  tooltipContainer.style.display = "none";
-  document.body.appendChild(tooltipContainer);
+  // Create a D3 tooltip using the chart library style
+  const tooltip = chartStyles.createTooltip();
 
   // Get available chart types or use default
   const availableChartTypes = state.availableChartTypes || ["table"];
@@ -184,26 +182,27 @@ function createChartTypeSwitcher() {
     option.className = `chart-type-option${state.chartType === typeId ? " selected" : ""}`;
     option.dataset.chartType = typeId;
 
-    const iconPath = `assets/icons/${typeId}.svg`;
+    // Try to load icon
+    const iconPath = `../assets/icons/${typeId}.svg`;
+    option.innerHTML = `
+      <img src="${iconPath}" alt="${config.label}" class="chart-icon"
+           onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+      <span class="material-icons" style="display:none;">${config.icon || "help_outline"}</span>
+    `;
 
-    option.innerHTML = `<img src="${iconPath}" alt="${config.label}" class="chart-icon" onerror="this.onerror=null; this.src='/frontend/assets/icons/default.svg';">`;
+    // Setup hover events using D3 selection for consistency with chart pattern
 
-    // Simple tooltip hover handlers
-    option.addEventListener("mouseenter", (e) => {
-      // Show the simple tooltip with just the chart name
-      tooltipContainer.innerHTML = `<div class="tooltip-content">${config.label}</div>`;
-
-      // Position the tooltip near the hovered element
-      const rect = option.getBoundingClientRect();
-      tooltipContainer.style.left = rect.right + 10 + "px";
-      tooltipContainer.style.top = rect.top + rect.height / 2 - 15 + "px";
-      tooltipContainer.style.display = "block";
-    });
-
-    option.addEventListener("mouseleave", () => {
-      // Hide the tooltip
-      tooltipContainer.style.display = "none";
-    });
+    // IMPORTANT CHANGE: Use mousemove instead of mouseenter to follow cursor
+    const selection = d3.select(option);
+    selection
+      .on("mousemove", function (event) {
+        // Show tooltip following the cursor position
+        chartStyles.tooltip.show(tooltip, event, `<strong>${config.label}</strong>`);
+      })
+      .on("mouseleave", function () {
+        // Hide tooltip
+        chartStyles.tooltip.hide(tooltip);
+      });
 
     // Add click handler
     option.addEventListener("click", () => {
@@ -218,7 +217,7 @@ function createChartTypeSwitcher() {
       visualizeData();
 
       // Hide tooltip after selection
-      tooltipContainer.style.display = "none";
+      chartStyles.tooltip.hide(tooltip);
     });
 
     selectorContainer.appendChild(option);
