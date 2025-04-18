@@ -98,12 +98,20 @@ export const chartControls = {
       </div>
     `;
 
-    // Apply styles and add click handler
-    this._applyButtonStyles(swapButton);
+    // Apply initial styles
+    this._applyButtonStyles(swapButton, false);
+
     swapButton.addEventListener("click", () => {
-      // Toggle state and update UI
+      // Show brief visual feedback when clicked
+      this._applyButtonStyles(swapButton, true);
+
+      // Toggle the actual state
       state.dimensionsSwapped = !state.dimensionsSwapped;
-      this._applyButtonStyles(swapButton);
+
+      // Return to normal styling after brief delay
+      setTimeout(() => {
+        this._applyButtonStyles(swapButton, false);
+      }, 300);
 
       // Notify listeners
       document.dispatchEvent(
@@ -120,10 +128,9 @@ export const chartControls = {
    * Apply proper styles to the swap button
    * @private
    * @param {HTMLElement} button - The button to style
+   * @param {boolean} isActive - Whether to show active styling
    */
-  _applyButtonStyles(button) {
-    const isActive = state.dimensionsSwapped;
-
+  _applyButtonStyles(button, isActive) {
     Object.assign(button.style, {
       padding: "8px 12px",
       border: "1px solid var(--color-border)",
@@ -137,6 +144,7 @@ export const chartControls = {
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
+      transition: "all 0.15s ease",
     });
   },
 };
