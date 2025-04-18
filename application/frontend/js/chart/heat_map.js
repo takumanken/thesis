@@ -5,7 +5,7 @@
 import { state } from "../state.js";
 import { CHART_DIMENSIONS } from "../constants.js";
 import { chartStyles } from "./utils/chartStyles.js";
-import { formatValue, setupResizeHandler, validateRenderingContext } from "./utils/chartUtils.js";
+import * as chartUtils from "./utils/chartUtils.js";
 
 // Constants
 const DEFAULT_ZOOM = 4;
@@ -30,7 +30,7 @@ const HEAT_SETTINGS = {
  * @param {HTMLElement} container - DOM element to render the chart
  */
 function renderHeatMap(container) {
-  if (!validateRenderingContext(container, "No location data available for display")) return;
+  if (!chartUtils.validateRenderingContext(container, "No location data available for display")) return;
 
   // Clear container and extract data from state
   container.innerHTML = "";
@@ -60,7 +60,7 @@ function renderHeatMap(container) {
   fitMapToPoints(map, points);
 
   // Setup resize handling
-  setupResizeHandler(container, () => renderHeatMap(container));
+  chartUtils.setupResizeHandler(container, () => renderHeatMap(container));
 }
 
 // ===== DATA PROCESSING =====
@@ -237,10 +237,7 @@ function addTooltipFunctionality(map, points, measure) {
     if (nearest && nearest.distance < POINT_PROXIMITY_THRESHOLD) {
       // Show tooltip with info
       const { lat, lng, value } = nearest.point;
-      const tooltipContent = `
-        <strong>Location:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}<br>
-        <strong>${measure}:</strong> ${formatValue(value)}
-      `;
+      const tooltipContent = createTooltipContent(lat, lng, value, measure);
 
       chartStyles.tooltip.show(tooltip, e.originalEvent, tooltipContent);
 
@@ -279,6 +276,14 @@ function addTooltipFunctionality(map, points, measure) {
       isTooltipVisible = false;
     }
   });
+}
+
+// Modified to use namespaced format value
+function createTooltipContent(lat, lng, value, measure) {
+  return `
+    <strong>Location:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}<br>
+    <strong>${measure}:</strong> ${chartUtils.formatValue(value)}
+  `;
 }
 
 export default renderHeatMap;

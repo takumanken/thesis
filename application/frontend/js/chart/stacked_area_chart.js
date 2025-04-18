@@ -5,20 +5,10 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
-import {
-  formatValue,
-  setupResizeHandler,
-  validateRenderingContext,
-  attachMouseTooltip,
-  determineTimeGrain,
-  getTimeAxisSettings,
-  renderTimeAxis,
-  formatTimeValue,
-  createTimeScale,
-  findClosestDataPoint,
-  createChartConfig,
-} from "./utils/chartUtils.js";
-import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js";
+import * as chartUtils from "./utils/chartUtils.js";
+import * as chartScales from "./utils/chartScales.js";
+import * as chartAxes from "./utils/chartAxes.js";
+import * as legendUtil from "./utils/legendUtil.js";
 
 // ===== MAIN RENDERING FUNCTION =====
 
@@ -27,12 +17,12 @@ import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js
  * @param {HTMLElement} container - DOM element to render the chart
  */
 function renderStackedAreaChart(container) {
-  if (!validateRenderingContext(container)) return;
+  if (!chartUtils.validateRenderingContext(container)) return;
 
   // Setup basic parameters
   const isPercentage = state.chartType === "stacked_area_chart_100";
   const { timeDimension, categoricalDimension, measure } = extractDimensions();
-  const { chartContainer, legendContainer } = createHorizontalLayout(container);
+  const { chartContainer, legendContainer } = legendUtil.createHorizontalLayout(container);
 
   // Process data
   const { processedData, uniqueCategories, isNumericTime, timeGrain } = processData(
@@ -48,7 +38,7 @@ function renderStackedAreaChart(container) {
   }
 
   // Set up chart and rendering
-  const config = createChartConfig(chartContainer);
+  const config = chartUtils.createChartConfig(chartContainer);
   const svg = createChartElements(chartContainer, config).svg;
   const tooltip = chartStyles.createTooltip();
 
@@ -72,10 +62,10 @@ function renderStackedAreaChart(container) {
 
   // Create legend - reverse order to match visual stacking
   const colorScale = d3.scaleOrdinal().domain(sortedCategories).range(chartColors.mainPalette);
-  createColorLegend(legendContainer, [...sortedCategories].reverse(), colorScale);
+  legendUtil.createColorLegend(legendContainer, [...sortedCategories].reverse(), colorScale);
 
   // Setup resize handling
-  setupResizeHandler(container, () => renderStackedAreaChart(container));
+  chartUtils.setupResizeHandler(container, () => renderStackedAreaChart(container));
 }
 
 // ===== DATA EXTRACTION & PROCESSING =====
@@ -100,7 +90,7 @@ function processData(dataset, timeDimension, categoricalDimension, measure) {
   }
 
   const isNumericTime = /_datepart$/.test(timeDimension);
-  const timeGrain = determineTimeGrain(timeDimension);
+  const timeGrain = chartUtils.determineTimeGrain(timeDimension);
 
   // Extract and collect unique categories and time values
   const { timeMap, categories } = collectUniques(dataset, timeDimension, categoricalDimension, isNumericTime);
@@ -110,7 +100,7 @@ function processData(dataset, timeDimension, categoricalDimension, measure) {
 
   // Return early if missing essential data
   if (!timeValues.length || !uniqueCategories.length) {
-    return { processedData: [], uniqueCategories: [], isNumericTime, timeGrain };
+    return { processedData: [], uniqueCategories, isNumericTime, timeGrain };
   }
 
   // Create and populate data structure
@@ -272,26 +262,15 @@ function preparePercentageData(data, sortedCategories) {
  * Create scales for axes
  */
 function createScales(data, stackedData, isNumericTime, isPercentage, config) {
-  // X-axis: Time scale
-  const x = createTimeScale(data, isNumericTime, config.width);
+  // Create appropriate time scale
+  const x = chartScales.createTimeScale(data, isNumericTime, config.width);
 
-  // Y-axis: Value or percentage scale
-  const y = createValueScale(stackedData, isPercentage, config.height);
+  // Create y-axis scale
+  const y = isPercentage
+    ? chartScales.createPercentageScale([config.height, 0])
+    : chartScales.createStackScale(stackedData, false, [config.height, 0]);
 
   return { x, y };
-}
-
-/**
- * Create appropriate value scale
- */
-function createValueScale(stackedData, isPercentage, height) {
-  return isPercentage
-    ? d3.scaleLinear().domain([0, 1]).range([height, 0])
-    : d3
-        .scaleLinear()
-        .domain([0, d3.max(stackedData, (layer) => d3.max(layer, (d) => d[1])) || 0])
-        .range([height, 0])
-        .nice();
 }
 
 // ===== CHART RENDERING =====
@@ -355,9 +334,9 @@ function attachTooltips({ areas, tooltip, data, scales, dimensions, measure, opt
   const { isNumericTime, isPercentage } = options;
   const { time: timeDimension, category: categoricalDimension } = dimensions;
 
-  attachMouseTooltip(areas, tooltip, (layer, el, event) => {
+  chartUtils.attachMouseTooltip(areas, tooltip, (layer, el, event) => {
     const [mouseX] = d3.pointer(event);
-    const timePoint = findClosestDataPoint(mouseX, scales.x, data);
+    const timePoint = chartUtils.findClosestDataPoint(mouseX, scales.x, data);
     if (!timePoint) return "";
 
     return createTooltipContent({
@@ -395,12 +374,12 @@ function createTooltipContent({
   const pct = (value / total) * 100;
 
   // Format time
-  const timeStr = formatTimeValue(timePoint.time, isNumericTime);
+  const timeStr = chartUtils.formatTimeValue(timePoint.time, isNumericTime);
 
   return `
     <strong>${categoricalDimension}:</strong> ${category}<br>
     <strong>${timeDimension}:</strong> ${timeStr}<br>
-    <strong>${measure}:</strong> ${formatValue(value)}<br>
+    <strong>${measure}:</strong> ${chartUtils.formatValue(value)}<br>
     <strong>Percentage:</strong> ${pct.toFixed(1)}%
   `;
 }
@@ -422,36 +401,18 @@ function calculateTotal(timePoint) {
  * Render X axis with appropriate time formatting
  */
 function renderXAxis(svg, xScale, height, isNumericTime, timeGrain) {
-  const { tickFormat, rotateLabels, tickCount } = getTimeAxisSettings(xScale, isNumericTime, timeGrain);
-
-  // Create and style axis
-  const axisGenerator = d3.axisBottom(xScale).tickFormat(tickFormat);
-  if (tickCount) axisGenerator.ticks(tickCount);
-
-  const axis = svg.append("g").attr("class", "x-axis").attr("transform", `translate(0, ${height})`).call(axisGenerator);
-
-  // Style labels
-  axis
-    .selectAll("text")
-    .attr("dx", "-.8em")
-    .attr("dy", ".15em")
-    .attr("transform", rotateLabels ? "rotate(-45)" : "rotate(0)")
-    .style("text-anchor", rotateLabels ? "end" : "middle");
-
-  chartStyles.applyAxisStyles(axis);
+  chartAxes.renderTimeAxis(svg, xScale, height, isNumericTime, timeGrain);
 }
 
 /**
  * Render Y axis with appropriate value formatting
  */
 function renderYAxis(svg, yScale, isPercentage) {
-  const axisGenerator = isPercentage
-    ? d3.axisLeft(yScale).tickFormat((d) => (d * 100).toFixed(0) + "%")
-    : d3.axisLeft(yScale).tickFormat(formatValue);
-
-  const axis = svg.append("g").attr("class", "y-axis").call(axisGenerator);
-
-  chartStyles.applyAxisStyles(axis);
+  chartAxes.renderMeasureAxis(svg, yScale, {
+    orientation: "left",
+    isPercentage: isPercentage && "normalized",
+    className: "y-axis",
+  });
 }
 
 export default renderStackedAreaChart;

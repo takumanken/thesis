@@ -1,5 +1,10 @@
+/**
+ * Table Component
+ * Displays data in a tabular format with sorting and pagination
+ */
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
+import * as chartUtils from "./utils/chartUtils.js";
 
 /**
  * Renders a data table visualization

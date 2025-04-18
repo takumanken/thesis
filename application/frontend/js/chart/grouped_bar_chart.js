@@ -6,23 +6,19 @@ import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
 import { chartControls } from "./utils/chartControls.js";
-import {
-  formatValue,
-  setupResizeHandler,
-  validateRenderingContext,
-  setupDimensionSwapHandler,
-  attachMouseTooltip,
-} from "./utils/chartUtils.js";
-import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js";
+import * as chartUtils from "./utils/chartUtils.js";
+import * as chartScales from "./utils/chartScales.js";
+import * as chartAxes from "./utils/chartAxes.js";
+import * as legendUtil from "./utils/legendUtil.js";
 
 /**
  * Main render function for grouped bar chart
  */
 function renderGroupedBarChart(container) {
-  if (!validateRenderingContext(container)) return;
+  if (!chartUtils.validateRenderingContext(container)) return;
 
   // Setup layout and extract dimensions/data
-  const { chartContainer, legendContainer } = createHorizontalLayout(container);
+  const { chartContainer, legendContainer } = legendUtil.createHorizontalLayout(container);
   const dimensions = getDimensions();
   const dataset = state.dataset;
   const [groupKey, subGroupKey = null] = dimensions;
@@ -44,7 +40,7 @@ function renderGroupedBarChart(container) {
   drawXAxis(xAxisSvg, scales.x, config.margin);
 
   // Create legend and setup events
-  createColorLegend(legendContainer, sortedSubGroups, scales.color);
+  legendUtil.createColorLegend(legendContainer, sortedSubGroups, scales.color);
   setupEventHandlers(container);
 }
 
@@ -138,7 +134,7 @@ function createConfig(sortedGroups, dataset, groupKey, subGroupKey) {
  * Create scales for positioning and coloring chart elements
  */
 function createScales(sortedGroups, sortedSubGroups, dataset, measure, config) {
-  // Calculate position for each group
+  // Calculate group positions (keep this custom code)
   const groupPositions = {};
   let yPosition = config.margin.top;
 
@@ -151,21 +147,17 @@ function createScales(sortedGroups, sortedSubGroups, dataset, measure, config) {
   const chartEl = document.querySelector(".viz-chart-area");
   const chartWidth = chartEl?.clientWidth || 800;
 
-  // Create and return all scales
+  // Create scales using utility functions
   return {
-    x: d3
-      .scaleLinear()
-      .domain([0, d3.max(dataset, (d) => +d[measure] || 0) * 1.05])
-      .range([config.margin.left, chartWidth - config.margin.right - 10])
-      .nice(),
+    x: chartScales.createMeasureScale(dataset, measure, [config.margin.left, chartWidth - config.margin.right - 10]),
 
-    innerY: d3
-      .scaleBand()
-      .domain(sortedSubGroups)
-      .range([0, d3.max(Object.values(config.groupHeights)) - config.groupPadding])
-      .padding(chartStyles.barChart.bar.padding),
+    innerY: chartScales.createCategoryScale(
+      sortedSubGroups,
+      [0, d3.max(Object.values(config.groupHeights)) - config.groupPadding],
+      chartStyles.barChart.bar.padding
+    ),
 
-    color: d3.scaleOrdinal().domain(sortedSubGroups).range(chartColors.mainPalette),
+    color: chartScales.createColorScale(sortedSubGroups),
 
     groupPositions,
   };
@@ -247,13 +239,13 @@ function drawBars(svg, dataset, scales, config, groupKey, subGroupKey, measure, 
     .attr("rx", chartStyles.barChart.bar.cornerRadius);
 
   // Attach tooltips
-  attachMouseTooltip(
+  chartUtils.attachMouseTooltip(
     bars,
     tooltip,
     (d) => `
       <strong>${groupKey}:</strong> ${d.group}<br>
       <strong>${subGroupKey}:</strong> ${d.sub}<br>
-      <strong>${measure}:</strong> ${formatValue(d.val)}
+      <strong>${measure}:</strong> ${chartUtils.formatValue(d.val)}
     `
   );
 }
@@ -264,18 +256,16 @@ function drawBars(svg, dataset, scales, config, groupKey, subGroupKey, measure, 
 function drawYAxis(svg, sortedGroups, groupPositions, config) {
   const yAxisGroup = svg.append("g").attr("class", "y-axis").attr("transform", `translate(${config.margin.left}, 0)`);
 
-  // Add vertical axis line
-  yAxisGroup
-    .append("line")
-    .attr("x1", 0)
-    .attr("y1", 0)
-    .attr("x2", 0)
-    .attr("y2", config.fullHeight - config.margin.top - config.margin.bottom)
-    .attr("stroke", chartStyles.colors.axisLine)
-    .attr("stroke-width", 1)
-    .attr("shape-rendering", "crispEdges");
+  // Use chartAxes.createReferenceLine for the vertical axis line
+  chartAxes.createReferenceLine(yAxisGroup, {
+    orientation: "vertical",
+    position: 0,
+    start: 0,
+    end: config.fullHeight - config.margin.top - config.margin.bottom,
+    className: "y-axis-line",
+  });
 
-  // Add labels centered in each group
+  // Keep the custom labels (this is specialized for grouped bar chart)
   yAxisGroup
     .selectAll(".group-label")
     .data(sortedGroups)
@@ -299,20 +289,19 @@ function drawYAxis(svg, sortedGroups, groupPositions, config) {
  * Draw X axis
  */
 function drawXAxis(xAxisSvg, xScale, margin) {
-  const axis = xAxisSvg
-    .append("g")
-    .attr("transform", `translate(0,${margin.top - 1})`)
-    .call(d3.axisTop(xScale).ticks(5).tickFormat(formatValue));
-
-  chartStyles.applyAxisStyles(axis);
+  chartAxes.renderMeasureAxis(xAxisSvg, xScale, {
+    orientation: "top",
+    position: { x: 0, y: margin.top - 1 },
+    className: "x-axis",
+  });
 }
 
 /**
  * Set up event handlers
  */
 function setupEventHandlers(container) {
-  setupResizeHandler(container, () => renderGroupedBarChart(container));
-  setupDimensionSwapHandler(renderGroupedBarChart);
+  chartUtils.setupResizeHandler(container, () => renderGroupedBarChart(container));
+  chartUtils.setupDimensionSwapHandler(renderGroupedBarChart);
 }
 
 export default renderGroupedBarChart;

@@ -230,82 +230,6 @@ export function determineTimeGrain(timeDimension) {
 }
 
 /**
- * Get X axis tick settings based on time grain
- * @param {d3.Scale} xScale - The x axis scale
- * @param {boolean} isNumericTime - Whether time is numeric (vs. date)
- * @param {string} timeGrain - Time grain (year, month, week, day)
- * @returns {Object} Formatting settings for x-axis
- */
-export function getTimeAxisSettings(xScale, isNumericTime, timeGrain) {
-  let tickFormat;
-  let rotateLabels = false;
-  let tickCount;
-
-  if (isNumericTime) {
-    tickFormat = d3.format("d");
-  } else {
-    switch (timeGrain) {
-      case "year":
-        tickFormat = d3.timeFormat("%Y");
-        break;
-      case "month":
-        tickFormat = d3.timeFormat("%b %Y");
-        break;
-      case "week":
-        tickFormat = d3.timeFormat("%b %d");
-        rotateLabels = true;
-        break;
-      case "day":
-      default:
-        tickFormat = d3.timeFormat("%Y-%m-%d");
-        rotateLabels = true;
-        break;
-    }
-
-    // Calculate appropriate tick count for date scales
-    const domain = xScale.domain();
-    const timeSpan = domain[1] - domain[0];
-
-    if (timeGrain === "year") {
-      tickCount = Math.min(10, Math.ceil(timeSpan / (365 * 24 * 60 * 60 * 1000)));
-    } else if (timeGrain === "month") {
-      tickCount = Math.min(12, Math.ceil(timeSpan / (30 * 24 * 60 * 60 * 1000)));
-    }
-  }
-
-  return { tickFormat, rotateLabels, tickCount };
-}
-
-/**
- * Render X axis with appropriate time formatting
- * @param {d3.Selection} svg - SVG element to add axis to
- * @param {d3.Scale} xScale - The x scale
- * @param {number} height - Height for positioning
- * @param {boolean} isNumericTime - Whether time is numeric
- * @param {string} timeGrain - Time grain (year, month, week, day)
- */
-export function renderTimeAxis(svg, xScale, height, isNumericTime, timeGrain) {
-  const { tickFormat, rotateLabels, tickCount } = getTimeAxisSettings(xScale, isNumericTime, timeGrain);
-
-  // Create axis generator
-  const axisGenerator = d3.axisBottom(xScale).tickFormat(tickFormat);
-  if (tickCount) axisGenerator.ticks(tickCount);
-
-  // Add and style axis
-  const axis = svg.append("g").attr("class", "x-axis").attr("transform", `translate(0, ${height})`).call(axisGenerator);
-
-  // Style labels
-  axis
-    .selectAll("text")
-    .attr("dx", "-.8em")
-    .attr("dy", ".15em")
-    .attr("transform", rotateLabels ? "rotate(-45)" : "rotate(0)")
-    .style("text-anchor", rotateLabels ? "end" : "middle");
-
-  chartStyles.applyAxisStyles(axis);
-}
-
-/**
  * Format time value for display
  * @param {Date|number} time - Time value
  * @param {boolean} isNumericTime - Whether time is numeric
@@ -313,28 +237,6 @@ export function renderTimeAxis(svg, xScale, height, isNumericTime, timeGrain) {
  */
 export function formatTimeValue(time, isNumericTime) {
   return isNumericTime ? time : d3.timeFormat("%Y-%m-%d")(time);
-}
-
-/**
- * Create time scale based on data type
- * @param {Array} data - Dataset containing time values
- * @param {boolean} isNumericTime - Whether time is numeric
- * @param {number} width - Width for scale range
- * @param {string} timeField - Name of the time field
- * @returns {d3.Scale} Appropriate time scale
- */
-export function createTimeScale(data, isNumericTime, width, timeField = "time") {
-  return isNumericTime
-    ? d3
-        .scaleLinear()
-        .domain(d3.extent(data, (d) => d[timeField]))
-        .range([0, width])
-        .nice()
-    : d3
-        .scaleTime()
-        .domain(d3.extent(data, (d) => d[timeField]))
-        .range([0, width])
-        .nice();
 }
 
 /**

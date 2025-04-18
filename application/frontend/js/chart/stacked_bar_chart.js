@@ -6,14 +6,10 @@ import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
 import { chartControls } from "./utils/chartControls.js";
-import {
-  formatValue,
-  setupResizeHandler,
-  setupDimensionSwapHandler,
-  validateRenderingContext,
-  attachMouseTooltip,
-} from "./utils/chartUtils.js";
-import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js";
+import * as chartUtils from "./utils/chartUtils.js";
+import * as chartScales from "./utils/chartScales.js";
+import * as chartAxes from "./utils/chartAxes.js";
+import * as legendUtil from "./utils/legendUtil.js";
 
 // -------------------------------------------------------------------------
 // CHART DESIGN PARAMETERS
@@ -32,11 +28,11 @@ const CHART_DESIGN = {
  * Main render function for stacked bar chart
  */
 function renderStackedBarChart(container) {
-  if (!validateRenderingContext(container)) return;
+  if (!chartUtils.validateRenderingContext(container)) return;
 
   // Extract data and settings
   const isPercentage = state.chartType === "stacked_bar_chart_100";
-  const { chartContainer, legendContainer } = createHorizontalLayout(container);
+  const { chartContainer, legendContainer } = legendUtil.createHorizontalLayout(container);
   const dimensions = chartControls.initDimensionSwap("stacked_bar_chart")
     ? chartControls.getSwappableDimensions()
     : state.aggregationDefinition.dimensions;
@@ -58,7 +54,7 @@ function renderStackedBarChart(container) {
   // Render chart components
   renderBars(elements.svg, stackData, sortedStacks, scales, groupKey, stackKey, measure, isPercentage, color, tooltip);
   renderAxes(elements.svg, elements.xAxisSvg, scales, config, isPercentage);
-  createColorLegend(legendContainer, sortedStacks, color);
+  legendUtil.createColorLegend(legendContainer, sortedStacks, color);
   setupEventHandlers(container);
 }
 
@@ -145,36 +141,27 @@ function createConfig(sortedGroups) {
  * Create scales for the chart
  */
 function createScales(sortedGroups, stackData, config, isPercentage) {
-  // Get chart dimensions
-  const height = config.fullHeight - config.margin.top - config.margin.bottom;
   const chartEl = document.querySelector(".viz-chart-area");
   const chartWidth = chartEl?.clientWidth || 800;
+  const height = config.fullHeight - config.margin.top - config.margin.bottom;
 
-  // Y scale - positions each group
-  const y = d3
-    .scaleBand()
-    .domain(sortedGroups)
-    .range([0, height])
-    .padding(config.rowSpacing / (config.rowHeight * 2));
+  return {
+    y: chartScales.createCategoryScale(sortedGroups, [0, height], config.rowSpacing / (config.rowHeight * 2)),
 
-  // X scale - measure values
-  const xMax = isPercentage
-    ? 100
-    : d3.max(stackData, (d) => {
-        return d3.sum(
-          Object.entries(d)
-            .filter(([key]) => key !== sortedGroups[0] && !key.startsWith("_"))
-            .map(([_, val]) => val || 0)
-        );
-      });
-
-  const x = d3
-    .scaleLinear()
-    .domain([0, isPercentage ? 100 : xMax * 1.05])
-    .range([config.margin.left, chartWidth - config.margin.right - (isPercentage ? 0 : 10)])
-    .nice();
-
-  return { x, y };
+    x: isPercentage
+      ? chartScales.createPercentageScale([config.margin.left, chartWidth - config.margin.right], false)
+      : chartScales.createMeasureScale(
+          stackData,
+          // Custom accessor for stacked data
+          (d) =>
+            d3.sum(
+              Object.entries(d)
+                .filter(([key]) => key !== sortedGroups[0] && !key.includes("_"))
+                .map(([_, val]) => +val || 0)
+            ),
+          [config.margin.left, chartWidth - config.margin.right - 10]
+        ),
+  };
 }
 
 /**
@@ -229,15 +216,6 @@ function createChartElements(container, config) {
  * Render stacked bars
  */
 function renderBars(svg, stackData, sortedStacks, scales, groupKey, stackKey, measure, isPercentage, color, tooltip) {
-  // Add this at the top of renderBars function
-  console.log("Rectangles before tooltip:", rects.nodes().length);
-
-  // Verify data binding is working
-  rects.each(function (d) {
-    console.log("Rectangle data:", d);
-    console.log("Rectangle fill:", d3.select(this).attr("fill"));
-  });
-
   const stackGen = d3.stack().keys(sortedStacks);
   const groups = svg
     .append("g")
@@ -255,7 +233,7 @@ function renderBars(svg, stackData, sortedStacks, scales, groupKey, stackKey, me
     .attr("width", (d) => Math.max(0, scales.x(d[1]) - scales.x(d[0])))
     .attr("height", scales.y.bandwidth());
 
-  attachMouseTooltip(rects, tooltip, (d, el) => {
+  chartUtils.attachMouseTooltip(rects, tooltip, (d, el) => {
     const stackVal = d3.select(el.parentNode).datum().key;
     const grp = d.data[groupKey];
     const raw = isPercentage ? d.data[`${stackVal}_original`] : d.data[stackVal];
@@ -263,7 +241,7 @@ function renderBars(svg, stackData, sortedStacks, scales, groupKey, stackKey, me
     return `
         <strong>${groupKey}:</strong> ${grp}<br>
         <strong>${stackKey}:</strong> ${stackVal}<br>
-        <strong>${measure}:</strong> ${formatValue(raw)}<br>
+        <strong>${measure}:</strong> ${chartUtils.formatValue(raw)}<br>
         <strong>Pct:</strong> ${pct.toFixed(CHART_DESIGN.percentagePrecision)}%
       `;
   });
@@ -274,34 +252,28 @@ function renderBars(svg, stackData, sortedStacks, scales, groupKey, stackKey, me
  */
 function renderAxes(svg, xAxisSvg, scales, config, isPercentage) {
   // Y axis with labels
-  const yAxis = svg
-    .append("g")
-    .attr("class", "y-axis")
-    .attr("transform", `translate(${config.margin.left},0)`)
-    .call(d3.axisLeft(scales.y));
-
-  chartStyles.applyAxisStyles(yAxis);
+  chartAxes.renderCategoryAxis(svg, scales.y, null, {
+    orientation: "left",
+    position: { x: config.margin.left, y: 0 },
+    className: "y-axis",
+  });
 
   // X axis with formatted values
-  const xAxis = xAxisSvg
-    .append("g")
-    .attr("transform", `translate(0,${config.margin.top - 1})`)
-    .call(
-      d3
-        .axisTop(scales.x)
-        .ticks(5)
-        .tickFormat(isPercentage ? (d) => `${d}%` : formatValue)
-    );
-
-  chartStyles.applyAxisStyles(xAxis);
+  chartAxes.renderMeasureAxis(xAxisSvg, scales.x, {
+    orientation: "top",
+    position: { x: 0, y: config.margin.top - 1 },
+    tickCount: 5,
+    isPercentage: isPercentage && "not-normalized",
+    className: "x-axis",
+  });
 }
 
 /**
  * Set up chart event handlers
  */
 function setupEventHandlers(container) {
-  setupResizeHandler(container, () => renderStackedBarChart(container));
-  setupDimensionSwapHandler(renderStackedBarChart);
+  chartUtils.setupResizeHandler(container, () => renderStackedBarChart(container));
+  chartUtils.setupDimensionSwapHandler(renderStackedBarChart);
 }
 
 export default renderStackedBarChart;

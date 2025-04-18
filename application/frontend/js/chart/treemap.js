@@ -5,14 +5,7 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
-import {
-  truncateLabel,
-  formatValue,
-  setupResizeHandler,
-  validateRenderingContext,
-  setupDimensionSwapHandler,
-  attachMouseTooltip,
-} from "./utils/chartUtils.js";
+import * as chartUtils from "./utils/chartUtils.js";
 import { chartControls } from "./utils/chartControls.js";
 
 // ===== CONSTANTS =====
@@ -45,7 +38,7 @@ const CHART_CONFIG = {
  */
 function renderTreemap(container) {
   // Validate context and prepare container
-  if (!validateRenderingContext(container)) return;
+  if (!chartUtils.validateRenderingContext(container)) return;
 
   // Configure container
   Object.assign(container.style, {
@@ -65,8 +58,8 @@ function renderTreemap(container) {
   renderCells(container, svg, hierarchyData, dimensions, measure);
 
   // Set up event handlers
-  setupResizeHandler(container, () => renderTreemap(container));
-  setupDimensionSwapHandler(renderTreemap);
+  chartUtils.setupResizeHandler(container, () => renderTreemap(container));
+  chartUtils.setupDimensionSwapHandler(renderTreemap);
 }
 
 // ===== DATA PROCESSING =====
@@ -220,7 +213,7 @@ function addRectangles(cell, dimensions, colorScale, tooltip, measure, totalValu
     .attr("opacity", cellConfig.opacity)
     .attr("rx", cellConfig.cornerRadius);
 
-  attachMouseTooltip(areas, tooltip, (d) => getTooltipContent(d, dimensions, measure, totalValue));
+  chartUtils.attachMouseTooltip(areas, tooltip, (d) => getTooltipContent(d, dimensions, measure, totalValue));
 }
 
 /**
@@ -275,7 +268,7 @@ function getTooltipContent(d, dimensions, measure, totalValue) {
 
     return `
       <strong>${d.parent.data.name} › ${d.data.name}</strong><br>
-      ${measure}: ${formatValue(d.value)}<br>
+      ${measure}: ${chartUtils.formatValue(d.value)}<br>
       Share of total: ${shareOfTotal}%<br>
       Share of ${d.parent.data.name}: ${shareOfParent}%
     `;
@@ -284,7 +277,7 @@ function getTooltipContent(d, dimensions, measure, totalValue) {
   // Parent node or single-dimension cell
   return `
     <strong>${d.data.name}</strong><br>
-    ${measure}: ${formatValue(d.value)}<br>
+    ${measure}: ${chartUtils.formatValue(d.value)}<br>
     Share of total: ${shareOfTotal}%
   `;
 }
@@ -316,7 +309,7 @@ function addHeaderLabels(cell, dimensions) {
     .attr("font-weight", "bold")
     .attr("font-family", chartStyles.fontFamily)
     .attr("fill", (d) => chartStyles.getContrastingTextColor(d.data.color || "#ddd"))
-    .text((d) => truncateLabel(d.data.name, Math.floor((d.x1 - d.x0) / 7)));
+    .text((d) => chartUtils.truncateLabel(d.data.name, Math.floor((d.x1 - d.x0) / 7)));
 }
 
 /**
@@ -349,7 +342,7 @@ function addNameLabels(cell, dimensions) {
 
       return chartStyles.getContrastingTextColor(bgColor);
     })
-    .text((d) => truncateLabel(d.data.name, Math.floor((d.x1 - d.x0) / 7)));
+    .text((d) => chartUtils.truncateLabel(d.data.name, Math.floor((d.x1 - d.x0) / 7)));
 }
 
 /**
@@ -379,7 +372,7 @@ function addValueLabels(cell, dimensions) {
 
       return chartStyles.getContrastingTextColor(bgColor, 0.9);
     })
-    .text((d) => formatValue(d.value));
+    .text((d) => chartUtils.formatValue(d.value));
 }
 
 export default renderTreemap;

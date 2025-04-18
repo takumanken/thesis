@@ -5,22 +5,10 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
-import {
-  formatValue,
-  setupResizeHandler,
-  validateRenderingContext,
-  attachMouseTooltip,
-  determineTimeGrain,
-  getTimeAxisSettings,
-  renderTimeAxis,
-  formatTimeValue,
-  createTimeScale,
-  findClosestDataPoint,
-  createChartConfig,
-  createInteractionOverlay,
-  createHighlightCircle,
-} from "./utils/chartUtils.js";
-import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js";
+import * as chartUtils from "./utils/chartUtils.js";
+import * as chartScales from "./utils/chartScales.js";
+import * as chartAxes from "./utils/chartAxes.js";
+import * as legendUtil from "./utils/legendUtil.js";
 
 // ===== MAIN RENDERING FUNCTION =====
 
@@ -28,7 +16,7 @@ import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js
  * Main render function for line chart
  */
 function renderLineChart(container) {
-  if (!validateRenderingContext(container)) return;
+  if (!chartUtils.validateRenderingContext(container)) return;
 
   // Extract dimensions and process data
   const { timeDimension, measure, groupDimension } = extractDimensions();
@@ -45,14 +33,17 @@ function renderLineChart(container) {
   }
 
   // Create chart components
-  const config = createChartConfig(chartContainer);
+  const config = chartUtils.createChartConfig(chartContainer);
   const svg = createChartElements(chartContainer, config).svg;
-  const scales = createScales(processedData, measure, isNumericTime, config);
+  const scales = {
+    x: chartScales.createTimeScale(processedData, isNumericTime, config.width, "parsedTime"),
+    y: chartScales.createMeasureScale(processedData, measure, [config.height, 0]),
+  };
   const tooltip = chartStyles.createTooltip();
   const lineGenerator = createLineGenerator(scales.x, scales.y, measure);
 
   // Draw chart components
-  renderTimeAxis(svg, scales.x, config.height, isNumericTime, timeGrain);
+  chartAxes.renderTimeAxis(svg, scales.x, config.height, isNumericTime, timeGrain);
   renderYAxis(svg, scales.y);
 
   // Draw data and get sorted groups
@@ -73,11 +64,11 @@ function renderLineChart(container) {
   // Add legend if grouped data
   if (groupDimension && sortedGroups.length > 0) {
     const colorScale = d3.scaleOrdinal().domain(sortedGroups).range(chartColors.mainPalette);
-    createColorLegend(legendContainer, sortedGroups, colorScale);
+    legendUtil.createColorLegend(legendContainer, sortedGroups, colorScale);
   }
 
   // Setup resize handler
-  setupResizeHandler(container, () => renderLineChart(container));
+  chartUtils.setupResizeHandler(container, () => renderLineChart(container));
 }
 
 // ===== DATA EXTRACTION & PROCESSING =====
@@ -105,7 +96,7 @@ function extractDimensions() {
  */
 function processData(dataset, timeDimension, groupDimension) {
   const isNumericTime = /_datepart$/.test(timeDimension);
-  const timeGrain = determineTimeGrain(timeDimension);
+  const timeGrain = chartUtils.determineTimeGrain(timeDimension);
 
   // Process time values - numeric or date
   const processedData = isNumericTime
@@ -151,7 +142,7 @@ function processDateTimeData(dataset, timeDimension) {
 function setupChartLayout(container, groupDimension) {
   // If grouped, set up horizontal layout with legend
   if (groupDimension) {
-    return createHorizontalLayout(container);
+    return legendUtil.createHorizontalLayout(container);
   }
 
   // No grouping - just use container
@@ -179,25 +170,11 @@ function createChartElements(container, config) {
  * Create scales for the chart
  */
 function createScales(data, measure, isNumericTime, config) {
-  // Create x scale based on data type
-  const x = isNumericTime
-    ? d3
-        .scaleLinear()
-        .domain(d3.extent(data, (d) => d.parsedTime))
-        .range([0, config.width])
-        .nice()
-    : d3
-        .scaleTime()
-        .domain(d3.extent(data, (d) => d.parsedTime))
-        .range([0, config.width])
-        .nice();
+  // Use time scale from chartUtils.js (already imported)
+  const x = chartUtils.createTimeScale(data, isNumericTime, config.width, "parsedTime");
 
-  // Create y scale for measure values
-  const y = d3
-    .scaleLinear()
-    .domain([0, d3.max(data, (d) => +d[measure] || 0) * 1.05])
-    .range([config.height, 0])
-    .nice();
+  // Use measure scale from chartScales.js
+  const y = chartScales.createMeasureScale(data, measure, [config.height, 0]);
 
   return { x, y };
 }
@@ -219,7 +196,7 @@ function createLineGenerator(x, y, measure) {
  * Draw chart axes
  */
 function drawAxes(svg, scales, height, isNumericTime, timeGrain) {
-  renderTimeAxis(svg, scales.x, height, isNumericTime, timeGrain);
+  chartAxes.renderTimeAxis(svg, scales.x, height, isNumericTime, timeGrain);
   renderYAxis(svg, scales.y);
 }
 
@@ -297,12 +274,12 @@ function drawSingleLine(svg, data, scales, lineGenerator, tooltip, timeDimension
     .attr("opacity", 0.7);
 
   // Attach tooltips to points
-  attachMouseTooltip(points, tooltip, (d) => {
+  chartUtils.attachMouseTooltip(points, tooltip, (d) => {
     const timeValue = isNumericTime ? d.parsedTime : d3.timeFormat("%Y-%m-%d")(d.parsedTime);
 
     return `
         <strong>${timeDimension}:</strong> ${timeValue}<br>
-        <strong>${measure}:</strong> ${formatValue(d[measure])}
+        <strong>${measure}:</strong> ${chartUtils.formatValue(d[measure])}
       `;
   });
 }
@@ -379,8 +356,8 @@ function addInteractionLayer(props) {
   const allPoints = createPointsArray(groupedData, scales, measure);
 
   // Create invisible overlay and highlight circle
-  const overlay = createInteractionOverlay(svg, config);
-  const highlight = createHighlightCircle(svg);
+  const overlay = chartUtils.createInteractionOverlay(svg, config);
+  const highlight = chartUtils.createHighlightCircle(svg);
 
   // Add mouse interaction
   setupMouseInteraction(
@@ -433,7 +410,7 @@ function setupMouseInteraction(
   overlay
     .on("mousemove", function (event) {
       const [mouseX, mouseY] = d3.pointer(event);
-      const closestPoint = findClosestDataPoint(mouseX, mouseY, points);
+      const closestPoint = chartUtils.findClosestDataPoint(mouseX, mouseY, points);
 
       if (closestPoint && closestPoint.distance < 50) {
         showPointHighlight(
@@ -472,7 +449,7 @@ function showPointHighlight(
   highlight.attr("cx", point.x).attr("cy", point.y).attr("fill", colorScale(point.group)).style("opacity", 0.8);
 
   // Format time value based on type
-  const timeValue = formatTimeValue(point.data.parsedTime, isNumericTime);
+  const timeValue = chartUtils.formatTimeValue(point.data.parsedTime, isNumericTime);
 
   // Show tooltip
   chartStyles.tooltip.show(
@@ -481,7 +458,7 @@ function showPointHighlight(
     `
       <strong>${groupDimension}:</strong> ${point.group}<br>
       <strong>${timeDimension}:</strong> ${timeValue}<br>
-      <strong>${measure}:</strong> ${formatValue(point.data[measure])}
+      <strong>${measure}:</strong> ${chartUtils.formatValue(point.data[measure])}
     `
   );
 }
@@ -540,9 +517,10 @@ function prepareGroupedData(data, groupDimension) {
  * Render Y axis with appropriate formatting
  */
 function renderYAxis(svg, yScale) {
-  const axis = svg.append("g").attr("class", "y-axis").call(d3.axisLeft(yScale).tickFormat(formatValue));
-
-  chartStyles.applyAxisStyles(axis);
+  chartAxes.renderMeasureAxis(svg, yScale, {
+    orientation: "left",
+    className: "y-axis",
+  });
 }
 
 export default renderLineChart;

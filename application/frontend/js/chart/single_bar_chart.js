@@ -5,20 +5,16 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
-import {
-  truncateLabel,
-  formatValue,
-  setupResizeHandler,
-  validateRenderingContext,
-  attachMouseTooltip,
-} from "./utils/chartUtils.js";
+import * as chartUtils from "./utils/chartUtils.js";
+import * as chartScales from "./utils/chartScales.js";
+import * as chartAxes from "./utils/chartAxes.js";
 
 /**
  * Main render function for single bar chart
  * @param {HTMLElement} container - DOM element to render the chart
  */
 function renderBarChart(container) {
-  if (!validateRenderingContext(container)) return;
+  if (!chartUtils.validateRenderingContext(container)) return;
 
   // Extract data and create configuration
   const { dataset, dimension, measure } = extractChartData();
@@ -36,7 +32,7 @@ function renderBarChart(container) {
   renderXAxis(xAxisSvg, scales.x, config.margin);
 
   // Setup resize handling
-  setupResizeHandler(container, () => renderBarChart(container));
+  chartUtils.setupResizeHandler(container, () => renderBarChart(container));
 }
 
 /**
@@ -147,24 +143,17 @@ function createDomStructure(container, config) {
 function createScales(dataset, measure, config) {
   const { margin, containerWidth, fullChartHeight } = config;
 
-  // Calculate maximum value with fallback
-  const maxValue = d3.max(dataset, (d) => +d[measure] || 0);
+  return {
+    // Use createMeasureScale for x-axis
+    x: chartScales.createMeasureScale(dataset, measure, [margin.left, containerWidth - margin.right]),
 
-  // Create x scale with 5% padding
-  const x = d3
-    .scaleLinear()
-    .domain([0, maxValue * 1.05])
-    .range([margin.left, containerWidth - margin.right])
-    .nice();
-
-  // Create y scale (categorical)
-  const y = d3
-    .scaleBand()
-    .domain(d3.range(dataset.length))
-    .range([0, fullChartHeight - margin.top - margin.bottom])
-    .padding(chartStyles.barChart.bar.padding);
-
-  return { x, y };
+    // Use createCategoryScale for y-axis (index-based)
+    y: chartScales.createCategoryScale(
+      d3.range(dataset.length),
+      [0, fullChartHeight - margin.top - margin.bottom],
+      chartStyles.barChart.bar.padding
+    ),
+  };
 }
 
 /**
@@ -184,12 +173,12 @@ function renderBars(svg, dataset, scales, measure, dimension, config, tooltip) {
     .attr("rx", chartStyles.barChart.bar.cornerRadius);
 
   // Attach tooltips with default highlight behavior
-  attachMouseTooltip(
+  chartUtils.attachMouseTooltip(
     bars,
     tooltip,
     (d) => `
       <strong>${dimension}:</strong> ${d[dimension] || "N/A"}<br>
-      <strong>${measure}:</strong> ${formatValue(+d[measure] || 0)}
+      <strong>${measure}:</strong> ${chartUtils.formatValue(+d[measure] || 0)}
     `
   );
 }
@@ -211,45 +200,33 @@ function renderBarLabels(svg, dataset, scales, measure) {
     .style("font-family", chartStyles.fontFamily)
     .style("font-size", chartStyles.fontSize.axisLabel)
     .style("font-weight", "500")
-    .text((d) => formatValue(+d[measure] || 0));
+    .text((d) => chartUtils.formatValue(+d[measure] || 0));
 }
 
 /**
  * Renders Y axis with category labels
  */
 function renderYAxis(svg, dataset, yScale, dimension, margin) {
-  const axis = svg
-    .append("g")
-    .attr("class", "y-axis")
-    .attr("transform", `translate(${margin.left},0)`)
-    .call(
-      d3
-        .axisLeft(yScale)
-        .tickFormat((d, i) => truncateLabel(dataset[i]?.[dimension] || "", 25))
-        .tickSize(0)
-    );
-
-  // Apply styling
-  chartStyles.applyAxisStyles(axis, { hideTickLines: true });
-
-  // Add tooltips for truncated labels
-  axis
-    .selectAll(".tick text")
-    .append("title")
-    .text((d, i) => dataset[i]?.[dimension] || "");
+  chartAxes.renderCategoryAxis(svg, yScale, dataset, {
+    orientation: "left",
+    position: { x: margin.left, y: 0 },
+    labelField: dimension,
+    maxLabelLength: 25,
+    showTickLines: false,
+    className: "y-axis",
+  });
 }
 
 /**
  * Renders X axis with value scale
  */
 function renderXAxis(svg, xScale, margin) {
-  const axis = svg
-    .append("g")
-    .attr("class", "x-axis")
-    .attr("transform", `translate(0,${margin.top - 1})`)
-    .call(d3.axisTop(xScale).ticks(5).tickFormat(formatValue));
-
-  chartStyles.applyAxisStyles(axis);
+  chartAxes.renderMeasureAxis(svg, xScale, {
+    orientation: "top",
+    position: { x: 0, y: margin.top - 1 },
+    tickCount: 5,
+    className: "x-axis",
+  });
 }
 
 export default renderBarChart;

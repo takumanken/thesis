@@ -7,13 +7,9 @@ import { CHART_DIMENSIONS } from "../constants.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
 import { chartControls } from "./utils/chartControls.js";
-import {
-  formatValue,
-  setupResizeHandler,
-  validateRenderingContext,
-  setupDimensionSwapHandler,
-  attachMouseTooltip,
-} from "./utils/chartUtils.js";
+import * as chartUtils from "./utils/chartUtils.js";
+import * as chartScales from "./utils/chartScales.js";
+import * as chartAxes from "./utils/chartAxes.js";
 
 // ===== MAIN RENDERING FUNCTION =====
 
@@ -21,7 +17,7 @@ import {
  * Main render function for nested bar chart
  */
 function renderNestedBarChart(container) {
-  if (!validateRenderingContext(container)) return;
+  if (!chartUtils.validateRenderingContext(container)) return;
 
   // Initialize dimension controls and extract measures
   chartControls.initDimensionSwap("nested_bar_chart");
@@ -157,9 +153,22 @@ function drawGridLines(svg, data, dimensions, measures, config) {
   const totalHeight = calculateTotalHeight(data, rowHeight, rowPadding);
   const bottomY = margin.top + totalHeight;
 
-  // Horizontal borders
-  chartStyles.drawGridLine(svg, 0, width, margin.top - rowPadding / 2, margin.top - rowPadding / 2);
-  chartStyles.drawGridLine(svg, 0, width, bottomY - rowPadding / 2, bottomY - rowPadding / 2);
+  // Horizontal borders using createReferenceLine
+  chartAxes.createReferenceLine(svg, {
+    orientation: "horizontal",
+    position: margin.top - rowPadding / 2,
+    start: 0,
+    end: width,
+    className: "top-border",
+  });
+
+  chartAxes.createReferenceLine(svg, {
+    orientation: "horizontal",
+    position: bottomY - rowPadding / 2,
+    start: 0,
+    end: width,
+    className: "bottom-border",
+  });
 
   // Category separators and vertical lines
   if (config.hasTwoDimensions) {
@@ -257,12 +266,12 @@ function drawBar(svg, bar, tooltip) {
     .attr("fill", (d) => d.color);
 
   // Attach tooltip
-  attachMouseTooltip(
+  chartUtils.attachMouseTooltip(
     rect,
     tooltip,
     (d) => `
       <strong>${d.category}${d.segment ? " → " + d.segment : ""}</strong><br>
-      <strong>${d.measure}:</strong> ${formatValue(d.value)}
+      <strong>${d.measure}:</strong> ${chartUtils.formatValue(d.value)}
     `
   );
 }
@@ -319,14 +328,11 @@ function calculateColumnPositions(leftMargin, textMeasurements, hasTwoDimensions
 }
 
 /**
- * Gets color array for measures
+ * Gets color array for measures using the standard color palette
  */
 function getMeasureColors(measures) {
-  return measures.map((_, i) => {
-    if (i === 0) return chartColors.mainPalette[0];
-    if (i === 1) return chartColors.mainPalette[5];
-    return chartColors.mainPalette[i % chartColors.mainPalette.length];
-  });
+  // Use the chartColors utility directly to create a standard color scale
+  return chartScales.createColorScale(measures, chartColors.mainPalette);
 }
 
 /**
@@ -352,17 +358,35 @@ function drawVerticalSeparators(svg, config, dimensions, measures, bottomY) {
 
   // Dimension separator
   if (dim2X) {
-    chartStyles.drawGridLine(svg, dim2X - 10, dim2X - 10, topY, bottomY);
+    chartAxes.createReferenceLine(svg, {
+      orientation: "vertical",
+      position: dim2X - 10,
+      start: topY,
+      end: bottomY,
+      className: "dimension-separator",
+    });
   }
 
   // Bar area start separator
-  chartStyles.drawGridLine(svg, barStartX - 10, barStartX - 10, topY, bottomY);
+  chartAxes.createReferenceLine(svg, {
+    orientation: "vertical",
+    position: barStartX - 10,
+    start: topY,
+    end: bottomY,
+    className: "bar-area-separator",
+  });
 
   // Measure separators
   if (measures.length > 1) {
     for (let i = 1; i < measures.length; i++) {
       const x = barStartX + i * measureWidth;
-      chartStyles.drawGridLine(svg, x, x, topY, bottomY);
+      chartAxes.createReferenceLine(svg, {
+        orientation: "vertical",
+        position: x,
+        start: topY,
+        end: bottomY,
+        className: "measure-separator",
+      });
     }
   }
 }
@@ -397,11 +421,12 @@ function createMeasureScales(measures, maxValues, barStartX, measureWidth) {
     const startX = barStartX + i * measureWidth;
     const endX = startX + measureWidth - 10;
 
-    xScales[measure] = d3
-      .scaleLinear()
-      .domain([0, Math.max(1, maxValues[measure])])
-      .range([startX, endX])
-      .nice();
+    // Use utility for each measure scale
+    xScales[measure] = chartScales.createMeasureScale(
+      [{ [measure]: maxValues[measure] }], // Create minimal dataset with just the max value
+      measure,
+      [startX, endX]
+    );
   });
 
   return xScales;
@@ -469,8 +494,8 @@ function getLongestText(textArray) {
  * Sets up event handlers
  */
 function setupEventHandlers(container) {
-  setupResizeHandler(container, () => renderNestedBarChart(container));
-  setupDimensionSwapHandler(renderNestedBarChart);
+  chartUtils.setupResizeHandler(container, () => renderNestedBarChart(container));
+  chartUtils.setupDimensionSwapHandler(renderNestedBarChart);
 }
 
 /**

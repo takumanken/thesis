@@ -1,4 +1,5 @@
 import { state } from "../state.js";
+import * as chartUtils from "./utils/chartUtils.js";
 
 function renderTextResponse(container) {
   // Clear container

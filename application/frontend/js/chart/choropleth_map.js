@@ -5,7 +5,7 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
-import { formatValue, setupResizeHandler, validateRenderingContext, attachMouseTooltip } from "./utils/chartUtils.js";
+import * as chartUtils from "./utils/chartUtils.js";
 
 // Constants
 const SUPPORTED_GEO_DIMENSIONS = ["borough", "neighborhood_name", "county"];
@@ -22,7 +22,7 @@ const COUNTY_MAPPING = {
  * @param {HTMLElement} container - DOM element to render the chart
  */
 function renderChoroplethMap(container) {
-  if (!validateRenderingContext(container, "No geographic data available for display")) return;
+  if (!chartUtils.validateRenderingContext(container, "No geographic data available for display")) return;
 
   // Extract data and settings
   const dataset = state.dataset;
@@ -46,7 +46,7 @@ function renderChoroplethMap(container) {
   loadGeoJsonData(svg, container, geoDimension, aggregatedData, config, measure, tooltip);
 
   // Setup resize handling
-  setupResizeHandler(container, () => renderChoroplethMap(container));
+  chartUtils.setupResizeHandler(container, () => renderChoroplethMap(container));
 }
 
 // ===== DATA PROCESSING =====
@@ -210,14 +210,14 @@ function renderMap(svg, geoJson, path, colorScale, geoDimension, measure, toolti
     .style("cursor", "pointer");
 
   // Attach tooltip behavior using standardized utility
-  attachMouseTooltip(regions, tooltip, (feature) => {
+  chartUtils.attachMouseTooltip(regions, tooltip, (feature) => {
     const p = feature.properties;
     return geoDimension === "neighborhood_name"
       ? `<strong>Neighborhood:</strong> ${p.ntaname}<br>
          <strong>Borough:</strong> ${p.boroname || "Unknown"}<br>
-         <strong>${measure}:</strong> ${formatValue(p.value)}`
+         <strong>${measure}:</strong> ${chartUtils.formatValue(p.value)}`
       : `<strong>${p.displayName}</strong><br>
-         <strong>${measure}:</strong> ${formatValue(p.value)}`;
+         <strong>${measure}:</strong> ${chartUtils.formatValue(p.value)}`;
   });
 }
 
@@ -242,7 +242,7 @@ function addRegionLabels(svg, geoJson, path) {
     .each(function (d) {
       const text = d3.select(this);
       const name = d.properties.displayName;
-      const value = formatValue(d.properties.value);
+      const value = chartUtils.formatValue(d.properties.value);
 
       // Add name and value on separate lines
       text.append("tspan").attr("x", 0).attr("dy", "-0.7em").text(name);
