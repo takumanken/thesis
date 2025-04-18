@@ -17,6 +17,7 @@ from google.genai import types
 from typing import List, Dict, Tuple, Optional, Any
 import polars as pl
 import numpy as np
+import pandas as pd
 from data_description import generate_data_description
 
 # Setup logging
@@ -287,6 +288,15 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
     measures_clause = ", ".join([f"{m['expression']} AS {m['alias']}" for m in definition.measures])
     select_clause = f"{dims_clause}, {measures_clause}" if dims_clause and measures_clause else (dims_clause or measures_clause)
     
+    # Add date range metadata using window functions
+    # These will be extracted in execute_sql_in_duckDB and won't affect results
+    date_metadata = """
+    , min(min(created_date)) over () as min_created_date
+    , max(max(created_date)) over () as max_created_date
+    """
+    
+    select_clause += date_metadata
+    
     sql = f"SELECT {select_clause} FROM {table_name}"
     
     # Add filters with location placeholders if needed
@@ -330,23 +340,14 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
     logger.info(f"Generated SQL:\n{sql}")
     return sql.strip()
 
-def execute_sql_in_duckDB(sql: str, db_filename: str) -> list:
+def execute_sql_in_duckDB(sql: str, db_filename: str) -> tuple[list, dict]:
     """
-    Executes a SQL query in DuckDB and returns the results.
-    
-    Args:
-        sql: The SQL query string to execute
-        db_filename: Database filename (or :memory: for in-memory database)
-        
-    Returns:
-        Query results as a list of dictionaries (JSON-serializable)
-        
-    Raises:
-        Various exceptions if the query fails
+    Executes a SQL query in DuckDB and returns both results and metadata.
     """
     start_time = time.time()
     logger.info(f"Executing SQL query in DuckDB:\n    {sql}")
     
+    metadata = {}
     try:
         with duckdb.connect(":memory:") as con:
             # Setup spatial extensions
@@ -360,10 +361,20 @@ def execute_sql_in_duckDB(sql: str, db_filename: str) -> list:
             view_sql = view_sql.format(object_name="requests_311")
             con.execute(view_sql)
             
-            # Execute the query
+            # Execute the query directly (no need for wrapper query now)
             df = con.execute(sql).fetchdf()
             row_count = len(df)
             logger.info(f"Query executed successfully: {row_count} rows returned")
+            
+            # Extract metadata from the first row
+            if not df.empty:
+                if 'min_created_date' in df.columns and 'max_created_date' in df.columns:
+                    metadata['min_created_date'] = df['min_created_date'].iloc[0]
+                    metadata['max_created_date'] = df['max_created_date'].iloc[0]
+                    
+                    # Remove metadata columns from result set
+                    df = df.drop(columns=['min_created_date', 'max_created_date'])
+    
     except Exception as e:
         logger.error(f"Database query failed: {str(e)}")
         logger.error(f"SQL with error:\n{sql}")
@@ -372,9 +383,15 @@ def execute_sql_in_duckDB(sql: str, db_filename: str) -> list:
     # Format datetime columns for JSON serialization
     for col in df.select_dtypes(include=['datetime64[ns]']).columns:
         df[col] = df[col].dt.strftime('%Y-%m-%d')
+        
+    # Format datetime values in metadata
+    for key, value in metadata.items():
+        if isinstance(value, pd.Timestamp):
+            metadata[key] = value.strftime('%Y-%m-%d')
     
     logger.info(f"SQL execution completed in {time.time() - start_time:.2f}s")
-    return json.loads(df.to_json(orient="records"))
+    results = json.loads(df.to_json(orient="records"))
+    return results, metadata
 
 def calculate_dimension_cardinality_stats(dataset: List[Dict], dimensions: List[str]) -> Dict[str, Dict[str, float]]:
     """
@@ -395,7 +412,6 @@ def calculate_dimension_cardinality_stats(dataset: List[Dict], dimensions: List[
         df = pl.DataFrame(dataset)
     except Exception as e:
         logger.warning(f"Failed to use Polars: {str(e)}. Using pandas.")
-        import pandas as pd
         df = pd.DataFrame(dataset)
     
     stats = {}
@@ -585,7 +601,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         
         # Generate and execute SQL query
         sql = generate_sql(agg_def, "requests_311", user_location)
-        dataset = execute_sql_in_duckDB(sql, ":memory:")
+        dataset, query_metadata = execute_sql_in_duckDB(sql, ":memory:")
         
         # Process results and optimize dimensions
         dimension_stats = {}
@@ -605,7 +621,8 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             "chartType": ideal_chart,
             "availableChartTypes": available_charts,
             "dimensionStats": dimension_stats,
-            "textResponse": None
+            "textResponse": None,
+            "metadata": query_metadata
         }
 
         # Add data description (new code)
