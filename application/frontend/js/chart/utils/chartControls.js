@@ -69,7 +69,7 @@ export const chartControls = {
     const swapSection = document.createElement("div");
     swapSection.className = "viz-dimension-swap";
     swapSection.style.marginBottom = "20px";
-    swapSection.innerHTML = '<h3 class="control-heading">Dimension Order</h3>';
+    swapSection.innerHTML = '<h3 class="control-heading">Chart Layout</h3>';
 
     // Create and add button
     swapSection.appendChild(this._createSwapButton());
