@@ -79,6 +79,7 @@ class AggregationDefinition(BaseModel):
     geoDimension: List[str] = []
     categoricalDimension: List[str] = []
     response_type: str = "data"
+    createdDateRange: Optional[List[str]] = None
 
 # Environment setup
 def setup_environment():
@@ -361,7 +362,7 @@ def execute_sql_in_duckDB(sql: str, db_filename: str) -> tuple[list, dict]:
             view_sql = view_sql.format(object_name="requests_311")
             con.execute(view_sql)
             
-            # Execute the query directly (no need for wrapper query now)
+            # Execute the query directly
             df = con.execute(sql).fetchdf()
             row_count = len(df)
             logger.info(f"Query executed successfully: {row_count} rows returned")
@@ -369,8 +370,10 @@ def execute_sql_in_duckDB(sql: str, db_filename: str) -> tuple[list, dict]:
             # Extract metadata from the first row
             if not df.empty:
                 if 'min_created_date' in df.columns and 'max_created_date' in df.columns:
-                    metadata['min_created_date'] = df['min_created_date'].iloc[0]
-                    metadata['max_created_date'] = df['max_created_date'].iloc[0]
+                    metadata['createdDateRange'] = [
+                        df['min_created_date'].iloc[0],
+                        df['max_created_date'].iloc[0]
+                    ]
                     
                     # Remove metadata columns from result set
                     df = df.drop(columns=['min_created_date', 'max_created_date'])
@@ -384,10 +387,12 @@ def execute_sql_in_duckDB(sql: str, db_filename: str) -> tuple[list, dict]:
     for col in df.select_dtypes(include=['datetime64[ns]']).columns:
         df[col] = df[col].dt.strftime('%Y-%m-%d')
         
-    # Format datetime values in metadata
-    for key, value in metadata.items():
-        if isinstance(value, pd.Timestamp):
-            metadata[key] = value.strftime('%Y-%m-%d')
+    # Format datetime values in metadata array
+    if 'createdDateRange' in metadata:
+        metadata['createdDateRange'] = [
+            value.strftime('%Y-%m-%d') if isinstance(value, pd.Timestamp) else value
+            for value in metadata['createdDateRange']
+        ]
     
     logger.info(f"SQL execution completed in {time.time() - start_time:.2f}s")
     results = json.loads(df.to_json(orient="records"))
@@ -603,6 +608,10 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         sql = generate_sql(agg_def, "requests_311", user_location)
         dataset, query_metadata = execute_sql_in_duckDB(sql, ":memory:")
         
+        # Add date range to aggregation definition as an array
+        if 'createdDateRange' in query_metadata:
+            agg_def.createdDateRange = query_metadata['createdDateRange']
+        
         # Process results and optimize dimensions
         dimension_stats = {}
         if dataset and agg_def.dimensions:
@@ -612,7 +621,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         # Determine best visualization
         available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats)
         
-        # Build response
+        # Build response - remove metadata field
         response_payload = {
             "dataset": dataset,
             "fields": list(dataset[0].keys()) if dataset else [],
@@ -621,8 +630,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             "chartType": ideal_chart,
             "availableChartTypes": available_charts,
             "dimensionStats": dimension_stats,
-            "textResponse": None,
-            "metadata": query_metadata
+            "textResponse": None
         }
 
         # Add data description (new code)
