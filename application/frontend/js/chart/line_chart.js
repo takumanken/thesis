@@ -5,7 +5,21 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
-import { formatValue, setupResizeHandler, validateRenderingContext, attachMouseTooltip } from "./utils/chartUtils.js";
+import {
+  formatValue,
+  setupResizeHandler,
+  validateRenderingContext,
+  attachMouseTooltip,
+  determineTimeGrain,
+  getTimeAxisSettings,
+  renderTimeAxis,
+  formatTimeValue,
+  createTimeScale,
+  findClosestDataPoint,
+  createChartConfig,
+  createInteractionOverlay,
+  createHighlightCircle,
+} from "./utils/chartUtils.js";
 import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js";
 
 // ===== MAIN RENDERING FUNCTION =====
@@ -38,7 +52,8 @@ function renderLineChart(container) {
   const lineGenerator = createLineGenerator(scales.x, scales.y, measure);
 
   // Draw chart components
-  drawAxes(svg, scales, config.height, isNumericTime, timeGrain);
+  renderTimeAxis(svg, scales.x, config.height, isNumericTime, timeGrain);
+  renderYAxis(svg, scales.y);
 
   // Draw data and get sorted groups
   const sortedGroups = drawLines({
@@ -128,18 +143,6 @@ function processDateTimeData(dataset, timeDimension) {
     .filter((d) => d.parsedTime);
 }
 
-/**
- * Determine the time grain from dimension name
- */
-function determineTimeGrain(timeDimension) {
-  const dimensionLower = timeDimension.toLowerCase();
-
-  if (dimensionLower.includes("year")) return "year";
-  if (dimensionLower.includes("month")) return "month";
-  if (dimensionLower.includes("week")) return "week";
-  return "day";
-}
-
 // ===== CHART SETUP FUNCTIONS =====
 
 /**
@@ -154,17 +157,6 @@ function setupChartLayout(container, groupDimension) {
   // No grouping - just use container
   container.innerHTML = "";
   return { chartContainer: container, legendContainer: null };
-}
-
-/**
- * Create chart configuration with sizing
- */
-function createChartConfig(container) {
-  const margin = { top: 20, right: 20, bottom: 70, left: 70 };
-  const width = container.clientWidth - margin.left - margin.right;
-  const height = (container.clientHeight || 500) - margin.top - margin.bottom;
-
-  return { margin, width, height };
 }
 
 /**
@@ -227,7 +219,7 @@ function createLineGenerator(x, y, measure) {
  * Draw chart axes
  */
 function drawAxes(svg, scales, height, isNumericTime, timeGrain) {
-  renderXAxis(svg, scales.x, height, isNumericTime, timeGrain);
+  renderTimeAxis(svg, scales.x, height, isNumericTime, timeGrain);
   renderYAxis(svg, scales.y);
 }
 
@@ -387,7 +379,7 @@ function addInteractionLayer(props) {
   const allPoints = createPointsArray(groupedData, scales, measure);
 
   // Create invisible overlay and highlight circle
-  const overlay = createOverlay(svg, config);
+  const overlay = createInteractionOverlay(svg, config);
   const highlight = createHighlightCircle(svg);
 
   // Add mouse interaction
@@ -425,33 +417,6 @@ function createPointsArray(groupedData, scales, measure) {
 }
 
 /**
- * Create invisible overlay for mouse interaction
- */
-function createOverlay(svg, config) {
-  return svg
-    .append("rect")
-    .attr("class", "overlay")
-    .attr("width", config.width)
-    .attr("height", config.height)
-    .style("fill", "none")
-    .style("pointer-events", "all");
-}
-
-/**
- * Create highlight circle for active point
- */
-function createHighlightCircle(svg) {
-  return svg
-    .append("circle")
-    .attr("class", "highlight")
-    .attr("r", 3)
-    .style("fill", "none")
-    .style("stroke", "#000")
-    .style("stroke-width", 1)
-    .style("opacity", 0.5);
-}
-
-/**
  * Setup mouse interaction events
  */
 function setupMouseInteraction(
@@ -468,7 +433,7 @@ function setupMouseInteraction(
   overlay
     .on("mousemove", function (event) {
       const [mouseX, mouseY] = d3.pointer(event);
-      const closestPoint = findClosestPoint(mouseX, mouseY, points);
+      const closestPoint = findClosestDataPoint(mouseX, mouseY, points);
 
       if (closestPoint && closestPoint.distance < 50) {
         showPointHighlight(
@@ -490,27 +455,6 @@ function setupMouseInteraction(
 }
 
 /**
- * Find closest data point to mouse position
- */
-function findClosestPoint(mouseX, mouseY, points) {
-  let closestPoint = null;
-  let minDistance = Infinity;
-
-  points.forEach((point) => {
-    const dx = point.x - mouseX;
-    const dy = point.y - mouseY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (distance < minDistance) {
-      minDistance = distance;
-      closestPoint = { ...point, distance };
-    }
-  });
-
-  return closestPoint;
-}
-
-/**
  * Show highlight and tooltip for a point
  */
 function showPointHighlight(
@@ -528,7 +472,7 @@ function showPointHighlight(
   highlight.attr("cx", point.x).attr("cy", point.y).attr("fill", colorScale(point.group)).style("opacity", 0.8);
 
   // Format time value based on type
-  const timeValue = isNumericTime ? point.data.parsedTime : d3.timeFormat("%Y-%m-%d")(point.data.parsedTime);
+  const timeValue = formatTimeValue(point.data.parsedTime, isNumericTime);
 
   // Show tooltip
   chartStyles.tooltip.show(
@@ -590,75 +534,6 @@ function prepareGroupedData(data, groupDimension) {
     key,
     values: [...values].sort((a, b) => a.parsedTime - b.parsedTime),
   }));
-}
-
-/**
- * Render X axis with appropriate formatting
- */
-function renderXAxis(svg, xScale, height, isNumericTime, timeGrain) {
-  // Determine tick format based on data type and grain
-  const { tickFormat, rotateLabels, tickCount } = getXAxisTickSettings(xScale, isNumericTime, timeGrain);
-
-  // Create axis generator
-  const axisGenerator = d3.axisBottom(xScale).tickFormat(tickFormat);
-  if (tickCount) axisGenerator.ticks(tickCount);
-
-  // Add and style axis
-  const axis = svg.append("g").attr("class", "x-axis").attr("transform", `translate(0, ${height})`).call(axisGenerator);
-
-  // Style the axis labels
-  axis
-    .selectAll("text")
-    .attr("dx", "-.8em")
-    .attr("dy", ".15em")
-    .attr("transform", rotateLabels ? "rotate(-45)" : "rotate(0)")
-    .style("text-anchor", rotateLabels ? "end" : "middle");
-
-  // Apply consistent styling
-  chartStyles.applyAxisStyles(axis);
-}
-
-/**
- * Get tick settings for X axis based on data type
- */
-function getXAxisTickSettings(xScale, isNumericTime, timeGrain) {
-  let tickFormat,
-    rotateLabels = false,
-    tickCount;
-
-  if (isNumericTime) {
-    tickFormat = d3.format("d");
-  } else {
-    // Format based on time grain
-    switch (timeGrain) {
-      case "year":
-        tickFormat = d3.timeFormat("%Y");
-        break;
-      case "month":
-        tickFormat = d3.timeFormat("%b %Y");
-        break;
-      case "week":
-        tickFormat = d3.timeFormat("%b %d");
-        rotateLabels = true;
-        break;
-      case "day":
-      default:
-        tickFormat = d3.timeFormat("%Y-%m-%d");
-        rotateLabels = true;
-        break;
-    }
-
-    // Calculate appropriate tick count
-    if (timeGrain === "year") {
-      const timeSpan = xScale.domain()[1] - xScale.domain()[0];
-      tickCount = Math.min(10, Math.ceil(timeSpan / (365 * 24 * 60 * 60 * 1000)));
-    } else if (timeGrain === "month") {
-      const timeSpan = xScale.domain()[1] - xScale.domain()[0];
-      tickCount = Math.min(12, Math.ceil(timeSpan / (30 * 24 * 60 * 60 * 1000)));
-    }
-  }
-
-  return { tickFormat, rotateLabels, tickCount };
 }
 
 /**

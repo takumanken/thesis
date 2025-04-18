@@ -214,3 +214,227 @@ export function attachMouseTooltip(sel, tooltip, contentFn, highlightFn) {
     lastEl = null;
   });
 }
+
+/**
+ * Determine the time grain from dimension name
+ * @param {string} timeDimension - Name of the time dimension
+ * @returns {string} Time grain: 'year', 'month', 'week', or 'day'
+ */
+export function determineTimeGrain(timeDimension) {
+  const dimensionLower = timeDimension?.toLowerCase() || "";
+
+  if (dimensionLower.includes("year")) return "year";
+  if (dimensionLower.includes("month")) return "month";
+  if (dimensionLower.includes("week")) return "week";
+  return "day"; // Default
+}
+
+/**
+ * Get X axis tick settings based on time grain
+ * @param {d3.Scale} xScale - The x axis scale
+ * @param {boolean} isNumericTime - Whether time is numeric (vs. date)
+ * @param {string} timeGrain - Time grain (year, month, week, day)
+ * @returns {Object} Formatting settings for x-axis
+ */
+export function getTimeAxisSettings(xScale, isNumericTime, timeGrain) {
+  let tickFormat;
+  let rotateLabels = false;
+  let tickCount;
+
+  if (isNumericTime) {
+    tickFormat = d3.format("d");
+  } else {
+    switch (timeGrain) {
+      case "year":
+        tickFormat = d3.timeFormat("%Y");
+        break;
+      case "month":
+        tickFormat = d3.timeFormat("%b %Y");
+        break;
+      case "week":
+        tickFormat = d3.timeFormat("%b %d");
+        rotateLabels = true;
+        break;
+      case "day":
+      default:
+        tickFormat = d3.timeFormat("%Y-%m-%d");
+        rotateLabels = true;
+        break;
+    }
+
+    // Calculate appropriate tick count for date scales
+    const domain = xScale.domain();
+    const timeSpan = domain[1] - domain[0];
+
+    if (timeGrain === "year") {
+      tickCount = Math.min(10, Math.ceil(timeSpan / (365 * 24 * 60 * 60 * 1000)));
+    } else if (timeGrain === "month") {
+      tickCount = Math.min(12, Math.ceil(timeSpan / (30 * 24 * 60 * 60 * 1000)));
+    }
+  }
+
+  return { tickFormat, rotateLabels, tickCount };
+}
+
+/**
+ * Render X axis with appropriate time formatting
+ * @param {d3.Selection} svg - SVG element to add axis to
+ * @param {d3.Scale} xScale - The x scale
+ * @param {number} height - Height for positioning
+ * @param {boolean} isNumericTime - Whether time is numeric
+ * @param {string} timeGrain - Time grain (year, month, week, day)
+ */
+export function renderTimeAxis(svg, xScale, height, isNumericTime, timeGrain) {
+  const { tickFormat, rotateLabels, tickCount } = getTimeAxisSettings(xScale, isNumericTime, timeGrain);
+
+  // Create axis generator
+  const axisGenerator = d3.axisBottom(xScale).tickFormat(tickFormat);
+  if (tickCount) axisGenerator.ticks(tickCount);
+
+  // Add and style axis
+  const axis = svg.append("g").attr("class", "x-axis").attr("transform", `translate(0, ${height})`).call(axisGenerator);
+
+  // Style labels
+  axis
+    .selectAll("text")
+    .attr("dx", "-.8em")
+    .attr("dy", ".15em")
+    .attr("transform", rotateLabels ? "rotate(-45)" : "rotate(0)")
+    .style("text-anchor", rotateLabels ? "end" : "middle");
+
+  chartStyles.applyAxisStyles(axis);
+}
+
+/**
+ * Format time value for display
+ * @param {Date|number} time - Time value
+ * @param {boolean} isNumericTime - Whether time is numeric
+ * @returns {string} Formatted time string
+ */
+export function formatTimeValue(time, isNumericTime) {
+  return isNumericTime ? time : d3.timeFormat("%Y-%m-%d")(time);
+}
+
+/**
+ * Create time scale based on data type
+ * @param {Array} data - Dataset containing time values
+ * @param {boolean} isNumericTime - Whether time is numeric
+ * @param {number} width - Width for scale range
+ * @param {string} timeField - Name of the time field
+ * @returns {d3.Scale} Appropriate time scale
+ */
+export function createTimeScale(data, isNumericTime, width, timeField = "time") {
+  return isNumericTime
+    ? d3
+        .scaleLinear()
+        .domain(d3.extent(data, (d) => d[timeField]))
+        .range([0, width])
+        .nice()
+    : d3
+        .scaleTime()
+        .domain(d3.extent(data, (d) => d[timeField]))
+        .range([0, width])
+        .nice();
+}
+
+/**
+ * Find closest data point to mouse position
+ * @param {number} mouseX - Mouse X position
+ * @param {number|d3.Scale} secondParam - Either mouseY or xScale depending on context
+ * @param {Array} data - Dataset or points array
+ * @returns {Object|null} Closest data point
+ */
+export function findClosestDataPoint(mouseX, secondParam, data) {
+  // If we're dealing with x/y coordinates (from line_chart.js)
+  if (typeof secondParam === "number") {
+    const mouseY = secondParam;
+
+    if (!data?.length) return null;
+
+    let closestPoint = null;
+    let minDistance = Infinity;
+
+    data.forEach((point) => {
+      const dx = point.x - mouseX;
+      const dy = point.y - mouseY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPoint = { ...point, distance };
+      }
+    });
+
+    return closestPoint;
+  }
+  // If we're dealing with a scale object (from stacked_area_chart.js)
+  else if (secondParam && typeof secondParam.invert === "function") {
+    const xScale = secondParam;
+    const timeField = arguments[3] || "time"; // Get optional 4th parameter
+
+    if (!data?.length) return null;
+
+    const date = xScale.invert(mouseX);
+    const bisect = d3.bisector((d) => d[timeField]).left;
+    const index = bisect(data, date);
+
+    // Handle edge cases
+    if (index === 0) return data[0];
+    if (index >= data.length) return data[data.length - 1];
+
+    // Determine which point is closer
+    const d0 = data[index - 1];
+    const d1 = data[index];
+
+    return date - d0[timeField] > d1[timeField] - date ? d1 : d0;
+  }
+
+  return null;
+}
+
+/**
+ * Create standard chart configuration with margins and dimensions
+ * @param {HTMLElement} container - Chart container
+ * @param {Object} customMargins - Optional custom margins
+ * @returns {Object} Chart configuration
+ */
+export function createChartConfig(container, customMargins) {
+  const margin = customMargins || { top: 20, right: 20, bottom: 70, left: 70 };
+  const width = container.clientWidth - margin.left - margin.right;
+  const height = (container.clientHeight || 500) - margin.top - margin.bottom;
+
+  return { margin, width, height };
+}
+
+/**
+ * Create invisible overlay for mouse interaction
+ * @param {d3.Selection} svg - SVG element
+ * @param {Object} config - Chart configuration
+ * @returns {d3.Selection} Overlay element
+ */
+export function createInteractionOverlay(svg, config) {
+  return svg
+    .append("rect")
+    .attr("class", "overlay")
+    .attr("width", config.width)
+    .attr("height", config.height)
+    .style("fill", "none")
+    .style("pointer-events", "all");
+}
+
+/**
+ * Create highlight circle for active point
+ * @param {d3.Selection} svg - SVG element
+ * @param {number} radius - Circle radius
+ * @returns {d3.Selection} Highlight circle element
+ */
+export function createHighlightCircle(svg, radius = 3) {
+  return svg
+    .append("circle")
+    .attr("class", "highlight")
+    .attr("r", radius)
+    .style("fill", "none")
+    .style("stroke", "#000")
+    .style("stroke-width", 1)
+    .style("opacity", 0);
+}

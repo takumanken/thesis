@@ -5,7 +5,19 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
-import { formatValue, setupResizeHandler, validateRenderingContext, attachMouseTooltip } from "./utils/chartUtils.js";
+import {
+  formatValue,
+  setupResizeHandler,
+  validateRenderingContext,
+  attachMouseTooltip,
+  determineTimeGrain,
+  getTimeAxisSettings,
+  renderTimeAxis,
+  formatTimeValue,
+  createTimeScale,
+  findClosestDataPoint,
+  createChartConfig,
+} from "./utils/chartUtils.js";
 import { createHorizontalLayout, createColorLegend } from "./utils/legendUtil.js";
 
 // ===== MAIN RENDERING FUNCTION =====
@@ -185,30 +197,7 @@ function initializeTimeEntries(timeValues, uniqueCategories, isNumericTime) {
   return timeEntries;
 }
 
-/**
- * Determine the time grain from the dimension name
- */
-function determineTimeGrain(timeDimension) {
-  const dimensionLower = timeDimension.toLowerCase();
-
-  if (dimensionLower.includes("year")) return "year";
-  if (dimensionLower.includes("month")) return "month";
-  if (dimensionLower.includes("week")) return "week";
-  return "day"; // Default
-}
-
 // ===== CHART SETUP =====
-
-/**
- * Create chart configuration
- */
-function createChartConfig(container) {
-  const margin = { top: 20, right: 20, bottom: 70, left: 70 };
-  const width = container.clientWidth - margin.left - margin.right;
-  const height = (container.clientHeight || 500) - margin.top - margin.bottom;
-
-  return { margin, width, height };
-}
 
 /**
  * Create chart DOM elements
@@ -290,23 +279,6 @@ function createScales(data, stackedData, isNumericTime, isPercentage, config) {
   const y = createValueScale(stackedData, isPercentage, config.height);
 
   return { x, y };
-}
-
-/**
- * Create appropriate time scale
- */
-function createTimeScale(data, isNumericTime, width) {
-  return isNumericTime
-    ? d3
-        .scaleLinear()
-        .domain(d3.extent(data, (d) => d.time))
-        .range([0, width])
-        .nice()
-    : d3
-        .scaleTime()
-        .domain(d3.extent(data, (d) => d.time))
-        .range([0, width])
-        .nice();
 }
 
 /**
@@ -434,13 +406,6 @@ function createTooltipContent({
 }
 
 /**
- * Format time value based on type
- */
-function formatTimeValue(time, isNumericTime) {
-  return isNumericTime ? time : d3.timeFormat("%Y-%m-%d")(time);
-}
-
-/**
  * Calculate total value for a time point
  */
 function calculateTotal(timePoint) {
@@ -451,34 +416,13 @@ function calculateTotal(timePoint) {
     .reduce((sum, key) => sum + (timePoint[key] || 0), 0);
 }
 
-/**
- * Find the closest data point to the mouse position
- */
-function findClosestDataPoint(mouseX, xScale, data) {
-  if (!data.length) return null;
-
-  const date = xScale.invert(mouseX);
-  const bisect = d3.bisector((d) => d.time).left;
-  const index = bisect(data, date);
-
-  // Handle edge cases
-  if (index === 0) return data[0];
-  if (index >= data.length) return data[data.length - 1];
-
-  // Determine which point is closer
-  const d0 = data[index - 1];
-  const d1 = data[index];
-
-  return date - d0.time > d1.time - date ? d1 : d0;
-}
-
 // ===== AXES RENDERING =====
 
 /**
  * Render X axis with appropriate time formatting
  */
 function renderXAxis(svg, xScale, height, isNumericTime, timeGrain) {
-  const { tickFormat, rotateLabels, tickCount } = getXAxisSettings(xScale, isNumericTime, timeGrain);
+  const { tickFormat, rotateLabels, tickCount } = getTimeAxisSettings(xScale, isNumericTime, timeGrain);
 
   // Create and style axis
   const axisGenerator = d3.axisBottom(xScale).tickFormat(tickFormat);
@@ -495,50 +439,6 @@ function renderXAxis(svg, xScale, height, isNumericTime, timeGrain) {
     .style("text-anchor", rotateLabels ? "end" : "middle");
 
   chartStyles.applyAxisStyles(axis);
-}
-
-/**
- * Get X axis tick settings
- */
-function getXAxisSettings(xScale, isNumericTime, timeGrain) {
-  let tickFormat;
-  let rotateLabels = false;
-  let tickCount;
-
-  // Configure tick format based on time grain
-  if (isNumericTime) {
-    tickFormat = d3.format("d");
-  } else {
-    switch (timeGrain) {
-      case "year":
-        tickFormat = d3.timeFormat("%Y");
-        break;
-      case "month":
-        tickFormat = d3.timeFormat("%b %Y");
-        break;
-      case "week":
-        tickFormat = d3.timeFormat("%b %d");
-        rotateLabels = true;
-        break;
-      case "day":
-      default:
-        tickFormat = d3.timeFormat("%Y-%m-%d");
-        rotateLabels = true;
-        break;
-    }
-
-    // Calculate appropriate tick count for date scales
-    const domain = xScale.domain();
-    const timeSpan = domain[1] - domain[0];
-
-    if (timeGrain === "year") {
-      tickCount = Math.min(10, Math.ceil(timeSpan / (365 * 24 * 60 * 60 * 1000)));
-    } else if (timeGrain === "month") {
-      tickCount = Math.min(12, Math.ceil(timeSpan / (30 * 24 * 60 * 60 * 1000)));
-    }
-  }
-
-  return { tickFormat, rotateLabels, tickCount };
 }
 
 /**
