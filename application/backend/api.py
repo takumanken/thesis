@@ -52,7 +52,7 @@ app.add_middleware(
 )
 
 # Constants
-SYSTEM_INSTRUCTION_FILE = "assets/gemini_instructions/data_aggregation_instruction.txt"
+SYSTEM_INSTRUCTION_FILE = "assets/gemini_instructions/data_aggregation_instruction.md"
 REFERENCE_DIR = "assets/gemini_instructions/references"
 
 # Environment setup
