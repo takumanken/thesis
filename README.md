@@ -134,7 +134,7 @@ By combining a cleaned, semantically explicit data model with structured validat
 This section outlines how the proposed natural language interface is built and how its components interact. **Figure 1** (below) depicts the overall workflow, from a user’s plain-language query to a final chart. The main goal is to let users explore open data through everyday language rather than having to code or learn complex analysis tools.
 
 **Figure 1**  
-![Figure1](https://github.com/takumanken/thesis/blob/main/design_mockup/images/architecture.png?raw=true)
+![Figure1](concept/images/architecture.png)
 
 1. **Frontend (Web UI)**  
    - Users enter queries in a text box (e.g., “How have 311 noise complaints changed over the past five years in Manhattan?”).  
@@ -164,7 +164,7 @@ The user interface is designed for simplicity and ease of use, making it accessi
 #### 3.2.1 Cover Page
 
 **Figure 2**  
-![Figure2](https://github.com/takumanken/thesis/blob/main/design_mockup/images/cover_page.png?raw=true)
+![Figure2](concept/images/cover_page.png)
 
 On first visit, the **cover page** greets users with a concise explanation of the system’s purpose. The layout features:
 
@@ -176,7 +176,7 @@ On first visit, the **cover page** greets users with a concise explanation of th
 #### 3.2.2 Main Page
 
 **Figure 3**  
-![Figure3](https://github.com/takumanken/thesis/blob/main/design_mockup/images/bar_chart.png?raw=true)
+![Figure3](concept/images/bar_chart.png)
 
 After entering a query, users arrive at the **main page**, where the system’s response is displayed. Key elements include:
 
