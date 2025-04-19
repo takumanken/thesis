@@ -22,7 +22,7 @@ def get_data_description_client():
     api_key = os.getenv("GEMINI_API_KEY")
     
     # Load instruction and initialize client
-    with open("data_description_instruction.txt", "r") as f:
+    with open("assets/gemini_instructions/data_description_instruction.txt", "r") as f:
         data_description_instruction = f.read()
     
     data_description_client = genai.Client(api_key=api_key)
