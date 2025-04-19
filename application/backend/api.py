@@ -54,6 +54,7 @@ app.add_middleware(
 # Constants
 SYSTEM_INSTRUCTION_FILE = "assets/gemini_instructions/data_aggregation_instruction.txt"
 FILTER_VALUES_DIR = "assets/gemini_instructions/filter_values"
+DATA_SCHEMA_FILE = "assets/gemini_instructions/data_schema.json"
 
 # Environment setup
 def setup_environment():
@@ -66,11 +67,32 @@ def setup_environment():
     with open(SYSTEM_INSTRUCTION_FILE, "r") as f:
         system_instruction = f.read()
 
+    # Load filter values
     with open(os.path.join(FILTER_VALUES_DIR, "all_filters.json"), "r") as f:
         all_filters = json.load(f)
+    
+    # Load data schema
+    with open(DATA_SCHEMA_FILE, "r") as f:
+        data_schema = json.load(f)
+    
+    # Prepare simplified schema for AI - remove description_to_user to avoid confusion
+    simplified_schema = {"dimensions": {}, "measures": []}
+    
+    # Process dimensions
+    for dim_type, dims in data_schema["dimensions"].items():
+        simplified_schema["dimensions"][dim_type] = []
+        for dim in dims:
+            dim_copy = {k: v for k, v in dim.items() if k != "description_to_user"}
+            simplified_schema["dimensions"][dim_type].append(dim_copy)
+    
+    # Process measures
+    for measure in data_schema["measures"]:
+        measure_copy = {k: v for k, v in measure.items() if k != "description_to_user"}
+        simplified_schema["measures"].append(measure_copy)
         
-    # Replace the {all_filters} placeholder 
+    # Replace the placeholders
     system_instruction = system_instruction.replace("{all_filters}", json.dumps(all_filters))
+    system_instruction = system_instruction.replace("{data_schema}", json.dumps(simplified_schema))
     
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:

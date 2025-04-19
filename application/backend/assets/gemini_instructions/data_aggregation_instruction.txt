@@ -15,27 +15,9 @@ I. PRIMARY GUIDELINES
 ────────────────────────────
 II. DATA MODEL
 
-A. Time Related Dimension
------------------
-• Default time dimensions (use these unless otherwise specified):
-   - created_week     : Week when the SR was created.
-   - closed_week      : Week when the SR was closed.
-• Optional time dimensions (use only when explicitly requested):
-   - created_date     : DATE (YYYY-MM-DD) of service request creation.
-   - created_month    : First day of month (YYYY-MM-01) of request creation.
-   - created_year     : First day of year (YYYY-01-01) of request creation.
-   - closed_date      : DATE (YYYY-MM-DD) of service request closure.
-   - closed_month     : First day of month (YYYY-MM-01) of service request closure.
-   - closed_year      : First day of year (YYYY-01-01) of service request closure.
-   - created_year_datepart     : INTEGER year number (YYYY) from created date.
-   - created_month_datepart    : INTEGER month number (1-12) from created date.
-   - created_day_datepart      : INTEGER day number (1-31) from created date.
-   - created_hour_datepart     : INTEGER hour (0-23) from created date.
-   - created_weekday_datepart  : TEXT day name (Mon, Tue, Wed, etc.) from created date.
-   - closed_year_datepart      : INTEGER year number (YYYY) from closed date.
-   - closed_month_datepart     : INTEGER month number (1-12) from closed date.
-   - closed_day_datepart       : INTEGER day number (1-31) from closed date.
-   - closed_hour_datepart      : INTEGER hour (0-23) from closed date.
+The following JSON defines all available dimensions and measures. You should use physical names for generating query.
+
+{data_schema}
 
 A.1 Time Expression Interpretation
 -----------------
@@ -53,33 +35,17 @@ A.1 Time Expression Interpretation
    - "Show me yearly complaint trends" → Use created_year (EXPLICIT request for yearly granularity)
    - "Show complaints by borough in the last 3 years" → Use created_week (DEFAULT) with 3-year filter
 
-B. Geo Related Dimension
-----------------
-• borough                   : Borough of the incident.
-• county                    : County of the incident.
-• location                  : Latitude and longitude of the incident.
-• incident_zip              : Incident zip code.
-• neighborhood_name         : Neighborhood name.
+────────────────────────────
+SCHEMA AND FIELD RECOGNITION
 
-C. Categorical Dimension
-------------------------
-• unique_key                : Unique identifier of a Service Request.
-• status                    : Status of the SR.
-• agency_category           : Agency category.
-• agency_name               : Full agency name.
-• complaint_type_large      : Default complaint type (broad).
-• complaint_type_middle     : The second detailed complaint type. Use only if explicitly asked.
-• complaint_type_detailed   : The most detailed complaint type. Use only if explicitly asked.
-• descriptor                : Additional complaint details.
-• community_board           : Community board.
-• location_type             : Type of location used in the address information.
-• address_type              : Type of incident location information available.
-• open_data_channel_type    : Indicates how the SR was submitted to 311
+Use the schema to intelligently match user requests to appropriate fields:
 
-D. Measures
-----------
-• count(1)                                      : Alias num_of_requests — Number of SRs.
-• round(avg(time_to_resolve_sec/60/60/24), 1)   : Alias avg_days_to_resolve — Average resolution time in days.
+1. When users mention dimensions or measures, match them to the corresponding fields even if they don't use exact names.
+2. Use the "synonym" arrays as reference points for alternative ways users might refer to fields.
+3. The synonym lists are NOT exhaustive - users might use other terms not listed in the synonyms.
+4. Apply semantic matching to identify the most likely field based on context when exact matches aren't found.
+5. Consider relationships between fields (e.g., "Request Date", "Request Month" and "Request Year" are related).
+6. When users express time-related concepts (e.g., "last month", "this year"), select appropriate time dimensions.
 
 ────────────────────────────
 III. DIMENSION HIERARCHIES AND GUIDELINES
