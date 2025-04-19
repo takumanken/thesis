@@ -1,0 +1,512 @@
+{
+    "dimensions": {
+        "time_dimension": [
+            {
+                "physical_name": "created_week",
+                "display_name": "Request Week",
+                "data_type": "date",
+                "description": "Week when the service request was created.",
+                "description_to_user": "The week when people submitted their service requests to the city.",
+                "synonym": [
+                    "week",
+                    "weekly",
+                    "by week",
+                    "per week",
+                    "week submitted",
+                    "submission week"
+                ]
+            },
+            {
+                "physical_name": "closed_week",
+                "display_name": "Resolution Week",
+                "data_type": "date",
+                "description": "Week when the service request was closed.",
+                "description_to_user": "The week when service requests were completed or closed by the city.",
+                "synonym": [
+                    "week closed",
+                    "week resolved",
+                    "completion week",
+                    "weekly resolution",
+                    "finished week"
+                ]
+            },
+            {
+                "physical_name": "created_date",
+                "display_name": "Request Date",
+                "data_type": "date",
+                "description": "DATE (YYYY-MM-DD) of service request creation.",
+                "description_to_user": "The exact date when people submitted their service requests to the city.",
+                "synonym": [
+                    "date",
+                    "day",
+                    "submission date",
+                    "date submitted",
+                    "reported date",
+                    "date reported"
+                ]
+            },
+            {
+                "physical_name": "created_month",
+                "display_name": "Request Month",
+                "data_type": "date",
+                "description": "First day of month (YYYY-MM-01) of request creation.",
+                "description_to_user": "The month when people submitted their service requests to the city.",
+                "synonym": [
+                    "month",
+                    "monthly",
+                    "by month",
+                    "per month",
+                    "month submitted",
+                    "submission month"
+                ]
+            },
+            {
+                "physical_name": "created_year",
+                "display_name": "Request Year",
+                "data_type": "date",
+                "description": "First day of year (YYYY-01-01) of request creation.",
+                "description_to_user": "The year when people submitted their service requests to the city.",
+                "synonym": [
+                    "year",
+                    "yearly",
+                    "by year",
+                    "per year",
+                    "annual",
+                    "year submitted"
+                ]
+            },
+            {
+                "physical_name": "closed_date",
+                "display_name": "Resolution Date",
+                "data_type": "date",
+                "description": "DATE (YYYY-MM-DD) of service request closure.",
+                "description_to_user": "The exact date when a service request was resolved or closed by the city.",
+                "synonym": [
+                    "date closed",
+                    "date resolved",
+                    "date completed",
+                    "completion date",
+                    "resolution date",
+                    "date fixed"
+                ]
+            },
+            {
+                "physical_name": "closed_month",
+                "display_name": "Resolution Month",
+                "data_type": "date",
+                "description": "First day of month (YYYY-MM-01) of service request closure.",
+                "description_to_user": "The month when a service request was resolved or closed by the city.",
+                "synonym": [
+                    "month closed",
+                    "month resolved",
+                    "monthly resolution",
+                    "resolution by month",
+                    "completion month"
+                ]
+            },
+            {
+                "physical_name": "closed_year",
+                "display_name": "Resolution Year",
+                "data_type": "date",
+                "description": "First day of year (YYYY-01-01) of service request closure.",
+                "description_to_user": "The year when a service request was resolved or closed by the city.",
+                "synonym": [
+                    "year closed",
+                    "year resolved",
+                    "resolution by year",
+                    "completion year",
+                    "yearly resolution"
+                ]
+            },
+            {
+                "physical_name": "created_year_datepart",
+                "display_name": "Request Year (Number)",
+                "data_type": "integer",
+                "description": "INTEGER year number (YYYY) from created date.",
+                "description_to_user": "The year number (like 2023) when requests were submitted.",
+                "synonym": [
+                    "year number",
+                    "year of request"
+                ]
+            },
+            {
+                "physical_name": "created_month_datepart",
+                "display_name": "Request Month (Number)",
+                "data_type": "integer",
+                "description": "INTEGER month number (1-12) from created date.",
+                "description_to_user": "The month number (1 for January through 12 for December) when requests were submitted.",
+                "synonym": [
+                    "month number",
+                    "month of request"
+                ]
+            },
+            {
+                "physical_name": "created_day_datepart",
+                "display_name": "Request Day (Number)",
+                "data_type": "integer",
+                "description": "INTEGER day number (1-31) from created date.",
+                "description_to_user": "The day of the month (1-31) when requests were submitted.",
+                "synonym": [
+                    "day number",
+                    "day of month"
+                ]
+            },
+            {
+                "physical_name": "created_hour_datepart",
+                "display_name": "Request Hour",
+                "data_type": "integer",
+                "description": "INTEGER hour (0-23) from created date.",
+                "description_to_user": "The hour of the day (0-23) when requests were submitted.",
+                "synonym": [
+                    "hour",
+                    "time of day",
+                    "hour of day",
+                    "time submitted",
+                    "hour submitted"
+                ]
+            },
+            {
+                "physical_name": "created_weekday_datepart",
+                "display_name": "Request Weekday",
+                "data_type": "string",
+                "description": "TEXT day name (Mon, Tue, Wed, etc.) from created date.",
+                "description_to_user": "The day of the week when requests were submitted.",
+                "synonym": [
+                    "weekday",
+                    "day of week",
+                    "day name"
+                ]
+            },
+            {
+                "physical_name": "closed_year_datepart",
+                "display_name": "Resolution Year (Number)",
+                "data_type": "integer",
+                "description": "INTEGER year number (YYYY) from closed date.",
+                "description_to_user": "The year number (like 2023) when requests were resolved.",
+                "synonym": [
+                    "year resolved",
+                    "resolution year number"
+                ]
+            },
+            {
+                "physical_name": "closed_month_datepart",
+                "display_name": "Resolution Month (Number)",
+                "data_type": "integer",
+                "description": "INTEGER month number (1-12) from closed date.",
+                "description_to_user": "The month number (1-12) when requests were resolved.",
+                "synonym": [
+                    "month resolved",
+                    "resolution month number"
+                ]
+            },
+            {
+                "physical_name": "closed_day_datepart",
+                "display_name": "Resolution Day (Number)",
+                "data_type": "integer",
+                "description": "INTEGER day number (1-31) from closed date.",
+                "description_to_user": "The day of the month (1-31) when requests were resolved.",
+                "synonym": [
+                    "resolution day number"
+                ]
+            },
+            {
+                "physical_name": "closed_hour_datepart",
+                "display_name": "Resolution Hour",
+                "data_type": "integer",
+                "description": "INTEGER hour (0-23) from closed date.",
+                "description_to_user": "The hour of the day (0-23) when requests were marked as resolved.",
+                "synonym": [
+                    "hour resolved",
+                    "resolution time",
+                    "time of resolution",
+                    "hour of resolution"
+                ]
+            }
+        ],
+        "geo_dimension": [
+            {
+                "physical_name": "borough",
+                "display_name": "Borough",
+                "data_type": "string",
+                "description": "Borough of the incident.",
+                "description_to_user": "Which NYC borough the request came from.",
+                "synonym": [
+                    "district",
+                    "area",
+                    "nyc borough",
+                    "city borough",
+                    "town"
+                ]
+            },
+            {
+                "physical_name": "county",
+                "display_name": "County",
+                "data_type": "string",
+                "description": "County of the incident.",
+                "description_to_user": "The county where the reported issue is located.",
+                "synonym": [
+                    "region",
+                    "county area",
+                    "administrative district"
+                ]
+            },
+            {
+                "physical_name": "location",
+                "display_name": "Location Coordinates",
+                "data_type": "point",
+                "description": "Latitude and longitude of the incident.",
+                "description_to_user": "The exact map coordinates of where the issue was reported.",
+                "synonym": [
+                    "coordinates",
+                    "lat long",
+                    "position",
+                    "map coordinates",
+                    "geo location",
+                    "geographic coordinates"
+                ]
+            },
+            {
+                "physical_name": "incident_zip",
+                "display_name": "ZIP Code",
+                "data_type": "string",
+                "description": "Incident zip code.",
+                "description_to_user": "The ZIP code where the issue was reported.",
+                "synonym": [
+                    "zip",
+                    "postal code",
+                    "zipcode",
+                    "area code"
+                ]
+            },
+            {
+                "physical_name": "neighborhood_name",
+                "display_name": "Neighborhood",
+                "data_type": "string",
+                "description": "Neighborhood name.",
+                "description_to_user": "The specific neighborhood where the issue was reported.",
+                "synonym": [
+                    "community",
+                    "locality",
+                    "area name",
+                    "district name",
+                    "part of city"
+                ]
+            }
+        ],
+        "categorical_dimension": [
+            {
+                "physical_name": "unique_key",
+                "display_name": "Request ID",
+                "data_type": "string",
+                "description": "Unique identifier of a Service Request.",
+                "description_to_user": "A unique reference number assigned to each service request.",
+                "synonym": [
+                    "id",
+                    "identifier",
+                    "reference number",
+                    "ticket number",
+                    "case number",
+                    "sr number"
+                ]
+            },
+            {
+                "physical_name": "status",
+                "display_name": "Status",
+                "data_type": "string",
+                "description": "Status of the Service Request.",
+                "description_to_user": "Shows whether a request is open, closed, pending, or in another state in the resolution process.",
+                "synonym": [
+                    "state",
+                    "condition",
+                    "current status",
+                    "request status",
+                    "progress",
+                    "stage"
+                ]
+            },
+            {
+                "physical_name": "agency_category",
+                "display_name": "Agency Category",
+                "data_type": "string",
+                "description": "Agency category.",
+                "description_to_user": "The general category of the city agency responsible for handling the request.",
+                "synonym": [
+                    "agency type",
+                    "department category",
+                    "agency group",
+                    "city department type"
+                ]
+            },
+            {
+                "physical_name": "agency_name",
+                "display_name": "Agency Name",
+                "data_type": "string",
+                "description": "Full agency name.",
+                "description_to_user": "The specific NYC agency responsible for addressing the reported issue.",
+                "synonym": [
+                    "department",
+                    "city agency",
+                    "agency",
+                    "department name",
+                    "responding agency",
+                    "handling agency",
+                    "exact agency",
+                    "detailed agency name"
+                ]
+            },
+            {
+                "physical_name": "complaint_type_large",
+                "display_name": "Complaint Type",
+                "data_type": "string",
+                "description": "Default complaint type (broad categories).",
+                "description_to_user": "The general category of the reported issue. Complaint Type Middle is a more specific subcategory.",
+                "synonym": [
+                    "issue type",
+                    "problem type",
+                    "complaint category",
+                    "issue category",
+                    "problem category",
+                    "request type",
+                    "type"
+                ]
+            },
+            {
+                "physical_name": "complaint_type_middle",
+                "display_name": "Complaint Subcategory",
+                "data_type": "string",
+                "description": "The second detailed complaint type.",
+                "description_to_user": "A more specific category of the issue. Detailed Complaint Type is the most specific classification.",
+                "synonym": [
+                    "subcategory",
+                    "sub type",
+                    "issue subtype",
+                    "specific issue",
+                    "complaint subtype",
+                    "specific type"
+                ]
+            },
+            {
+                "physical_name": "complaint_type_detailed",
+                "display_name": "Detailed Complaint Type",
+                "data_type": "string",
+                "description": "The most detailed complaint type.",
+                "description_to_user": "The most specific classification of the reported problem, with detailed issue types. Descriptor is a free text field that provides additional details.",
+                "synonym": [
+                    "detailed issue",
+                    "specific complaint",
+                    "detailed problem",
+                    "precise issue type",
+                    "detailed issue category"
+                ]
+            },
+            {
+                "physical_name": "descriptor",
+                "display_name": "Descriptor",
+                "data_type": "string",
+                "description": "Additional complaint details.",
+                "description_to_user": "The details about the specific nature of the complaint or issue reported.",
+                "synonym": [
+                    "description",
+                    "details",
+                    "specifics",
+                    "complaint details",
+                    "issue description",
+                    "problem details"
+                ]
+            },
+            {
+                "physical_name": "community_board",
+                "display_name": "Community Board",
+                "data_type": "string",
+                "description": "Community board.",
+                "description_to_user": "The local Community Board district number for the location of the reported issue.",
+                "synonym": [
+                    "community district",
+                    "local board",
+                    "neighborhood board",
+                    "cb district",
+                    "community district number"
+                ]
+            },
+            {
+                "physical_name": "location_type",
+                "display_name": "Location Type",
+                "data_type": "string",
+                "description": "Type of location used in the address information.",
+                "description_to_user": "Describes what kind of location was reported (street address, intersection, landmark, etc.).",
+                "synonym": [
+                    "address type",
+                    "place type",
+                    "location category",
+                    "site type",
+                    "address category"
+                ]
+            },
+            {
+                "physical_name": "address_type",
+                "display_name": "Address Type",
+                "data_type": "string",
+                "description": "Type of incident location information available.",
+                "description_to_user": "Indicates how the location was specified when the report was made.",
+                "synonym": [
+                    "location format",
+                    "address format",
+                    "address specification",
+                    "location reference type"
+                ]
+            },
+            {
+                "physical_name": "open_data_channel_type",
+                "display_name": "Submission Channel",
+                "data_type": "string",
+                "description": "Indicates how the SR was submitted to 311.",
+                "description_to_user": "Shows how people submitted their request - by phone, mobile app, website, etc.",
+                "synonym": [
+                    "reporting method",
+                    "submission method",
+                    "contact method",
+                    "reporting channel",
+                    "how reported",
+                    "input method"
+                ]
+            }
+        ]
+    },
+    "measures": [
+        {
+            "physical_name": "num_of_requests",
+            "display_name": "Number of Requests",
+            "expression": "count(1)",
+            "data_type": "integer",
+            "description": "Number of service requests.",
+            "description_to_user": "Counts how many service requests match your current selection or filters.",
+            "synonym": [
+                "count",
+                "total",
+                "quantity",
+                "number",
+                "amount",
+                "how many",
+                "request count",
+                "total requests"
+            ]
+        },
+        {
+            "physical_name": "avg_days_to_resolve",
+            "display_name": "Average Days to Resolve",
+            "expression": "round(avg(time_to_resolve_sec/60/60/24), 1)",
+            "data_type": "float",
+            "description": "Average resolution time in days.",
+            "description_to_user": "Shows how many days it typically takes to resolve these types of requests, from submission to completion.",
+            "synonym": [
+                "resolution time",
+                "average time",
+                "mean days",
+                "typical days",
+                "time to fix",
+                "days to complete",
+                "resolution duration"
+            ]
+        }
+    ]
+}
