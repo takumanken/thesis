@@ -145,14 +145,23 @@ export const chartStyles = {
   //-------------------------------------------------------------------------
 
   /**
-   * Creates a tooltip element
-   * @returns {Selection} D3 selection of tooltip div
+   * Creates and manages tooltips with singleton pattern
    */
   createTooltip: function () {
+    // Check if we already have a tooltip instance
+    const existingTooltip = d3.select("body").select(".chart-tooltip");
+
+    // If tooltip exists, return it
+    if (!existingTooltip.empty()) {
+      return existingTooltip;
+    }
+
+    // Otherwise create a new tooltip
     return d3
       .select("body")
       .append("div")
       .attr("class", "chart-tooltip")
+      .attr("id", "chart-tooltip-singleton")
       .style("position", "absolute")
       .style("visibility", "hidden")
       .style("background-color", "white")

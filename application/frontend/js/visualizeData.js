@@ -5,6 +5,7 @@
 import { state } from "./state.js";
 import { chartControls } from "./chart/utils/chartControls.js";
 import { chartStyles } from "./chart/utils/chartStyles.js"; // Add this import!
+import { cleanupOrphanedTooltips } from "./chart/utils/chartUtils.js";
 
 // Import chart renderers
 import renderTable from "./chart/table.js";
@@ -303,6 +304,7 @@ function cleanupVisualization(container) {
     container.removeChild(state.currentChart);
     state.currentChart = null;
   }
+  cleanupOrphanedTooltips();
 
   // Clear container contents
   container.innerHTML = "";

@@ -135,11 +135,30 @@ export function setupDimensionSwapHandler(renderCallback) {
   // Create a debounced handler to prevent rapid executions
   currentDimensionSwapHandler = debounce(() => {
     const container = document.querySelector(".viz-container");
+
+    // Use the centralized cleanup utility
+    cleanupOrphanedTooltips();
+
     if (container) renderCallback(container);
   }, 100);
 
   // Add the new handler
   document.addEventListener("dimensionSwap", currentDimensionSwapHandler);
+}
+
+/**
+ * Cleanup orphaned tooltips in the DOM
+ * Keeps only the singleton tooltip and removes all others
+ */
+export function cleanupOrphanedTooltips() {
+  const tooltips = d3.selectAll(".chart-tooltip");
+  if (tooltips.size() > 1) {
+    tooltips.each(function () {
+      if (this.id !== "chart-tooltip-singleton") {
+        d3.select(this).remove();
+      }
+    });
+  }
 }
 
 /**
