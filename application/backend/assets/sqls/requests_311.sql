@@ -163,4 +163,4 @@ SELECT
     IFNULL("Open Data Channel Type", 'Unspecified') AS open_data_channel_type,
     1 as num_of_requests
 FROM
-    read_parquet('data/requests_311.parquet');
+    read_parquet('assets/data/requests_311.parquet');
