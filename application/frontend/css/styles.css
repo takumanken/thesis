@@ -228,7 +228,7 @@ body {
     border-radius: 4px;
     cursor: pointer;
     display: flex;
-    height: 44px; /* Increased from 40px (10% larger) */
+    height: 44px;
     justify-content: center;
     transition: all 0.2s ease;
 }
