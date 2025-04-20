@@ -3,7 +3,6 @@
  * Displays geospatial data as a heat intensity map with Leaflet
  */
 import { state } from "../state.js";
-import { CHART_DIMENSIONS } from "../constants.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import * as chartUtils from "./utils/chartUtils.js";
 
@@ -51,7 +50,8 @@ function renderHeatMap(container) {
   }
 
   // Setup and render map
-  const { width, height } = CHART_DIMENSIONS;
+  const width = 1440;
+  const height = 720;
   const mapContainer = createMapContainer(container, width, height);
   const map = setupLeafletMap(mapContainer);
 

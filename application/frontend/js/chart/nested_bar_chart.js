@@ -3,7 +3,6 @@
  * Displays hierarchical data with measure bars grouped by one or two dimensions
  */
 import { state } from "../state.js";
-import { CHART_DIMENSIONS } from "../constants.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import { chartColors } from "./utils/chartColors.js";
 import { chartControls } from "./utils/chartControls.js";
@@ -41,7 +40,7 @@ function createChartConfig(container, data, dimensions, measures) {
   // Basic layout
   const textMeasurements = measureTextWidths(container, data);
   const margin = chartStyles.getChartMargins("nested_bar_chart");
-  const width = container.clientWidth || CHART_DIMENSIONS.width;
+  const width = container.clientWidth || 1440;
 
   // Row dimensions
   const rowHeight = chartStyles.barChart.bar.height;
