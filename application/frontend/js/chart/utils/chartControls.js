@@ -46,7 +46,7 @@ export const chartControls = {
 
   /**
    * Remove any existing dimension swap control
-   * Note: This is used externally in visualizeData.js
+   * Note: This is used externally in visualization.js
    */
   removeExistingControl() {
     document.querySelector(".viz-dimension-swap")?.remove();

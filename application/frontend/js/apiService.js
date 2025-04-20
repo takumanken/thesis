@@ -1,8 +1,8 @@
 import { state } from "./state.js";
-import { updateChartTypeDropdown } from "./events.js";
+import { updateChartTypeDropdown } from "./eventHandlers.js";
 import { getCurrentPosition } from "./locationService.js";
 
-export async function askGemini() {
+export async function apiService() {
   const userQuery = document.getElementById("promptInput").value;
   state.userQuery = userQuery;
 
@@ -70,8 +70,8 @@ export async function askGemini() {
 
     updateChartTypeDropdown();
   } catch (error) {
-    console.error("Error in askGemini:", error);
+    console.error("Error in apiService:", error);
   }
 }
 
-export default askGemini;
+export default apiService;

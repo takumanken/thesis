@@ -6,7 +6,7 @@ import { state } from "./state.js";
 import { chartControls } from "./chart/utils/chartControls.js";
 import { chartStyles } from "./chart/utils/chartStyles.js";
 import { cleanupOrphanedTooltips } from "./chart/utils/chartUtils.js";
-import { updateAboutDataSection } from "./aboutDataSection.js";
+import { updateaboutData } from "./aboutData.js";
 
 // Import chart renderers
 import renderTable from "./chart/table.js";
@@ -58,7 +58,7 @@ const CHART_RENDERERS = {
 /**
  * Main visualization function - renders the appropriate chart based on state
  */
-function visualizeData() {
+function visualization() {
   // Find and prepare containers
   const containers = findContainers();
   if (!containers) return;
@@ -70,7 +70,7 @@ function visualizeData() {
   setupVisualizationContainer(containers.insightsDiv, containers.insightsContainer);
 
   // Update the About Data section
-  updateAboutDataSection();
+  updateaboutData();
 
   // Render the selected chart
   renderChart();
@@ -219,7 +219,7 @@ function createChartTypeSwitcher() {
 
       // Update state and redraw
       state.chartType = typeId;
-      visualizeData();
+      visualization();
 
       // Hide tooltip after selection
       chartStyles.tooltip.hide(tooltip);
@@ -323,13 +323,13 @@ function switchChartType(chartType) {
   state.chartType = chartType;
 
   // Redraw visualization
-  visualizeData();
+  visualization();
 }
 
 // Export function for direct access
-export default visualizeData;
+export default visualization;
 
 // Make specific functions available globally if needed
 window.switchChartType = switchChartType;
 window.createChartTypeSwitcher = createChartTypeSwitcher;
-window.updateAboutDataSection = updateAboutDataSection;
+window.updateaboutData = updateaboutData;

@@ -1,6 +1,6 @@
-import { handleUserQuery } from "./main.js";
+import { handleUserQuery } from "./app.js";
 import { state } from "./state.js";
-import visualizeData from "./visualizeData.js";
+import visualization from "./visualization.js";
 
 /**
  * Updates the chart type dropdown with available chart types
@@ -36,7 +36,7 @@ function formatChartTypeName(type) {
 function handleChartTypeChange(value) {
   if (value === state.chartType) return; // No change
   state.chartType = value;
-  visualizeData();
+  visualization();
 }
 
 /**

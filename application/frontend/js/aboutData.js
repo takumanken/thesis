@@ -11,7 +11,7 @@ let dataSchemaCache = null;
 /**
  * Main function to update the About Data section
  */
-export async function updateAboutDataSection() {
+export async function updateaboutData() {
   // Containers
   const periodContainer = document.querySelector(".viz-period .period-tags");
   const attributesContainer = document.querySelector(".viz-dimensions .dimension-tags");
