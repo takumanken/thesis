@@ -168,16 +168,34 @@ function createPill(iconName, text, description, tooltip, extraClass = "") {
 }
 
 /**
- * Format date for display
+ * Format date for display without timezone adjustments
  */
 function formatDate(dateStr, short = false) {
-  const options = {
-    year: "numeric",
-    month: short ? "short" : "long",
-    day: "numeric",
-  };
+  if (!dateStr) return "";
 
-  return new Date(dateStr).toLocaleDateString("en-US", options);
+  // Simply parse the YYYY-MM-DD format directly
+  const [year, month, day] = dateStr.split("-");
+
+  // Month names for formatting
+  const months = short
+    ? ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    : [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+
+  // Format as "Jan 1, 2022" or "January 1, 2022" based on short flag
+  return `${months[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
 }
 
 /**
