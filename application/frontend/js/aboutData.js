@@ -1,106 +1,68 @@
 /**
- * About Data Section Module
- * Handles displaying metadata about the current visualization
+ * About Data Module
+ * Displays metadata about the current visualization
  */
 import { state } from "./state.js";
 import { chartStyles } from "./chart/utils/chartStyles.js";
 
-// Cache for loaded schema
+// Schema cache
 let dataSchemaCache = null;
 
 /**
- * Main function to update the About Data section
+ * Update the About Data section
  */
-export async function updateaboutData() {
-  // Containers
-  const periodContainer = document.querySelector(".viz-period .period-tags");
-  const attributesContainer = document.querySelector(".viz-dimensions .dimension-tags");
-  const measuresContainer = document.querySelector(".viz-metrics .metrics-tags");
-  const filtersContainer = document.querySelector(".viz-filters .filter-tags");
+export async function updateAboutData() {
+  const containers = {
+    attributes: document.querySelector(".viz-dimensions .dimension-tags"),
+    measures: document.querySelector(".viz-metrics .metrics-tags"),
+    filters: document.querySelector(".viz-filters .filter-tags"),
+  };
 
-  if (!periodContainer || !attributesContainer || !measuresContainer || !filtersContainer) {
+  // Validate containers
+  if (!containers.attributes || !containers.measures || !containers.filters) {
     console.error("About Data containers not found");
     return;
   }
 
-  // Clear existing content
-  periodContainer.innerHTML = "";
-  attributesContainer.innerHTML = "";
-  measuresContainer.innerHTML = "";
-  filtersContainer.innerHTML = "";
+  // Clear containers
+  Object.values(containers).forEach((container) => (container.innerHTML = ""));
 
-  // Create D3 tooltip for consistent styling
+  // Create tooltip
   const tooltip = chartStyles.createTooltip();
 
   try {
-    // Load data schema for field labels and descriptions
+    // Load schema
     const schema = await loadDataSchema();
 
-    // 1. Display period (date range)
-    updatePeriodSection(periodContainer, tooltip);
-
-    // 2. Display attributes (dimensions)
-    updateAttributesSection(attributesContainer, tooltip, schema);
-
-    // 3. Display measures
-    updateMeasuresSection(measuresContainer, tooltip, schema);
-
-    // 4. Display filters
-    updateFiltersSection(filtersContainer, tooltip, schema);
+    // Update sections
+    updateAttributesSection(containers.attributes, tooltip, schema);
+    updateMeasuresSection(containers.measures, tooltip, schema);
+    updateFiltersSection(containers.filters, tooltip, schema);
   } catch (error) {
     console.error("Error updating About Data section:", error);
   }
 }
 
 /**
- * Update the Period section with date range information
- */
-function updatePeriodSection(container, tooltip) {
-  const dateRange = state.aggregationDefinition?.createdDateRange;
-
-  if (dateRange && Array.isArray(dateRange) && dateRange.length >= 2) {
-    const minDate = dateRange[0];
-    const maxDate = dateRange[1];
-
-    if (minDate && maxDate) {
-      const formattedDateRange = formatDateRange(minDate, maxDate);
-
-      const periodPill = createPill(
-        "date_range",
-        formattedDateRange,
-        "Date range of 311 requests in the dataset.",
-        tooltip
-      );
-
-      container.appendChild(periodPill);
-      return;
-    }
-  }
-
-  // If we get here, there's no valid date range
-  container.innerHTML = "<span class='empty-message'>No date range specified</span>";
-}
-
-/**
- * Update the Attributes section with dimensions information
+ * Update the Attributes section
  */
 function updateAttributesSection(container, tooltip, schema) {
   const dimensions = getStateDimensions();
 
-  if (!dimensions.length) {
+  if (dimensions.length === 0) {
     container.innerHTML = "<span class='empty-message'>No attributes in this visualization</span>";
     return;
   }
 
   dimensions.forEach((dimension) => {
-    const dimensionInfo = findDimensionInSchema(dimension, schema);
-    if (!dimensionInfo) return;
+    const info = findDimensionInSchema(dimension, schema);
+    if (!info) return;
 
-    const iconName = getDimensionTypeIcon(dimensionInfo.data_type || "string");
+    const iconName = getDimensionTypeIcon(info.data_type);
     const pill = createPill(
       iconName,
-      dimensionInfo.display_name || dimension,
-      dimensionInfo.description_to_user || "Dimension attribute",
+      info.display_name || dimension,
+      info.description_to_user || "Dimension attribute",
       tooltip
     );
 
@@ -109,25 +71,25 @@ function updateAttributesSection(container, tooltip, schema) {
 }
 
 /**
- * Update the Measures section with information about measures
+ * Update the Measures section
  */
 function updateMeasuresSection(container, tooltip, schema) {
   const measures = getStateMeasures();
 
-  if (!measures.length) {
+  if (measures.length === 0) {
     container.innerHTML = "<span class='empty-message'>No measures in this visualization</span>";
     return;
   }
 
   measures.forEach((measure) => {
-    const measureInfo = findMeasureInSchema(measure, schema);
-    if (!measureInfo) return;
+    const info = findMeasureInSchema(measure, schema);
+    if (!info) return;
 
-    const iconName = getMeasureTypeIcon(measureInfo.data_type || "number");
+    const iconName = getMeasureTypeIcon(info.data_type);
     const pill = createPill(
       iconName,
-      measureInfo.display_name || measure,
-      measureInfo.description_to_user || "Measure attribute",
+      info.display_name || measure,
+      info.description_to_user || "Measure attribute",
       tooltip
     );
 
@@ -136,17 +98,19 @@ function updateMeasuresSection(container, tooltip, schema) {
 }
 
 /**
- * Update the Filters section with filter information
+ * Update the Filters section including period pill
  */
 function updateFiltersSection(container, tooltip, schema) {
-  // Get filter descriptions from state
-  const filters = state.dataInsights?.filter_description || [];
+  // Add period pill first
+  addDateRangePill(container, tooltip);
 
-  // Also check for preAggregationFilters and postAggregationFilters in aggregationDefinition
+  // Add other filters
+  const filters = state.dataInsights?.filter_description || [];
   const preFilters = state.aggregationDefinition?.preAggregationFilters;
   const postFilters = state.aggregationDefinition?.postAggregationFilters;
 
-  if (filters.length === 0 && !preFilters && !postFilters) {
+  // If no filters at all and no period pill was added
+  if (filters.length === 0 && !preFilters && !postFilters && container.childElementCount === 0) {
     container.innerHTML = "<span class='empty-message'>No filters applied</span>";
     return;
   }
@@ -154,7 +118,6 @@ function updateFiltersSection(container, tooltip, schema) {
   // Add filter pills from filter_description array
   if (Array.isArray(filters)) {
     filters.forEach((filter) => {
-      // Find the field in schema for better display
       const fieldName = filter.filtered_field_name || filter.field || "Filter";
       const fieldInfo = findFieldInSchema(fieldName, schema);
 
@@ -167,46 +130,57 @@ function updateFiltersSection(container, tooltip, schema) {
 
       container.appendChild(pill);
     });
-  } else if (typeof filters === "string" && filters.length > 0) {
-    // Handle case where filter_description is a string
-    const pill = createPill("filter_alt", "Filter", filters, tooltip);
-    container.appendChild(pill);
+  } else if (typeof filters === "string" && filters) {
+    container.appendChild(createPill("filter_alt", "Filter", filters, tooltip));
   }
 
-  // Add preAggregationFilters if not already covered
+  // Add pre/post filters if needed
   if (preFilters && filters.length === 0) {
-    const pill = createPill("filter_alt", "Pre-aggregation Filter", `Filter: ${preFilters}`, tooltip);
-
-    container.appendChild(pill);
+    container.appendChild(createPill("filter_alt", "Pre-filter", `Filter: ${preFilters}`, tooltip));
   }
 
-  // Add postAggregationFilters if present
-  if (postFilters && postFilters.length > 0) {
-    const pill = createPill("filter_alt", "Post-aggregation Filter", `Filter: ${postFilters}`, tooltip);
-
-    container.appendChild(pill);
+  if (postFilters) {
+    container.appendChild(createPill("filter_alt", "Post-filter", `Filter: ${postFilters}`, tooltip));
   }
+}
+
+/**
+ * Add date range pill to container if date range exists
+ */
+function addDateRangePill(container, tooltip) {
+  const dateRange = state.aggregationDefinition?.createdDateRange;
+
+  if (!dateRange || !Array.isArray(dateRange) || dateRange.length < 2) return;
+
+  const [minDate, maxDate] = dateRange;
+  if (!minDate || !maxDate) return;
+
+  // Format for display and tooltip
+  const formattedRange = formatDateRange(minDate, maxDate);
+  const fromDate = formatDate(minDate);
+  const toDate = formatDate(maxDate);
+
+  const tooltipText = `Limited to requests created between ${fromDate} and ${toDate}`;
+  const pill = createPill("date_range", formattedRange, tooltipText, tooltip, "period");
+
+  container.appendChild(pill);
 }
 
 /**
  * Create a pill element with tooltip
  */
-function createPill(iconName, text, description, tooltip) {
+function createPill(iconName, text, description, tooltip, extraClass = "") {
   const pill = document.createElement("div");
-  pill.className = "tag-item";
+  pill.className = `tag-item ${extraClass}`;
   pill.innerHTML = `
     <span class="material-icons" style="font-size: 16px; margin-right: 4px;">${iconName}</span>
     <span>${text}</span>
   `;
 
-  // Add tooltip using D3
+  // Add tooltip
   d3.select(pill)
-    .on("mousemove", function (event) {
-      chartStyles.tooltip.show(tooltip, event, description);
-    })
-    .on("mouseleave", function () {
-      chartStyles.tooltip.hide(tooltip);
-    });
+    .on("mousemove", (event) => chartStyles.tooltip.show(tooltip, event, description))
+    .on("mouseleave", () => chartStyles.tooltip.hide(tooltip));
 
   return pill;
 }
@@ -215,25 +189,32 @@ function createPill(iconName, text, description, tooltip) {
  * Format date range for display
  */
 function formatDateRange(minDate, maxDate) {
-  if (!minDate || !maxDate) return "Date range unavailable";
-
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
+  const formatShort = (date) =>
+    new Date(date).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
     });
-  };
 
-  return `${formatDate(minDate)} - ${formatDate(maxDate)}`;
+  return `${formatShort(minDate)} - ${formatShort(maxDate)}`;
 }
 
 /**
- * Get appropriate icon for dimension type
+ * Format date for tooltip
+ */
+function formatDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+/**
+ * Get icon for dimension type
  */
 function getDimensionTypeIcon(dataType) {
-  switch (dataType.toLowerCase()) {
+  switch ((dataType || "string").toLowerCase()) {
     case "date":
       return "calendar_today";
     case "point":
@@ -251,10 +232,10 @@ function getDimensionTypeIcon(dataType) {
 }
 
 /**
- * Get appropriate icon for measure type
+ * Get icon for measure type
  */
 function getMeasureTypeIcon(dataType) {
-  switch (dataType.toLowerCase()) {
+  switch ((dataType || "number").toLowerCase()) {
     case "integer":
       return "tag";
     case "float":
@@ -271,18 +252,18 @@ function getMeasureTypeIcon(dataType) {
  * Get all dimensions from state
  */
 function getStateDimensions() {
-  const agg = state.aggregationDefinition;
+  const agg = state.aggregationDefinition || {};
   const dimensions = [];
 
-  // Add regular dimensions
-  if (agg.dimensions && Array.isArray(agg.dimensions)) {
+  // Regular dimensions
+  if (Array.isArray(agg.dimensions)) {
     dimensions.push(...agg.dimensions);
   }
 
-  // Add specialized dimensions
-  ["timeDimension", "geoDimension", "categoricalDimension"].forEach((dimType) => {
-    if (agg[dimType] && Array.isArray(agg[dimType])) {
-      dimensions.push(...agg[dimType]);
+  // Specialized dimensions
+  ["timeDimension", "geoDimension", "categoricalDimension"].forEach((type) => {
+    if (Array.isArray(agg[type])) {
+      dimensions.push(...agg[type]);
     }
   });
 
@@ -293,21 +274,31 @@ function getStateDimensions() {
  * Get all measures from state
  */
 function getStateMeasures() {
-  const agg = state.aggregationDefinition;
-  if (!agg.measures || !Array.isArray(agg.measures)) return [];
+  const measures = state.aggregationDefinition?.measures;
+  if (!Array.isArray(measures)) return [];
 
-  return agg.measures.map((m) => m.alias).filter(Boolean);
+  return measures.map((m) => m.alias).filter(Boolean);
 }
 
 /**
- * Find dimension info in the schema
+ * Find field in schema (dimension or measure)
+ */
+function findFieldInSchema(fieldName, schema) {
+  return findDimensionInSchema(fieldName, schema) || findMeasureInSchema(fieldName, schema);
+}
+
+/**
+ * Find dimension in schema
  */
 function findDimensionInSchema(dimensionName, schema) {
-  if (!schema || !schema.dimensions) return null;
+  if (!schema?.dimensions || !dimensionName) return null;
 
-  // Search in each dimension type
-  for (const dimType of ["time_dimension", "geo_dimension", "categorical_dimension"]) {
-    const found = (schema.dimensions[dimType] || []).find((dim) => dim.physical_name === dimensionName);
+  // Search in dimension types
+  for (const type of ["time_dimension", "geo_dimension", "categorical_dimension"]) {
+    const dimensions = schema.dimensions[type];
+    if (!dimensions) continue;
+
+    const found = dimensions.find((dim) => dim.physical_name === dimensionName);
     if (found) return found;
   }
 
@@ -315,53 +306,42 @@ function findDimensionInSchema(dimensionName, schema) {
 }
 
 /**
- * Find measure info in the schema
+ * Find measure in schema
  */
 function findMeasureInSchema(measureName, schema) {
-  if (!schema || !schema.measures) return null;
-
+  if (!schema?.measures || !measureName) return null;
   return schema.measures.find((m) => m.physical_name === measureName);
 }
 
 /**
- * Find any field in the schema (dimension or measure)
- */
-function findFieldInSchema(fieldName, schema) {
-  // First check dimensions
-  const dimension = findDimensionInSchema(fieldName, schema);
-  if (dimension) return dimension;
-
-  // Then check measures
-  return findMeasureInSchema(fieldName, schema);
-}
-
-/**
- * Load the data schema JSON file
- * @returns {Promise<Object>} The data schema
+ * Load the data schema
  */
 async function loadDataSchema() {
-  if (dataSchemaCache) {
-    return dataSchemaCache;
-  }
+  // Return cached schema if available
+  if (dataSchemaCache) return dataSchemaCache;
 
   try {
+    // Primary schema path
     const response = await fetch("../backend/assets/gemini_instructions/references/data_schema.json");
-    if (!response.ok) {
-      throw new Error(`Failed to load schema: ${response.status}`);
+
+    if (response.ok) {
+      dataSchemaCache = await response.json();
+      return dataSchemaCache;
     }
 
-    dataSchemaCache = await response.json();
-    return dataSchemaCache;
-  } catch (error) {
-    console.error("Error loading data schema:", error);
-
-    // Return empty schema structure on error
+    // Fallback to empty schema
     return {
       dimensions: {
         time_dimension: [],
         geo_dimension: [],
         categorical_dimension: [],
       },
+      measures: [],
+    };
+  } catch (error) {
+    console.warn("Error loading data schema:", error.message);
+    return {
+      dimensions: { time_dimension: [], geo_dimension: [], categorical_dimension: [] },
       measures: [],
     };
   }

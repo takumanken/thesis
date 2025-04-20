@@ -305,18 +305,7 @@ body {
     margin-bottom: 16px;
 }
 
-.viz-dimension-swap {
-  margin-bottom: 20px;
-}
-
-.dimension-swap-btn {
-  transition: background-color 0.2s, border-color 0.2s;
-}
-
-.dimension-swap-btn:hover {
-  background-color: var(--color-primary-light) !important;
-}
-
+/* Base pill/tag styling */
 .tag-item {
     align-items: center;
     border-radius: 16px;
@@ -325,8 +314,15 @@ body {
     margin: 0 4px 8px 0;
     padding: 4px 10px;
     transition: background-color 0.2s;
+    cursor: default;
 }
 
+.tag-item .material-icons {
+    font-size: 18px;
+    margin-right: 4px;
+}
+
+/* Default pill style (for dimensions) */
 .tag-item {
     background-color: var(--color-primary-light);
     color: var(--color-primary-dark);
@@ -334,26 +330,10 @@ body {
 
 .tag-item:hover {
     background-color: #dbe5f9;
-    cursor: default;
 }
 
 .tag-item .material-icons {
     color: var(--color-primary);
-    font-size: 18px;
-    margin-right: 4px;
-}
-
-.viz-period .tag-item {
-    background-color: var(--color-period-bg);
-    color: var(--color-period-text);
-}
-
-.viz-period .tag-item:hover {
-    background-color: #e5e5e5;
-}
-
-.viz-period .tag-item .material-icons {
-    color: var(--color-period-icon);
 }
 
 /* Measures styling */
@@ -384,11 +364,35 @@ body {
     color: var(--color-filter-icon);
 }
 
+/* Period pill styling (special case inside filters) */
+.viz-filters .tag-item.period {
+    background-color: var(--color-period-bg);
+    color: var(--color-period-text);
+    margin-bottom: 12px; /* Extra margin to separate from other filters */
+}
+
+.viz-filters .tag-item.period .material-icons {
+    color: var(--color-period-icon);
+}
+
+/* Empty state message */
 .empty-message {
     color: var(--color-text-secondary);
     font-size: 0.8rem;
     font-style: italic;
     opacity: 0.7;
+}
+
+.viz-dimension-swap {
+  margin-bottom: 20px;
+}
+
+.dimension-swap-btn {
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.dimension-swap-btn:hover {
+  background-color: var(--color-primary-light) !important;
 }
 
 /* 7. MEDIA QUERIES
