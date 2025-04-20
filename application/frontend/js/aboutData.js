@@ -130,15 +130,6 @@ function updateFiltersSection(container, tooltip, schema) {
   } else if (typeof filters === "string" && filters) {
     container.appendChild(createPill("filter_alt", "Filter", filters, tooltip));
   }
-
-  // Add pre/post filters if needed
-  if (preFilters && filters.length === 0) {
-    container.appendChild(createPill("filter_alt", "Pre-filter", `Filter: ${preFilters}`, tooltip));
-  }
-
-  if (postFilters) {
-    container.appendChild(createPill("filter_alt", "Post-filter", `Filter: ${postFilters}`, tooltip));
-  }
 }
 
 /**
