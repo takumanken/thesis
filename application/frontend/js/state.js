@@ -10,6 +10,7 @@ export const state = {
   dataInsights: {
     title: null,
     dataDescription: null,
+    filter_description: [],
   },
 
   // Update method
@@ -28,6 +29,7 @@ export const state = {
       this.dataInsights = {
         title: newData.dataInsights.title || null,
         dataDescription: newData.dataInsights.dataDescription || null,
+        filter_description: newData.dataInsights.filter_description || [],
       };
     }
     // Handle legacy flat structure
@@ -35,6 +37,7 @@ export const state = {
       this.dataInsights = {
         title: newData.title || null,
         dataDescription: newData.dataDescription || null,
+        filter_description: newData.filter_description || [],
       };
     }
 

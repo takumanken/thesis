@@ -59,15 +59,22 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
             
         # Extract response text
         response_text = response.candidates[0].content.parts[0].text
+        logger.info(f"Response from Gemini: {response_text}")
         
         # Parse JSON, handling different formats
         result = extract_json(response_text)
         
-        # Ensure we have the expected fields
-        if "title" not in result:
-            result["title"] = "Data Overview"
-        if "dataDescription" not in result:
-            result["dataDescription"] = "Here is a summary of the requested data."
+        # Ensure we have all expected fields with defaults
+        defaults = {
+            "title": "Data Overview",
+            "dataDescription": "Here is a summary of the requested data.",
+            "filter_description": []
+        }
+        
+        # Apply defaults for any missing fields
+        for key, default_value in defaults.items():
+            if key not in result:
+                result[key] = default_value
             
         return result
             
@@ -75,13 +82,13 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
         logger.error(f"Error generating data description: {e}", exc_info=True)
         return {
             "title": "Data Overview",
-            "dataDescription": "Here is a summary of the requested data."
+            "dataDescription": "Here is a summary of the requested data.",
+            "filter_description": []
         }
 
-def extract_json(text: str) -> Dict[str, str]:
+def extract_json(text: str) -> Dict[str, Any]:
     """Extract JSON from text, handling code blocks"""
     try:
-        # Remove code block markers if present
         clean_text = text.strip()
         if "```" in clean_text:
             for block in ["```json", "```"]:
@@ -92,7 +99,9 @@ def extract_json(text: str) -> Dict[str, str]:
                 clean_text = clean_text.split("```", 1)[0]
                 
         clean_text = clean_text.strip()
-        return json.loads(clean_text)
-    except:
-        logger.warning("Failed to parse JSON response")
+        result = json.loads(clean_text)
+        logger.info(f"Successfully parsed JSON result with keys: {list(result.keys())}")
+        return result
+    except Exception as e:
+        logger.warning(f"Failed to parse JSON response: {e}")
         return {}

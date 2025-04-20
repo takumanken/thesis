@@ -49,6 +49,9 @@ export async function askGemini() {
     const result = await response.json();
     console.log("Raw response from backend:", result);
 
+    // Create a proper dataInsights object
+    const dataInsights = result.dataInsights || {};
+
     // Update state with the exact structure from the API response
     state.update({
       fields: result.fields || [],
@@ -58,9 +61,10 @@ export async function askGemini() {
       chartType: result.chartType || "table",
       availableChartTypes: result.availableChartTypes || ["table"],
       textResponse: result.textResponse || null,
-      dataInsights: result.dataInsights || {
-        title: null,
-        dataDescription: null,
+      dataInsights: {
+        title: dataInsights.title || null,
+        dataDescription: dataInsights.dataDescription || null,
+        filter_description: dataInsights.filter_description || [],
       },
     });
 

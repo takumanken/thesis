@@ -195,7 +195,8 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             )
             response_payload["dataInsights"] = {
                 "title": data_description.get("title"),
-                "dataDescription": data_description.get("dataDescription")
+                "dataDescription": data_description.get("dataDescription"),
+                "filter_description": data_description.get("filter_description")
             }
         
         logger.info(f"[{request_id}] Completed in {time.time() - start_time:.2f}s")
