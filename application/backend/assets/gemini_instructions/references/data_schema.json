@@ -262,7 +262,8 @@
                     "position",
                     "map coordinates",
                     "geo location",
-                    "geographic coordinates"
+                    "geographic coordinates",
+                    "hotspot"
                 ]
             },
             {
