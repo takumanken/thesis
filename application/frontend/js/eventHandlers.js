@@ -1,16 +1,83 @@
+/**
+ * Event Handlers Module
+ * Manages UI event listeners and interactions
+ */
 import { handleUserQuery } from "./app.js";
 import { state } from "./state.js";
 import visualization from "./visualization.js";
 
 /**
- * Updates the chart type dropdown with available chart types
+ * Initialize all event listeners
+ */
+export default function initializeEventListeners() {
+  // Set up search functionality
+  setupSearchForm();
+
+  // Set up chart type selectors
+  setupChartSelectors();
+}
+
+/**
+ * Set up search form and location checkbox
+ */
+function setupSearchForm() {
+  // Search input and button
+  const promptInput = document.getElementById("promptInput");
+  const sendButton = document.getElementById("sendButton");
+
+  if (promptInput) {
+    promptInput.addEventListener("keyup", (e) => {
+      if (e.key === "Enter") handleUserQuery();
+    });
+  }
+
+  if (sendButton) {
+    sendButton.addEventListener("click", handleUserQuery);
+  }
+
+  // Location checkbox
+  const locationCheckbox = document.getElementById("useLocationCheckbox");
+  if (locationCheckbox) {
+    locationCheckbox.addEventListener("change", (e) => {
+      state.useLocation = e.target.checked;
+    });
+  }
+}
+
+/**
+ * Set up chart type selector(s)
+ */
+function setupChartSelectors() {
+  // Find all chart type selectors (dropdown and visual selector)
+  const selectors = [document.getElementById("chartTypeSelector"), document.getElementById("chartTypeDropdown")].filter(
+    Boolean
+  );
+
+  // Add change listeners to all selectors
+  selectors.forEach((selector) => {
+    selector.addEventListener("change", (e) => {
+      if (e.target.value !== state.chartType) {
+        state.chartType = e.target.value;
+        visualization();
+      }
+    });
+  });
+
+  // Initialize dropdown with available chart types
+  updateChartTypeDropdown();
+}
+
+/**
+ * Update chart type dropdown with available options
  */
 export function updateChartTypeDropdown() {
   const dropdown = document.getElementById("chartTypeSelector");
   if (!dropdown) return;
 
+  // Clear existing options
   dropdown.innerHTML = "";
 
+  // Add available chart types
   state.availableChartTypes.forEach((type) => {
     const option = document.createElement("option");
     option.value = type;
@@ -21,7 +88,7 @@ export function updateChartTypeDropdown() {
 }
 
 /**
- * Formats chart type names for display (e.g., "single_bar_chart" -> "Single Bar Chart")
+ * Format chart type for display (e.g., "line_chart" -> "Line Chart")
  */
 function formatChartTypeName(type) {
   return type
@@ -29,74 +96,3 @@ function formatChartTypeName(type) {
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
-
-/**
- * Handles chart type changes from any selector
- */
-function handleChartTypeChange(value) {
-  if (value === state.chartType) return; // No change
-  state.chartType = value;
-  visualization();
-}
-
-/**
- * Initializes all event listeners
- */
-export function initializeEventListeners() {
-  // Search functionality
-  setupSearchListeners();
-
-  // Chart type selectors
-  setupChartSelectors();
-
-  // Always update the dropdown on initialization
-  updateChartTypeDropdown();
-}
-
-/**
- * Sets up search input and button listeners
- */
-function setupSearchListeners() {
-  const promptInput = document.getElementById("promptInput");
-  const sendButton = document.getElementById("sendButton");
-
-  if (!promptInput || !sendButton) return;
-
-  promptInput.addEventListener("keyup", (event) => {
-    if (event.key === "Enter") handleUserQuery();
-  });
-
-  sendButton.addEventListener("click", handleUserQuery);
-
-  // Optional location checkbox
-  const locationCheckbox = document.getElementById("useLocationCheckbox");
-  if (locationCheckbox) {
-    locationCheckbox.addEventListener("change", function (event) {
-      // Location handling logic would go here
-      state.useLocation = event.target.checked;
-    });
-  }
-}
-
-/**
- * Sets up chart type selection listeners
- */
-function setupChartSelectors() {
-  // Primary chart type selector
-  const chartTypeSelector = document.getElementById("chartTypeSelector");
-  if (chartTypeSelector) {
-    chartTypeSelector.addEventListener("change", (event) => {
-      handleChartTypeChange(event.target.value);
-    });
-  }
-
-  // Alternative chart dropdown (if it exists)
-  const chartDropdown = document.getElementById("chartTypeDropdown");
-  if (chartDropdown) {
-    chartDropdown.addEventListener("change", (event) => {
-      handleChartTypeChange(event.target.value);
-    });
-  }
-}
-
-export default initializeEventListeners;
