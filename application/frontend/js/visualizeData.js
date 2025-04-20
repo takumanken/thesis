@@ -4,8 +4,9 @@
  */
 import { state } from "./state.js";
 import { chartControls } from "./chart/utils/chartControls.js";
-import { chartStyles } from "./chart/utils/chartStyles.js"; // Add this import!
+import { chartStyles } from "./chart/utils/chartStyles.js";
 import { cleanupOrphanedTooltips } from "./chart/utils/chartUtils.js";
+import { updateAboutDataSection } from "./aboutDataSection.js";
 
 // Import chart renderers
 import renderTable from "./chart/table.js";
@@ -67,6 +68,9 @@ function visualizeData() {
 
   // Prepare visualization container
   setupVisualizationContainer(containers.insightsDiv, containers.insightsContainer);
+
+  // Update the About Data section
+  updateAboutDataSection();
 
   // Render the selected chart
   renderChart();
@@ -328,3 +332,4 @@ export default visualizeData;
 // Make specific functions available globally if needed
 window.switchChartType = switchChartType;
 window.createChartTypeSwitcher = createChartTypeSwitcher;
+window.updateAboutDataSection = updateAboutDataSection;

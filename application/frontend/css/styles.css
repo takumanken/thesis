@@ -23,6 +23,19 @@
     --color-border: #eaeaea;
     --color-border-light: #ddd;
     
+    /* New color variables for About Data section */
+    --color-period-bg: #f0f0f0;
+    --color-period-text: #555555;
+    --color-period-icon: #777777;
+    
+    --color-measure-bg: #e6f4ea;
+    --color-measure-text: #2d6a4f;
+    --color-measure-icon: #40916c;
+    
+    --color-filter-bg: #f0f0f0;
+    --color-filter-text: #555555;
+    --color-filter-icon: #777777;
+    
     /* Spacing system */
     --space-unit: 8px;
     --space-xs: var(--space-unit);
@@ -250,8 +263,10 @@ body {
     border-left: 1px solid var(--color-border);
     flex: 0 0 var(--sidebar-width);
     height: 100%;
+    max-height: calc(100% - 20px);
     overflow-y: auto;
     padding-left: var(--space-lg);
+    padding-right: 10px;
     position: relative;
     z-index: 2;
 }
@@ -271,8 +286,9 @@ body {
 
 .control-section-title {
     color: var(--color-text-secondary);
-    font-size: 0.95rem;
-    margin-bottom: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 10px;
 }
 
 .viz-type-selector {
@@ -282,10 +298,11 @@ body {
     margin-bottom: 20px;
 }
 
-.viz-filters,
+.viz-period,
 .viz-dimensions,
-.viz-metrics {
-    margin-bottom: 20px;
+.viz-metrics,
+.viz-filters {
+    margin-bottom: 16px;
 }
 
 .viz-dimension-swap {
@@ -302,13 +319,76 @@ body {
 
 .tag-item {
     align-items: center;
-    background-color: #f0f7fa;
-    border-radius: 20px;
-    color: var(--color-text);
+    border-radius: 16px;
     display: inline-flex;
-    font-size: 0.85rem;
-    margin: 4px;
-    padding: 6px 12px;
+    font-size: 0.8rem;
+    margin: 0 4px 8px 0;
+    padding: 4px 10px;
+    transition: background-color 0.2s;
+}
+
+.tag-item {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary-dark);
+}
+
+.tag-item:hover {
+    background-color: #dbe5f9;
+    cursor: default;
+}
+
+.tag-item .material-icons {
+    color: var(--color-primary);
+    font-size: 18px;
+    margin-right: 4px;
+}
+
+.viz-period .tag-item {
+    background-color: var(--color-period-bg);
+    color: var(--color-period-text);
+}
+
+.viz-period .tag-item:hover {
+    background-color: #e5e5e5;
+}
+
+.viz-period .tag-item .material-icons {
+    color: var(--color-period-icon);
+}
+
+/* Measures styling */
+.viz-metrics .tag-item {
+    background-color: var(--color-measure-bg);
+    color: var(--color-measure-text);
+}
+
+.viz-metrics .tag-item:hover {
+    background-color: #d8efe0;
+}
+
+.viz-metrics .tag-item .material-icons {
+    color: var(--color-measure-icon);
+}
+
+/* Filters styling */
+.viz-filters .tag-item {
+    background-color: var(--color-filter-bg);
+    color: var(--color-filter-text);
+}
+
+.viz-filters .tag-item:hover {
+    background-color: #e5e5e5;
+}
+
+.viz-filters .tag-item .material-icons {
+    color: var(--color-filter-icon);
+}
+
+.empty-message {
+    color: var(--color-text-secondary);
+    font-size: 0.8rem;
+    font-style: italic;
+    opacity: 0.7;
 }
 
 /* 7. MEDIA QUERIES

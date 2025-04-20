@@ -117,7 +117,7 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
             available.append("heatmap")
             available.remove("table")
             ideal = "heatmap"
-        elif geo_name in ["borough", "county", "neighborhood"]:
+        elif geo_name in ["borough", "county", "neighborhood_name"]:
             available.append("choropleth_map")
             ideal = "choropleth_map"
         
