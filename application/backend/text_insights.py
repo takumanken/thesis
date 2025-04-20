@@ -75,6 +75,10 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
         for key, default_value in defaults.items():
             if key not in result:
                 result[key] = default_value
+                
+        # Filter out created_date related filters to avoid redundancy with period pill
+        if "filter_description" in result and isinstance(result["filter_description"], list):
+            result["filter_description"] = remove_date_filters(result["filter_description"])
             
         return result
             
@@ -85,6 +89,18 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
             "dataDescription": "Here is a summary of the requested data.",
             "filter_description": []
         }
+
+def remove_date_filters(filter_descriptions):
+    """Remove filter descriptions related to created_date fields"""
+    if not isinstance(filter_descriptions, list):
+        return filter_descriptions
+    
+    # Simple one-liner to filter out created_date items
+    return [
+        item for item in filter_descriptions
+        if isinstance(item, str) or 
+        'created_date' not in (item.get('filtered_field_name', '') + item.get('field', '')).lower()
+    ]
 
 def extract_json(text: str) -> Dict[str, Any]:
     """Extract JSON from text, handling code blocks"""
