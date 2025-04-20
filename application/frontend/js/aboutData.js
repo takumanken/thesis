@@ -8,18 +8,29 @@ import { chartStyles } from "./chart/utils/chartStyles.js";
 // Schema cache
 let dataSchemaCache = null;
 
+// Empty schema structure for fallbacks
+const EMPTY_SCHEMA = {
+  dimensions: {
+    time_dimension: [],
+    geo_dimension: [],
+    categorical_dimension: [],
+  },
+  measures: [],
+};
+
 /**
  * Update the About Data section
  */
 export async function updateAboutData() {
+  // Get containers
   const containers = {
     attributes: document.querySelector(".viz-dimensions .dimension-tags"),
     measures: document.querySelector(".viz-metrics .metrics-tags"),
     filters: document.querySelector(".viz-filters .filter-tags"),
   };
 
-  // Validate containers
-  if (!containers.attributes || !containers.measures || !containers.filters) {
+  // Quick validation
+  if (!Object.values(containers).every(Boolean)) {
     console.error("About Data containers not found");
     return;
   }
@@ -27,20 +38,13 @@ export async function updateAboutData() {
   // Clear containers
   Object.values(containers).forEach((container) => (container.innerHTML = ""));
 
-  // Create tooltip
+  // Load schema and update UI
+  const schema = await loadDataSchema();
   const tooltip = chartStyles.createTooltip();
 
-  try {
-    // Load schema
-    const schema = await loadDataSchema();
-
-    // Update sections
-    updateAttributesSection(containers.attributes, tooltip, schema);
-    updateMeasuresSection(containers.measures, tooltip, schema);
-    updateFiltersSection(containers.filters, tooltip, schema);
-  } catch (error) {
-    console.error("Error updating About Data section:", error);
-  }
+  updateAttributesSection(containers.attributes, tooltip, schema);
+  updateMeasuresSection(containers.measures, tooltip, schema);
+  updateFiltersSection(containers.filters, tooltip, schema);
 }
 
 /**
@@ -49,24 +53,18 @@ export async function updateAboutData() {
 function updateAttributesSection(container, tooltip, schema) {
   const dimensions = getStateDimensions();
 
-  if (dimensions.length === 0) {
+  if (!dimensions.length) {
     container.innerHTML = "<span class='empty-message'>No attributes in this visualization</span>";
     return;
   }
 
   dimensions.forEach((dimension) => {
     const info = findDimensionInSchema(dimension, schema);
-    if (!info) return;
+    const iconName = getDimensionTypeIcon(info?.data_type);
 
-    const iconName = getDimensionTypeIcon(info.data_type);
-    const pill = createPill(
-      iconName,
-      info.display_name || dimension,
-      info.description_to_user || "Dimension attribute",
-      tooltip
+    container.appendChild(
+      createPill(iconName, info?.display_name || dimension, info?.description_to_user || "Dimension attribute", tooltip)
     );
-
-    container.appendChild(pill);
   });
 }
 
@@ -76,24 +74,18 @@ function updateAttributesSection(container, tooltip, schema) {
 function updateMeasuresSection(container, tooltip, schema) {
   const measures = getStateMeasures();
 
-  if (measures.length === 0) {
+  if (!measures.length) {
     container.innerHTML = "<span class='empty-message'>No measures in this visualization</span>";
     return;
   }
 
   measures.forEach((measure) => {
     const info = findMeasureInSchema(measure, schema);
-    if (!info) return;
+    const iconName = getMeasureTypeIcon(info?.data_type);
 
-    const iconName = getMeasureTypeIcon(info.data_type);
-    const pill = createPill(
-      iconName,
-      info.display_name || measure,
-      info.description_to_user || "Measure attribute",
-      tooltip
+    container.appendChild(
+      createPill(iconName, info?.display_name || measure, info?.description_to_user || "Measure attribute", tooltip)
     );
-
-    container.appendChild(pill);
   });
 }
 
@@ -104,38 +96,33 @@ function updateFiltersSection(container, tooltip, schema) {
   // Add period pill first
   addDateRangePill(container, tooltip);
 
-  // Add other filters
+  // Get filter data
   const filters = state.dataInsights?.filter_description || [];
   const preFilters = state.aggregationDefinition?.preAggregationFilters;
   const postFilters = state.aggregationDefinition?.postAggregationFilters;
 
-  // If no filters at all and no period pill was added
-  if (filters.length === 0 && !preFilters && !postFilters && container.childElementCount === 0) {
+  // Show empty message if needed
+  if (!filters.length && !preFilters && !postFilters && !container.childElementCount) {
     container.innerHTML = "<span class='empty-message'>No filters applied</span>";
     return;
   }
 
-  // Add filter pills from filter_description array
+  // Add filter pills from array
   if (Array.isArray(filters)) {
     filters.forEach((filter) => {
       const fieldName = filter.filtered_field_name || filter.field || "Filter";
       const fieldInfo = findFieldInSchema(fieldName, schema);
 
-      const pill = createPill(
-        "filter_alt",
-        fieldInfo?.display_name || fieldName,
-        filter.description || "Applied filter",
-        tooltip
+      container.appendChild(
+        createPill("filter_alt", fieldInfo?.display_name || fieldName, filter.description || "Applied filter", tooltip)
       );
-
-      container.appendChild(pill);
     });
   } else if (typeof filters === "string" && filters) {
     container.appendChild(createPill("filter_alt", "Filter", filters, tooltip));
   }
 
   // Add pre/post filters if needed
-  if (preFilters && filters.length === 0) {
+  if (preFilters && !filters.length) {
     container.appendChild(createPill("filter_alt", "Pre-filter", `Filter: ${preFilters}`, tooltip));
   }
 
@@ -145,25 +132,20 @@ function updateFiltersSection(container, tooltip, schema) {
 }
 
 /**
- * Add date range pill to container if date range exists
+ * Add date range pill to container
  */
 function addDateRangePill(container, tooltip) {
   const dateRange = state.aggregationDefinition?.createdDateRange;
-
-  if (!dateRange || !Array.isArray(dateRange) || dateRange.length < 2) return;
+  if (!dateRange?.length || dateRange.length < 2) return;
 
   const [minDate, maxDate] = dateRange;
   if (!minDate || !maxDate) return;
 
-  // Format for display and tooltip
-  const formattedRange = formatDateRange(minDate, maxDate);
-  const fromDate = formatDate(minDate);
-  const toDate = formatDate(maxDate);
+  // Format dates
+  const formattedRange = `${formatDate(minDate, true)} - ${formatDate(maxDate, true)}`;
+  const tooltipText = `Limited to requests created between ${formatDate(minDate)} and ${formatDate(maxDate)}`;
 
-  const tooltipText = `Limited to requests created between ${fromDate} and ${toDate}`;
-  const pill = createPill("date_range", formattedRange, tooltipText, tooltip, "period");
-
-  container.appendChild(pill);
+  container.appendChild(createPill("date_range", formattedRange, tooltipText, tooltip, "period"));
 }
 
 /**
@@ -186,66 +168,43 @@ function createPill(iconName, text, description, tooltip, extraClass = "") {
 }
 
 /**
- * Format date range for display
+ * Format date for display
  */
-function formatDateRange(minDate, maxDate) {
-  const formatShort = (date) =>
-    new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-
-  return `${formatShort(minDate)} - ${formatShort(maxDate)}`;
-}
-
-/**
- * Format date for tooltip
- */
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString("en-US", {
+function formatDate(dateStr, short = false) {
+  const options = {
     year: "numeric",
-    month: "long",
+    month: short ? "short" : "long",
     day: "numeric",
-  });
+  };
+
+  return new Date(dateStr).toLocaleDateString("en-US", options);
 }
 
 /**
  * Get icon for dimension type
  */
 function getDimensionTypeIcon(dataType) {
-  switch ((dataType || "string").toLowerCase()) {
-    case "date":
-      return "calendar_today";
-    case "point":
-    case "geo":
-      return "location_on";
-    case "string":
-      return "abc";
-    case "integer":
-    case "number":
-    case "float":
-      return "tag";
-    default:
-      return "label";
-  }
+  const type = (dataType || "string").toLowerCase();
+
+  if (type === "date") return "calendar_today";
+  if (["point", "geo"].includes(type)) return "location_on";
+  if (type === "string") return "abc";
+  if (["integer", "number", "float"].includes(type)) return "tag";
+
+  return "label";
 }
 
 /**
  * Get icon for measure type
  */
 function getMeasureTypeIcon(dataType) {
-  switch ((dataType || "number").toLowerCase()) {
-    case "integer":
-      return "tag";
-    case "float":
-    case "number":
-      return "functions";
-    case "percentage":
-      return "percent";
-    default:
-      return "functions";
-  }
+  const type = (dataType || "number").toLowerCase();
+
+  if (type === "integer") return "tag";
+  if (["float", "number"].includes(type)) return "functions";
+  if (type === "percentage") return "percent";
+
+  return "functions";
 }
 
 /**
@@ -255,12 +214,11 @@ function getStateDimensions() {
   const agg = state.aggregationDefinition || {};
   const dimensions = [];
 
-  // Regular dimensions
+  // Add all dimension types
   if (Array.isArray(agg.dimensions)) {
     dimensions.push(...agg.dimensions);
   }
 
-  // Specialized dimensions
   ["timeDimension", "geoDimension", "categoricalDimension"].forEach((type) => {
     if (Array.isArray(agg[type])) {
       dimensions.push(...agg[type]);
@@ -275,9 +233,7 @@ function getStateDimensions() {
  */
 function getStateMeasures() {
   const measures = state.aggregationDefinition?.measures;
-  if (!Array.isArray(measures)) return [];
-
-  return measures.map((m) => m.alias).filter(Boolean);
+  return Array.isArray(measures) ? measures.map((m) => m.alias).filter(Boolean) : [];
 }
 
 /**
@@ -293,7 +249,6 @@ function findFieldInSchema(fieldName, schema) {
 function findDimensionInSchema(dimensionName, schema) {
   if (!schema?.dimensions || !dimensionName) return null;
 
-  // Search in dimension types
   for (const type of ["time_dimension", "geo_dimension", "categorical_dimension"]) {
     const dimensions = schema.dimensions[type];
     if (!dimensions) continue;
@@ -321,7 +276,6 @@ async function loadDataSchema() {
   if (dataSchemaCache) return dataSchemaCache;
 
   try {
-    // Primary schema path
     const response = await fetch("../backend/assets/gemini_instructions/references/data_schema.json");
 
     if (response.ok) {
@@ -329,20 +283,9 @@ async function loadDataSchema() {
       return dataSchemaCache;
     }
 
-    // Fallback to empty schema
-    return {
-      dimensions: {
-        time_dimension: [],
-        geo_dimension: [],
-        categorical_dimension: [],
-      },
-      measures: [],
-    };
+    return EMPTY_SCHEMA;
   } catch (error) {
-    console.warn("Error loading data schema:", error.message);
-    return {
-      dimensions: { time_dimension: [], geo_dimension: [], categorical_dimension: [] },
-      measures: [],
-    };
+    console.warn("Error loading schema:", error.message);
+    return EMPTY_SCHEMA;
   }
 }
