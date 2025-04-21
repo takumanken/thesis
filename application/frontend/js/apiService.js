@@ -61,6 +61,7 @@ export async function apiService() {
       chartType: result.chartType || "table",
       availableChartTypes: result.availableChartTypes || ["table"],
       textResponse: result.textResponse || null,
+      schemaMetadata: result.schemaMetadata || null,
       dataInsights: {
         title: dataInsights.title || null,
         dataDescription: dataInsights.dataDescription || null,

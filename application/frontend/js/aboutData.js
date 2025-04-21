@@ -27,9 +27,6 @@ const MONTHS_LONG = [
   "December",
 ];
 
-// Cache for loaded schema
-let dataSchemaCache = null;
-
 /**
  * Main entry point - updates the About Data section
  */
@@ -48,13 +45,20 @@ export async function updateAboutData() {
 
   // Clear and prepare
   Object.values(containers).forEach((container) => (container.innerHTML = ""));
-  const schema = await loadDataSchema();
+  const schema = getSchema();
   const tooltip = chartStyles.createTooltip();
 
   // Update each section
   updateAttributesSection(containers.attributes, tooltip, schema);
   updateMeasuresSection(containers.measures, tooltip, schema);
   updateFiltersSection(containers.filters, tooltip, schema);
+}
+
+/**
+ * Get schema from state (or fallback to empty schema)
+ */
+function getSchema() {
+  return state.schemaMetadata || EMPTY_SCHEMA;
 }
 
 /**
@@ -310,25 +314,4 @@ function findDimensionInSchema(dimensionName, schema) {
 function findMeasureInSchema(measureName, schema) {
   if (!schema?.measures || !measureName) return null;
   return schema.measures.find((m) => m.physical_name === measureName);
-}
-
-/**
- * Load the data schema
- */
-async function loadDataSchema() {
-  if (dataSchemaCache) return dataSchemaCache;
-
-  try {
-    const dataSchemaFile = "../backend/assets/data/data_schema.json";
-    const response = await fetch(dataSchemaFile);
-
-    if (response.ok) {
-      dataSchemaCache = await response.json();
-      return dataSchemaCache;
-    }
-  } catch (error) {
-    console.warn("Error loading schema:", error.message);
-  }
-
-  return EMPTY_SCHEMA;
 }
