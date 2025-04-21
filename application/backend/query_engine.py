@@ -141,6 +141,7 @@ def execute_sql_in_duckDB(sql: str, db_filename: str) -> tuple[list, dict]:
             # Setup spatial extensions
             con.execute("INSTALL spatial;")
             con.execute("LOAD spatial;")
+            con.execute("SET default_collation='nocase';")
             
             # Create view from SQL file
             with open("assets/sqls/requests_311.sql", "r") as f:
