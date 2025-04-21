@@ -10,6 +10,7 @@ SELECT
     date_trunc('week', created_timestamp) AS created_week,
     date_trunc('month', created_timestamp) AS created_month,
     date_trunc('year', created_timestamp) AS created_year,
+    month(created_timestamp) AS created_month_datepart,
     day(created_timestamp) AS created_day_datepart,
     hour(created_timestamp) AS created_hour_datepart,
     strftime('%a', created_timestamp) AS created_weekday_datepart,

@@ -119,6 +119,17 @@
                 ]
             },
             {
+                "physical_name": "created_month_datepart",
+                "display_name": "Request Month (Number)",
+                "data_type": "integer",
+                "description": "INTEGER month number (1-12) from created date.",
+                "description_to_user": "The month (1-12) when requests were submitted.",
+                "synonym": [
+                    "month number",
+                    "month of year"
+                ]
+            },
+            {
                 "physical_name": "created_day_datepart",
                 "display_name": "Request Day (Number)",
                 "data_type": "integer",

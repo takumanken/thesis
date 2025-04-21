@@ -193,9 +193,8 @@ I can create queries for any of these approaches using the 311 dataset."
 
 1. **Current Date**: Use `CURRENT_DATE`.
 2. **Intervals**: Use `CURRENT_DATE - INTERVAL X YEAR`.
-3. **Extracting Components**: Use `YEAR(created_date)`, `MONTH(created_date)`.
 4. **Date Ranges**: Use `created_date BETWEEN DATE 'YYYY-MM-DD' AND DATE 'YYYY-MM-DD'`.
 
 ## DON'T
-- DO NOT USE `BETWEEN 12 AND 2` for winter queries. USE `EXTRACT(MONTH FROM created_date) IN (12, 1, 2)`
 - DO NOT USE `DATE('2020-01-01')`. USE `DATE '2020-01-01'`
+- DO NOT USE `created_month_datepart BETWEEN 12 AND 2`. USE `created_month_datepart IN (12, 1, 2)`
