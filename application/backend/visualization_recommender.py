@@ -88,10 +88,10 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
         available.append("single_bar_chart")
         ideal = "single_bar_chart"
     
-    if time_count == 1 and cat_count <= 1 and measure_count == 1 and not high_cardinality:
+    if time_count == 1 and measure_count == 1 and not high_cardinality:
         available.append("line_chart")
         ideal = "line_chart"
-        if additive_measure_count == measure_count:
+        if  cat_count == 1 and additive_measure_count == measure_count:
             available.append("stacked_area_chart")
             available.append("stacked_area_chart_100")
     
