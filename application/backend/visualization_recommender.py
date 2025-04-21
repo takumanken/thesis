@@ -81,7 +81,7 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
     
     high_cardinality = dimension_stats and all_dimensions_exceed_cardinality(dimensions, dimension_stats)
     all_additive_measures = additive_measure_count == measure_count
-    is_not_location = dimensions[0] != "location"
+    is_not_location = dimensions[0] != "location" if dimensions else True
     
     # Add chart types based on data characteristics
     if cat_count == 1 and measure_count == 1 and time_count == 0 and is_not_location:
