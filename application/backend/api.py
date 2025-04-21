@@ -56,6 +56,9 @@ SYSTEM_INSTRUCTION_FILE = "assets/gemini_instructions/data_aggregation_instructi
 FILTER_VALUES_FILE = "assets/gemini_instructions/references/all_filters.json"
 DATA_SCHEMA_FILE = "assets/data/data_schema.json"
 
+# Store schema metadata for frontend
+frontend_schema = None
+
 # Environment setup
 def setup_environment():
     """
@@ -64,6 +67,8 @@ def setup_environment():
     Returns:
         Tuple containing the formatted system instruction and initialized API client.
     """
+    global frontend_schema
+    
     with open(SYSTEM_INSTRUCTION_FILE, "r") as f:
         system_instruction = f.read()
 
@@ -78,17 +83,40 @@ def setup_environment():
     # Prepare simplified schema for AI - remove description_to_user to avoid confusion
     simplified_schema = {"dimensions": {}, "measures": []}
     
+    # Create frontend schema with only needed fields
+    frontend_schema = {"dimensions": {}, "measures": []}
+    
     # Process dimensions
     for dim_type, dims in data_schema["dimensions"].items():
         simplified_schema["dimensions"][dim_type] = []
+        frontend_schema["dimensions"][dim_type] = []
+        
         for dim in dims:
+            # For AI (without description_to_user)
             dim_copy = {k: v for k, v in dim.items() if k != "description_to_user"}
             simplified_schema["dimensions"][dim_type].append(dim_copy)
+            
+            # For frontend (only with required fields)
+            frontend_schema["dimensions"][dim_type].append({
+                "physical_name": dim.get("physical_name", ""),
+                "display_name": dim.get("display_name", ""),
+                "data_type": dim.get("data_type", ""),
+                "description_to_user": dim.get("description_to_user", "")
+            })
     
     # Process measures
     for measure in data_schema["measures"]:
+        # For AI
         measure_copy = {k: v for k, v in measure.items() if k != "description_to_user"}
         simplified_schema["measures"].append(measure_copy)
+        
+        # For frontend
+        frontend_schema["measures"].append({
+            "physical_name": measure.get("physical_name", ""),
+            "display_name": measure.get("display_name", ""),
+            "data_type": measure.get("data_type", ""),
+            "description_to_user": measure.get("description_to_user", "")
+        })
         
     # Replace the placeholders
     system_instruction = system_instruction.replace("{all_filters}", json.dumps(all_filters))
@@ -174,7 +202,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         # Determine best visualization
         available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats)
         
-        # Build response - remove metadata field
+        # Build response - add schema metadata for frontend
         response_payload = {
             "dataset": dataset,
             "fields": list(dataset[0].keys()) if dataset else [],
@@ -183,7 +211,8 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             "chartType": ideal_chart,
             "availableChartTypes": available_charts,
             "dimensionStats": dimension_stats,
-            "textResponse": None
+            "textResponse": None,
+            "schemaMetadata": frontend_schema
         }
 
         # Add data description
