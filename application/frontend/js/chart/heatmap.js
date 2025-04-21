@@ -84,11 +84,13 @@ function processLocationData(dataset, geoDim, measure) {
     // Skip invalid coordinates
     if (isNaN(lat) || isNaN(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return validPoints;
 
-    // Add valid point to the array
+    // Add valid point to the array with reference information
     validPoints.push({
       lat,
       lng,
       value: +record[measure] || 1,
+      borough: record.reference_borough || "Unknown",
+      neighborhood: record.reference_neighborhood || "Unknown",
     });
 
     return validPoints;
@@ -236,8 +238,8 @@ function addTooltipFunctionality(map, points, measure) {
 
     if (nearest && nearest.distance < POINT_PROXIMITY_THRESHOLD) {
       // Show tooltip with info
-      const { lat, lng, value } = nearest.point;
-      const tooltipContent = createTooltipContent(lat, lng, value, measure);
+      const { lat, lng, value, borough, neighborhood } = nearest.point;
+      const tooltipContent = createTooltipContent(lat, lng, value, measure, borough, neighborhood);
 
       chartStyles.tooltip.show(tooltip, e.originalEvent, tooltipContent);
 
@@ -278,9 +280,20 @@ function addTooltipFunctionality(map, points, measure) {
   });
 }
 
-// Modified to use namespaced format value
-function createTooltipContent(lat, lng, value, measure) {
+/**
+ * Create tooltip content with enhanced location information
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @param {number} value - Measure value
+ * @param {string} measure - Measure name
+ * @param {string} borough - Borough name
+ * @param {string} neighborhood - Neighborhood name
+ * @returns {string} HTML content for tooltip
+ */
+function createTooltipContent(lat, lng, value, measure, borough, neighborhood) {
   return `
+    <strong>Borough:</strong> ${borough}<br>
+    <strong>Neighborhood:</strong> ${neighborhood}<br>
     <strong>Location:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}<br>
     <strong>${measure}:</strong> ${chartUtils.formatValue(value)}
   `;
