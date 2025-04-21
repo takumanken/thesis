@@ -95,11 +95,12 @@ def remove_date_filters(filter_descriptions):
     if not isinstance(filter_descriptions, list):
         return filter_descriptions
     
-    # Simple one-liner to filter out created_date items
+    # Filter out both created_date and createdDateRange items
     return [
         item for item in filter_descriptions
-        if isinstance(item, str) or 
-        'created_date' not in (item.get('filtered_field_name', '') + item.get('field', '')).lower()
+        if isinstance(item, str) or
+        not any(date_term in (item.get('filtered_field_name', '') + item.get('field', '')).lower() 
+                for date_term in ['created_date', 'createddaterange'])
     ]
 
 def extract_json(text: str) -> Dict[str, Any]:
