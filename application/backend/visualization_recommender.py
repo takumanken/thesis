@@ -95,11 +95,11 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
             available.append("stacked_area_chart")
             available.append("stacked_area_chart_100")
     
-    if 1 <= cat_count <= 2 and 1 <= measure_count <= 2 and (cat_count > 1 or measure_count > 1):
+    if 1 <= dim_count <= 2 and 1 <= measure_count <= 2 and (cat_count > 1 or measure_count > 1):
         available.append("nested_bar_chart")
         ideal = "nested_bar_chart"
     
-    if cat_count == 2 and measure_count == 1 and not high_cardinality:
+    if dim_count == 2 and measure_count == 1 and not high_cardinality:
         available.append("grouped_bar_chart")
         ideal = "grouped_bar_chart"
     
@@ -108,7 +108,7 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
             available.append("stacked_bar_chart_100")
             ideal = "stacked_bar_chart"
     
-    if 1 <= cat_count <= 2 and measure_count == 1 and time_count == 0 and all_additive_measures and is_not_location:
+    if 1 <= dim_count <= 2 and measure_count == 1 and time_count == 0 and all_additive_measures and is_not_location:
         available.append("treemap")
         
     if geo_count == 1 and len(dimensions) == 1 and measure_count == 1 and all_additive_measures:
