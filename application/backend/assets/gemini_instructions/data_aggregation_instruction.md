@@ -39,7 +39,7 @@ The following JSON defines all available dimensions and measures. Use physical n
 
 ### B. Complaint Type Hierarchy
 
-1. **Complaint Type Large**: Default for general categorization.
+1. **Complaint Type Large**: Default for general categorization. Use this field for showing complaint category unless more detailed field is specified.
 2. **Complaint Type Middle**: Use for specific filtering (e.g., "rodents").
 3. **Complaint Type Detailed**: Use only when explicitly requested.
 

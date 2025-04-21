@@ -368,7 +368,10 @@
                     "issue category",
                     "problem category",
                     "request type",
-                    "type"
+                    "type",
+                    "What kinds of complaints",
+                    "What type of issue",
+                    "What complaint type"
                 ]
             },
             {
