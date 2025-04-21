@@ -93,7 +93,6 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
         if additive_measure_count == measure_count:
             available.append("stacked_area_chart")
             available.append("stacked_area_chart_100")
-            ideal = "stacked_area_chart"
     
     if 1 <= cat_count <= 2 and 1 <= measure_count <= 2 and (cat_count > 1 or measure_count > 1):
         available.append("nested_bar_chart")
