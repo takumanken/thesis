@@ -56,9 +56,9 @@ function createColumnConfig() {
   const measures = getMeasures();
 
   return fields.map((field) => {
-    // Basic column config
+    // Basic column config with translated display name
     const column = {
-      name: formatFieldName(field),
+      name: chartUtils.getDisplayName(field), // Use display name from schema
       id: field,
     };
 
@@ -121,19 +121,6 @@ function isNumericColumn(dataset, field) {
   }
 
   return numericCount / sampleSize >= 0.8;
-}
-
-/**
- * Formats field names for display
- * @param {string} field - Raw field name
- * @returns {string} Formatted field name
- */
-function formatFieldName(field) {
-  return field
-    .replace(/_/g, " ")
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
 }
 
 /**

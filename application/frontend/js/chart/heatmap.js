@@ -292,10 +292,10 @@ function addTooltipFunctionality(map, points, measure) {
  */
 function createTooltipContent(lat, lng, value, measure, borough, neighborhood) {
   return `
-    <strong>Borough:</strong> ${borough}<br>
-    <strong>Neighborhood:</strong> ${neighborhood}<br>
+    <strong>${chartUtils.getDisplayName("borough")}:</strong> ${borough}<br>
+    <strong>${chartUtils.getDisplayName("neighborhood_name")}:</strong> ${neighborhood}<br>
     <strong>Location:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}<br>
-    <strong>${measure}:</strong> ${chartUtils.formatValue(value)}
+    <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(value)}
   `;
 }
 

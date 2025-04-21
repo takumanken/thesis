@@ -359,3 +359,35 @@ export function createHighlightCircle(svg, radius = 3) {
     .style("stroke-width", 1)
     .style("opacity", 0);
 }
+
+/**
+ * Gets the display name for a field from schema metadata
+ * @param {string} physicalName - The physical field name
+ * @param {Object} [schemaOverride] - Optional schema to use instead of state.schemaMetadata
+ * @returns {string} The display name or formatted physical name as fallback
+ */
+export function getDisplayName(physicalName, schemaOverride) {
+  const schema = schemaOverride || state.schemaMetadata;
+
+  // Check dimensions across all dimension types
+  if (schema.dimensions) {
+    for (const dimType of ["time_dimension", "geo_dimension", "categorical_dimension"]) {
+      const dimensions = schema.dimensions[dimType] || [];
+      const match = dimensions.find((dim) => dim.physical_name === physicalName);
+      if (match?.display_name) {
+        return match.display_name;
+      }
+    }
+  }
+
+  // Check measures
+  if (schema.measures) {
+    const match = schema.measures.find((m) => m.physical_name === physicalName);
+    if (match?.display_name) {
+      return match.display_name;
+    }
+  }
+
+  // If no match found, return the physical name
+  return physicalName;
+}

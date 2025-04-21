@@ -377,9 +377,9 @@ function createTooltipContent({
   const timeStr = chartUtils.formatTimeValue(timePoint.time, isNumericTime);
 
   return `
-    <strong>${categoricalDimension}:</strong> ${category}<br>
-    <strong>${timeDimension}:</strong> ${timeStr}<br>
-    <strong>${measure}:</strong> ${chartUtils.formatValue(value)}<br>
+    <strong>${chartUtils.getDisplayName(categoricalDimension)}:</strong> ${category}<br>
+    <strong>${chartUtils.getDisplayName(timeDimension)}:</strong> ${timeStr}<br>
+    <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(value)}<br>
     <strong>Percentage:</strong> ${pct.toFixed(1)}%
   `;
 }

@@ -238,14 +238,14 @@ function drawBars(svg, dataset, scales, config, groupKey, subGroupKey, measure, 
     .attr("fill", (d) => scales.color(d.sub))
     .attr("rx", chartStyles.barChart.bar.cornerRadius);
 
-  // Attach tooltips
+  // Attach tooltips with translated field names
   chartUtils.attachMouseTooltip(
     bars,
     tooltip,
     (d) => `
-      <strong>${groupKey}:</strong> ${d.group}<br>
-      <strong>${subGroupKey}:</strong> ${d.sub}<br>
-      <strong>${measure}:</strong> ${chartUtils.formatValue(d.val)}
+      <strong>${chartUtils.getDisplayName(groupKey)}:</strong> ${d.group}<br>
+      <strong>${chartUtils.getDisplayName(subGroupKey)}:</strong> ${d.sub}<br>
+      <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(d.val)}
     `
   );
 }

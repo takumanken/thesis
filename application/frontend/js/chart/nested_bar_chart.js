@@ -264,13 +264,13 @@ function drawBar(svg, bar, tooltip) {
     .attr("rx", chartStyles.barChart.bar.cornerRadius)
     .attr("fill", (d) => d.color);
 
-  // Attach tooltip
+  // Attach tooltip with translated field names
   chartUtils.attachMouseTooltip(
     rect,
     tooltip,
     (d) => `
       <strong>${d.category}${d.segment ? " → " + d.segment : ""}</strong><br>
-      <strong>${d.measure}:</strong> ${chartUtils.formatValue(d.value)}
+      <strong>${chartUtils.getDisplayName(d.measure)}:</strong> ${chartUtils.formatValue(d.value)}
     `
   );
 }

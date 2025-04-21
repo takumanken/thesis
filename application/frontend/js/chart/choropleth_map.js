@@ -209,15 +209,15 @@ function renderMap(svg, geoJson, path, colorScale, geoDimension, measure, toolti
     .attr("stroke-width", 0.5)
     .style("cursor", "pointer");
 
-  // Attach tooltip behavior using standardized utility
+  // Attach tooltip behavior using standardized utility with translated field names
   chartUtils.attachMouseTooltip(regions, tooltip, (feature) => {
     const p = feature.properties;
     return geoDimension === "neighborhood_name"
-      ? `<strong>Neighborhood:</strong> ${p.ntaname}<br>
-         <strong>Borough:</strong> ${p.boroname || "Unknown"}<br>
-         <strong>${measure}:</strong> ${chartUtils.formatValue(p.value)}`
+      ? `<strong>${chartUtils.getDisplayName("neighborhood_name")}:</strong> ${p.ntaname}<br>
+         <strong>${chartUtils.getDisplayName("borough")}:</strong> ${p.boroname || "Unknown"}<br>
+         <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(p.value)}`
       : `<strong>${p.displayName}</strong><br>
-         <strong>${measure}:</strong> ${chartUtils.formatValue(p.value)}`;
+         <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(p.value)}`;
   });
 }
 

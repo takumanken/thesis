@@ -446,7 +446,7 @@ function showPointHighlight(
   tooltip,
   event,
   timeDimension,
-  groupDimension,
+  categoricalDimension,
   measure,
   isNumericTime
 ) {
@@ -456,14 +456,14 @@ function showPointHighlight(
   // Format time value based on type
   const timeValue = chartUtils.formatTimeValue(point.data.parsedTime, isNumericTime);
 
-  // Show tooltip
+  // Show tooltip with translated field names
   chartStyles.tooltip.show(
     tooltip,
     event,
     `
-      <strong>${groupDimension}:</strong> ${point.group}<br>
-      <strong>${timeDimension}:</strong> ${timeValue}<br>
-      <strong>${measure}:</strong> ${chartUtils.formatValue(point.data[measure])}
+      <strong>${chartUtils.getDisplayName(categoricalDimension)}:</strong> ${point.group}<br>
+      <strong>${chartUtils.getDisplayName(timeDimension)}:</strong> ${timeValue}<br>
+      <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(point.data[measure])}
     `
   );
 }

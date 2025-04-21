@@ -172,13 +172,13 @@ function renderBars(svg, dataset, scales, measure, dimension, config, tooltip) {
     .attr("fill", config.barColor)
     .attr("rx", chartStyles.barChart.bar.cornerRadius);
 
-  // Attach tooltips with default highlight behavior
+  // Attach tooltips with default highlight behavior and translated field names
   chartUtils.attachMouseTooltip(
     bars,
     tooltip,
     (d) => `
-      <strong>${dimension}:</strong> ${d[dimension] || "N/A"}<br>
-      <strong>${measure}:</strong> ${chartUtils.formatValue(+d[measure] || 0)}
+      <strong>${chartUtils.getDisplayName(dimension)}:</strong> ${d[dimension] || "N/A"}<br>
+      <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(+d[measure] || 0)}
     `
   );
 }

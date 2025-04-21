@@ -235,9 +235,9 @@ function renderBars(svg, stackData, sortedStacks, scales, groupKey, stackKey, me
     const raw = isPercentage ? d.data[`${stackVal}_original`] : d.data[stackVal];
     const pct = isPercentage ? d.data[stackVal] : (raw / d.data._total) * 100;
     return `
-        <strong>${groupKey}:</strong> ${grp}<br>
-        <strong>${stackKey}:</strong> ${stackVal}<br>
-        <strong>${measure}:</strong> ${chartUtils.formatValue(raw)}<br>
+        <strong>${chartUtils.getDisplayName(groupKey)}:</strong> ${grp}<br>
+        <strong>${chartUtils.getDisplayName(stackKey)}:</strong> ${stackVal}<br>
+        <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(raw)}<br>
         <strong>Pct:</strong> ${pct.toFixed(CHART_DESIGN.percentagePrecision)}%
       `;
   });
