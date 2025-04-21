@@ -79,11 +79,21 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
     
     # Add date range metadata using window functions
     date_metadata = """
-    , min(min(created_date)) over () as min_created_date
-    , max(max(created_date)) over () as max_created_date
+    , min(min(created_date)) over () as metadata_min_created_date
+    , max(max(created_date)) over () as metadata_max_created_date
     """
     
-    select_clause += date_metadata
+    # Add location reference if location is in the dimensions
+    location_reference = ""
+    if dims and any("location" in dim.lower() for dim in dims):
+        location_reference = """
+        , min(borough) as reference_borough
+        , min(neighborhood_name)as reference_neighborhood
+        """
+        logger.info("Adding location reference to query (borough and neighborhood)")
+    
+    # Combine all metadata
+    select_clause += date_metadata + location_reference
     
     sql = f"SELECT {select_clause} FROM {table_name}"
     
@@ -156,15 +166,16 @@ def execute_sql_in_duckDB(sql: str, db_filename: str) -> tuple[list, dict]:
             logger.info(f"Query executed successfully: {row_count} rows returned")
             
             # Extract metadata from the first row
-            if not df.empty:
-                if 'min_created_date' in df.columns and 'max_created_date' in df.columns:
-                    metadata['createdDateRange'] = [
-                        df['min_created_date'].iloc[0],
-                        df['max_created_date'].iloc[0]
-                    ]
-                    
-                    # Remove metadata columns from result set
-                    df = df.drop(columns=['min_created_date', 'max_created_date'])
+            metadata['createdDateRange'] = [
+                df['metadata_min_created_date'].iloc[0],
+                df['metadata_max_created_date'].iloc[0]
+            ]
+                
+            # Remove all metadata columns from result set
+            metadata_cols = [col for col in df.columns if col.startswith('metadata_')]
+            if metadata_cols:
+                df = df.drop(columns=metadata_cols)
+
     
     except Exception as e:
         logger.error(f"Database query failed: {str(e)}")
