@@ -134,7 +134,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         # Call Gemini API to process the prompt
         response = client.models.generate_content(
             model="gemini-2.0-flash",
-            config=types.GenerateContentConfig(system_instruction=system_instruction),
+            config=types.GenerateContentConfig(system_instruction=system_instruction, temperature=0),
             contents=[content],
         )
         
