@@ -53,7 +53,8 @@ app.add_middleware(
 
 # Constants
 SYSTEM_INSTRUCTION_FILE = "assets/gemini_instructions/data_aggregation_instruction.md"
-REFERENCE_DIR = "assets/gemini_instructions/references"
+FILTER_VALUES_FILE = "assets/gemini_instructions/references/all_filters.json"
+DATA_SCHEMA_FILE = "assets/data/data_schema.json"
 
 # Environment setup
 def setup_environment():
@@ -67,11 +68,11 @@ def setup_environment():
         system_instruction = f.read()
 
     # Load filter values
-    with open(os.path.join(REFERENCE_DIR, "all_filters.json"), "r") as f:
+    with open(FILTER_VALUES_FILE, "r") as f:
         all_filters = json.load(f)
     
     # Load data schema
-    with open(os.path.join(REFERENCE_DIR, "data_schema.json"), "r") as f:
+    with open(DATA_SCHEMA_FILE, "r") as f:
         data_schema = json.load(f)
     
     # Prepare simplified schema for AI - remove description_to_user to avoid confusion
