@@ -81,9 +81,10 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
     
     high_cardinality = dimension_stats and all_dimensions_exceed_cardinality(dimensions, dimension_stats)
     all_additive_measures = additive_measure_count == measure_count
+    is_not_location = len(dimensions) == 1 and dimensions[0] != "location"
     
     # Add chart types based on data characteristics
-    if cat_count == 1 and measure_count == 1 and time_count == 0 and dimensions[0] != "location":
+    if cat_count == 1 and measure_count == 1 and time_count == 0 and is_not_location:
         available.append("single_bar_chart")
         ideal = "single_bar_chart"
     
@@ -107,7 +108,7 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
             available.append("stacked_bar_chart_100")
             ideal = "stacked_bar_chart"
     
-    if 1 <= cat_count <= 2 and measure_count == 1 and time_count == 0 and all_additive_measures:
+    if 1 <= cat_count <= 2 and measure_count == 1 and time_count == 0 and all_additive_measures and is_not_location:
         available.append("treemap")
         
     if geo_count == 1 and len(dimensions) == 1 and measure_count == 1 and all_additive_measures:
