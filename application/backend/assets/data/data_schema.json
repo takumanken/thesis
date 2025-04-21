@@ -440,6 +440,21 @@
                     "how reported",
                     "input method"
                 ]
+            },
+            {
+                "physical_name": "time_to_resolve_day",
+                "display_name": "Time to Resolve (Days)",
+                "data_type": "integer",
+                "description": "Time taken to resolve the service request in days.",
+                "description_to_user": "The number of days it took to resolve the service request.",
+                "synonym": [
+                    "resolution times in days",
+                    "time to fix in days",
+                    "days to resolve",
+                    "days to complete",
+                    "days to fix",
+                    "time taken in days"
+                ]
             }
         ]
     },

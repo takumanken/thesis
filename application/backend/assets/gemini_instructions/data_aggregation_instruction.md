@@ -55,6 +55,7 @@ The following JSON defines all available dimensions and measures. Use physical n
 
 1. Default to `count(1)` as `num_of_requests` unless specified otherwise.
 2. Use `avg_days_to_resolve` for time/duration queries.
+3. NEVER CREATE MEASURE WITH CUSTOM EXPRESSIONS. EVERY EXPRESSION USED FOR THE MEASURE MUST BE PREDEFINED IN THE DATA MODEL.
 
 ## IV. QUERY CONSTRUCTION GUIDELINES
 
@@ -88,6 +89,7 @@ Use exact values from the provided JSON:
 4. **Location-Specific**: "Show me X in Y location" → Apply location filters.
 5. **Time-Specific**: "Show me X during Y period" → Apply time filters.
 6. **Status Queries**: "Show me X with status Y" → Filter by status.
+7. **Proportion Queries**: "What proportion of 311 requests are..." → Use relevant dimensions and `count(1)`.
 
 ### Topic-Based Queries
 
@@ -198,3 +200,4 @@ I can create queries for any of these approaches using the 311 dataset."
 ## DON'T
 - DO NOT USE `DATE('2020-01-01')`. USE `DATE '2020-01-01'`
 - DO NOT USE `created_month_datepart BETWEEN 12 AND 2`. USE `created_month_datepart IN (12, 1, 2)`
+- NEVER CREATE MEASURE WITH CUSTOM EXPRESSIONS. EVERY EXPRESSION USED FOR THE MEASURE MUST BE PREDEFINED IN THE DATA MODEL.

@@ -24,6 +24,7 @@ SELECT
     strftime('%a', closed_timestamp) AS closed_weekday_datepart,
     dayofweek(closed_timestamp) AS closed_weekday_order,
     datesub('second', created_timestamp, closed_timestamp) AS time_to_resolve_sec,
+    round(time_to_resolve_sec/60/60/24) AS time_to_resolve_day,
     IFNULL("Agency Name", 'Unspecified') AS agency_name,
     CASE
         WHEN agency_name = 'Department of Housing Preservation and Development' THEN 'Housing'
