@@ -14,6 +14,7 @@ SELECT
     day(created_timestamp) AS created_day_datepart,
     hour(created_timestamp) AS created_hour_datepart,
     strftime('%a', created_timestamp) AS created_weekday_datepart,
+    dayofweek(created_timestamp) AS created_weekday_order,
     cast("Closed Date" as timestamp) AS closed_timestamp,
     cast(closed_timestamp as date) AS closed_date,
     year(closed_timestamp) AS closed_year_datepart,
@@ -21,6 +22,7 @@ SELECT
     day(closed_timestamp) AS closed_day_datepart,
     hour(closed_timestamp) AS closed_hour_datepart,
     strftime('%a', closed_timestamp) AS closed_weekday_datepart,
+    dayofweek(closed_timestamp) AS closed_weekday_order,
     datesub('second', created_timestamp, closed_timestamp) AS time_to_resolve_sec,
     IFNULL("Agency Name", 'Unspecified') AS agency_name,
     CASE

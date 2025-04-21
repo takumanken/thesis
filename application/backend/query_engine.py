@@ -127,7 +127,12 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
         sql += f" HAVING {definition.postAggregationFilters}"
     
     # Add ordering
-    if definition.timeDimension:
+    if len(dims) == 1 and dims[0] in ['created_weekday_datepart', 'closed_weekday_datepart']:
+        if dims[0] == 'created_weekday_datepart':
+            sql += f" ORDER BY MIN(created_weekday_order) ASC"
+        elif dims[0] == 'closed_weekday_datepart':
+            sql += f" ORDER BY MIN(closed_weekday_order) ASC"
+    elif definition.timeDimension:
         sql += f" ORDER BY {definition.timeDimension[0]} ASC"
     elif definition.measures:
         sql += f" ORDER BY {definition.measures[0]['alias']} DESC"
