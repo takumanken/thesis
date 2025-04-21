@@ -119,28 +119,6 @@
                 ]
             },
             {
-                "physical_name": "created_year_datepart",
-                "display_name": "Request Year (Number)",
-                "data_type": "integer",
-                "description": "INTEGER year number (YYYY) from created date.",
-                "description_to_user": "The year number (like 2023) when requests were submitted.",
-                "synonym": [
-                    "year number",
-                    "year of request"
-                ]
-            },
-            {
-                "physical_name": "created_month_datepart",
-                "display_name": "Request Month (Number)",
-                "data_type": "integer",
-                "description": "INTEGER month number (1-12) from created date.",
-                "description_to_user": "The month number (1 for January through 12 for December) when requests were submitted.",
-                "synonym": [
-                    "month number",
-                    "month of request"
-                ]
-            },
-            {
                 "physical_name": "created_day_datepart",
                 "display_name": "Request Day (Number)",
                 "data_type": "integer",
@@ -175,28 +153,6 @@
                     "weekday",
                     "day of week",
                     "day name"
-                ]
-            },
-            {
-                "physical_name": "closed_year_datepart",
-                "display_name": "Resolution Year (Number)",
-                "data_type": "integer",
-                "description": "INTEGER year number (YYYY) from closed date.",
-                "description_to_user": "The year number (like 2023) when requests were resolved.",
-                "synonym": [
-                    "year resolved",
-                    "resolution year number"
-                ]
-            },
-            {
-                "physical_name": "closed_month_datepart",
-                "display_name": "Resolution Month (Number)",
-                "data_type": "integer",
-                "description": "INTEGER month number (1-12) from closed date.",
-                "description_to_user": "The month number (1-12) when requests were resolved.",
-                "synonym": [
-                    "month resolved",
-                    "resolution month number"
                 ]
             },
             {
@@ -254,7 +210,7 @@
                 "physical_name": "location",
                 "display_name": "Location Coordinates",
                 "data_type": "point",
-                "description": "Latitude and longitude of the incident.",
+                "description": "Latitude and longitude of the incident. If you select this dimension, no other dimensions should be included.",
                 "description_to_user": "The exact map coordinates of where the issue was reported.",
                 "synonym": [
                     "coordinates",

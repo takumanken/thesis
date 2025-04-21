@@ -45,7 +45,7 @@ The following JSON defines all available dimensions and measures. Use physical n
 
 ### C. Geographic Guidelines
 
-- Use "location" for point-level data or map-based visualizations.
+- Use "location" for point-level data or map-based visualizations. However, when you use location as the dimension, you should not include any other dimensions.
 - Use "borough", "neighborhood_name", or "county" only when explicitly requested.
 - For proximity queries:
   - Use placeholders `{{user_latitude}}` and `{{user_longitude}}`.
@@ -60,7 +60,7 @@ The following JSON defines all available dimensions and measures. Use physical n
 
 1. **Dimension Selection**: Include only dimensions relevant to the query.
 2. **Measure Selection**: Use measures that directly quantify the user's request.
-3. **Pre-Aggregation Filters**: Apply filters before aggregation (e.g., `created_year_datepart = YEAR(CURRENT_DATE)`).
+3. **Pre-Aggregation Filters**: Apply filters before aggregation
 4. **Post-Aggregation Filters**: Use for filtering aggregate values (e.g., "more than 100 complaints").
 
 ## V. FILTER VALUES
@@ -126,7 +126,7 @@ Return valid JSON in the following structure:
 ## IX. EXAMPLES
 
 ### Example 1: Monthly Service Requests
-**Query**: "Show me how many service requests were created each month."  
+**Query**: "Show me how many service requests were created each month this year."  
 **Output**:
 ```json
 {
@@ -134,7 +134,7 @@ Return valid JSON in the following structure:
     "measures": [
         { "expression": "count(1)", "alias": "num_of_requests" }
     ],
-    "preAggregationFilters": "created_year_datepart = YEAR(CURRENT_DATE)",
+    "preAggregationFilters": "created_date >= date_trunc('year', CURRENT_DATE)",
     "postAggregationFilters": ""
 }
 ```
@@ -160,7 +160,7 @@ Return valid JSON in the following structure:
     "measures": [
         { "expression": "count(1)", "alias": "num_of_requests" }
     ],
-    "preAggregationFilters": "created_year_datepart >= YEAR(CURRENT_DATE - INTERVAL 5 YEAR) AND complaint_type_middle IN ('Noise', 'Noise - Commercial', 'Noise - Residential', ...)",
+    "preAggregationFilters": "complaint_type_middle IN ('Noise', 'Noise - Commercial', 'Noise - Residential', ...)",
     "postAggregationFilters": ""
 }
 ```
@@ -169,5 +169,9 @@ Return valid JSON in the following structure:
 
 1. **Current Date**: Use `CURRENT_DATE`.
 2. **Intervals**: Use `CURRENT_DATE - INTERVAL X YEAR`.
-3. **Extracting Components**: Use `YEAR(date_column)`, `MONTH(date_column)`.
+3. **Extracting Components**: Use `YEAR(created_date)`, `MONTH(created_date)`.
 4. **Date Ranges**: Use `created_date BETWEEN DATE 'YYYY-MM-DD' AND DATE 'YYYY-MM-DD'`.
+
+## DON'T
+- DO NOT USE `BETWEEN 12 AND 2` for winter queries. USE `EXTRACT(MONTH FROM created_date) IN (12, 1, 2)`
+- DO NOT USE `DATE('2020-01-01')`. USE `DATE '2020-01-01'`

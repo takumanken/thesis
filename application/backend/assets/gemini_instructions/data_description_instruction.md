@@ -64,6 +64,7 @@ Additional constraints
 ### 6  Date & Filter Phrasing  
 * Use phrases like “over the past year”, “from mid‑2022 to early 2024”.  
 * Reference important filters (e.g., borough, complaint type) in plain language.  
+* For date filters, use expressions like `YEAR(created_date)` or `MONTH(created_date)` to extract components.
 
 ---
 
@@ -74,7 +75,7 @@ Additional constraints
 ---
 
 ### 8  Filter Demystification Rules
-* Field-Specific Descriptions ():
+* Field-Specific Descriptions:
 
 Include one entry for each field with an applied filter.
 
