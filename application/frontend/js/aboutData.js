@@ -319,7 +319,8 @@ async function loadDataSchema() {
   if (dataSchemaCache) return dataSchemaCache;
 
   try {
-    const response = await fetch("../backend/assets/gemini_instructions/references/data_schema.json");
+    const dataSchemaFile = "../backend/assets/data/data_schema.json";
+    const response = await fetch(dataSchemaFile);
 
     if (response.ok) {
       dataSchemaCache = await response.json();
