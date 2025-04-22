@@ -147,7 +147,7 @@ def execute_sql_in_duckDB(sql: str, db_filename: str) -> tuple[list, dict]:
     
     metadata = {}
     try:
-        with duckdb.connect("data/nyc_open_data_explorer.duckdb") as con:
+        with duckdb.connect(db_filename) as con:
             # Setup spatial extensions
             con.execute("INSTALL spatial;")
             con.execute("LOAD spatial;")

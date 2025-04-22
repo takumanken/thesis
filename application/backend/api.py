@@ -187,7 +187,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         
         # Generate and execute SQL query
         sql = generate_sql(agg_def, "requests_311", user_location)
-        dataset, query_metadata = execute_sql_in_duckDB(sql, ":memory:")
+        dataset, query_metadata = execute_sql_in_duckDB(sql, "data/nyc_open_data_explorer.duckdb")
         
         # Add date range to aggregation definition as an array
         if 'createdDateRange' in query_metadata:
