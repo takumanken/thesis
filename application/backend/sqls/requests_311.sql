@@ -162,7 +162,6 @@ SELECT
     IFNULL("Community Board", 'Unspecified') AS community_board,
     IFNULL("Location Type", 'Unspecified') AS location_type,
     IFNULL("Address Type", 'Unspecified') AS address_type,
-    IFNULL("Open Data Channel Type", 'Unspecified') AS open_data_channel_type,
-    1 as num_of_requests
+    IFNULL("Open Data Channel Type", 'Unspecified') AS open_data_channel_type
 FROM
     read_parquet('data/requests_311.parquet');
