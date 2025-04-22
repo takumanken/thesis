@@ -27,7 +27,7 @@ TARGET_COLUMNS = [
     'open_data_channel_type',
 ]
 
-def generate_unique_values(output_dir='../backend/assets/gemini_instructions/references/'):
+def generate_unique_values(output_dir='../backend/gemini_instructions/references/'):
     """
     Generate JSON files with unique values for specified columns using in-memory DuckDB.
     """
@@ -49,7 +49,7 @@ def generate_unique_values(output_dir='../backend/assets/gemini_instructions/ref
         
         # Create view from SQL file (same approach as query_engine.py)
         logger.info("Creating requests_311 view from SQL file...")
-        with open("../backend/assets/sqls/requests_311.sql", "r") as f:
+        with open("../backend/sqls/requests_311.sql", "r") as f:
             view_sql = f.read()
         
         view_sql = view_sql.format(object_name="requests_311")

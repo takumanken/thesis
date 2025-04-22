@@ -159,7 +159,7 @@ def execute_sql_in_duckDB(sql: str, db_filename: str) -> tuple[list, dict]:
             con.execute("SET default_collation='nocase';")
             
             # Create view from SQL file
-            with open("assets/sqls/requests_311.sql", "r") as f:
+            with open("sqls/requests_311.sql", "r") as f:
                 view_sql = f.read()
             
             view_sql = view_sql.format(object_name="requests_311")

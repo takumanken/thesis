@@ -52,9 +52,9 @@ app.add_middleware(
 )
 
 # Constants
-SYSTEM_INSTRUCTION_FILE = "assets/gemini_instructions/data_aggregation_instruction.md"
-FILTER_VALUES_FILE = "assets/gemini_instructions/references/all_filters.json"
-DATA_SCHEMA_FILE = "assets/data/data_schema.json"
+SYSTEM_INSTRUCTION_FILE = "gemini_instructions/data_aggregation_instruction.md"
+FILTER_VALUES_FILE = "gemini_instructions/references/all_filters.json"
+DATA_SCHEMA_FILE = "data/data_schema.json"
 
 # Store schema metadata for frontend
 frontend_schema = None

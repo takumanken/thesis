@@ -29,7 +29,7 @@ def generate_data_description(
     """Generate a user-friendly description of data and chart"""
     try:
         # Load system instruction
-        instruction_path = "assets/gemini_instructions/data_description_instruction.md"
+        instruction_path = "gemini_instructions/data_description_instruction.md"
         with open(instruction_path, "r") as f:
             system_instruction = f.read()
             
