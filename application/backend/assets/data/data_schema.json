@@ -248,10 +248,10 @@
             },
             {
                 "physical_name": "neighborhood_name",
-                "display_name": "Neighborhood",
+                "display_name": "Neighborhood (NTA)",
                 "data_type": "string",
                 "description": "Neighborhood name.",
-                "description_to_user": "The specific neighborhood where the issue was reported.",
+                "description_to_user": "The specific neighborhood (NTA) where the issue was reported. NTA stands for Neighborhood Tabulation Area.",
                 "synonym": [
                     "community",
                     "locality",
