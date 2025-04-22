@@ -11,7 +11,7 @@ ACCESS_KEY_ID = secrets['R2_ACCESS_KEY_ID']
 SECRET_ACCESS_KEY = secrets['R2_SECRET_ACCESS_KEY']
 BUCKET_NAME = secrets['R2_BUCKET_NAME']
 OBJECT_NAME = 'requests_311.parquet'
-FILE_PATH = 'data/requests_311/parquet/requests_311.parquet'
+FILE_PATH = '../backend/data/requests_311.parquet'
 
 ENDPOINT_URL = f'https://{ACCOUNT_ID}.r2.cloudflarestorage.com'
 
