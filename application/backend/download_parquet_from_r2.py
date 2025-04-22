@@ -22,7 +22,7 @@ def download_parquet_from_r2():
                 
         # Define file names and paths
         OBJECT_NAME = 'requests_311.parquet'
-        DOWNLOAD_DIRECTORY = 'assets/data'
+        DOWNLOAD_DIRECTORY = 'data'
         DOWNLOAD_PATH = os.path.join(DOWNLOAD_DIRECTORY, OBJECT_NAME)
 
         # Ensure the download directory exists
