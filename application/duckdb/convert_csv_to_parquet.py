@@ -19,12 +19,24 @@ duckdb.sql("""
         SELECT 
             c.*,
             n.nta2020 AS neighborhood_code,
-            n.ntaname AS neighborhood_name
-        FROM read_csv_auto('data/requests_311/csv/*.csv') AS c
+            n.ntaname AS neighborhood_name,
+            n.shape_area AS neighborhood_area,
+            n.ntatype AS neighborhood_type,
+            p.population_2010 AS population_2010
+        FROM read_csv_auto('data/csv/311_*.csv') AS c
         LEFT JOIN read_parquet('data/geo/2020_nyc_neighborhood_tabulation_areas_nta.parquet') AS n
           ON st_contains(
               n.geometry,
               st_point(c.Longitude::DOUBLE, c.Latitude::DOUBLE)
           )
-    ) TO 'data/requests_311/parquet/requests_311.parquet' (FORMAT 'parquet');
+        LEFT JOIN
+           (
+                SELECT
+                    "NTA Code" as nta_code,
+                    MIN(CASE WHEN "Year" = 2010 THEN "Population" END) AS population_2010
+                FROM read_csv_auto('data/csv/NTA_population.csv') AS p
+                GROUP BY nta_code
+           ) AS p
+        ON n.nta2020 = p.nta_code
+    ) TO 'data/parquet/requests_311.parquet' (FORMAT 'parquet');
 """)
