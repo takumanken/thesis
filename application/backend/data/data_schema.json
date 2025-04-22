@@ -507,6 +507,22 @@
                 "days to complete",
                 "resolution duration"
             ]
+        },
+        {
+            "physical_name": "population",
+            "display_name": "Population (2020)",
+            "expression": "list_sum(list_transform(list(distinct json_array(neighborhood_code, population_2020)), x -> cast(x[1] as integer)))",
+            "data_type": "integer",
+            "description": "Population (neighborhood level) based on 2020 census data.",
+            "description_to_user": "The total number of people living in the area. This is based on the 2020 census data.",
+            "synonym": [
+                "number of people",
+                "total population",
+                "population count",
+                "people count",
+                "residents",
+                "local population"
+            ]
         }
     ]
 }
