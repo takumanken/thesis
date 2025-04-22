@@ -73,29 +73,24 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
 
     # Build SELECT clause
     dims = definition.dimensions
-    dims_clause = ", ".join(dims) if dims else ""
+    dims_clause = "\n  , ".join(dims) if dims else ""
     measures_clause = ", ".join([f"{m['expression']} AS {m['alias']}" for m in definition.measures])
-    select_clause = f"{dims_clause}, {measures_clause}" if dims_clause and measures_clause else (dims_clause or measures_clause)
+    select_clause = f"{dims_clause}\n  , {measures_clause}" if dims_clause and measures_clause else (dims_clause or measures_clause)
     
     # Add date range metadata using window functions
-    date_metadata = """
-    , min(min(created_date)) over () as metadata_min_created_date
-    , max(max(created_date)) over () as metadata_max_created_date
-    """
+    date_metadata = """\n  , min(min(created_date)) over () as metadata_min_created_date\n  , max(max(created_date)) over () as metadata_max_created_date"""
     
     # Add location reference if location is in the dimensions
     location_reference = ""
     if dims and any("location" in dim.lower() for dim in dims):
-        location_reference = """
-        , min(borough) as reference_borough
-        , min(neighborhood_name)as reference_neighborhood
+        location_reference = """\n  , min(borough) as reference_borough\n  , min(neighborhood_name)as reference_neighborhood
         """
         logger.info("Adding location reference to query (borough and neighborhood)")
     
     # Combine all metadata
     select_clause += date_metadata + location_reference
     
-    sql = f"SELECT {select_clause} FROM {table_name}"
+    sql = f"SELECT\n\n  {select_clause}\nFROM {table_name}"
     
     # Add filters with location placeholders if needed
     if definition.preAggregationFilters:
@@ -115,29 +110,29 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
             
             logger.info(f"Filters after substitution: {filters}")
         
-        sql += f" WHERE {filters}"
+        sql += f"\n  WHERE {filters}"
     
     # Add grouping if dimensions exist
     if dims:
         group_clause = ", ".join(str(i) for i in range(1, len(dims) + 1))
-        sql += f" GROUP BY {group_clause}"
+        sql += f"\n\nGROUP BY {group_clause}"
     
     # Add post-aggregation filters (HAVING)
     if definition.postAggregationFilters:
-        sql += f" HAVING {definition.postAggregationFilters}"
+        sql += f"\n\nHAVING {definition.postAggregationFilters}"
     
     # Add ordering
     if len(dims) == 1 and dims[0] in ['created_weekday_datepart', 'closed_weekday_datepart']:
         if dims[0] == 'created_weekday_datepart':
-            sql += f" ORDER BY MIN(created_weekday_order) ASC"
+            sql += f"\n\nORDER BY MIN(created_weekday_order) ASC"
         elif dims[0] == 'closed_weekday_datepart':
-            sql += f" ORDER BY MIN(closed_weekday_order) ASC"
+            sql += f"\n\nORDER BY MIN(closed_weekday_order) ASC"
     elif definition.timeDimension:
-        sql += f" ORDER BY {definition.timeDimension[0]} ASC"
+        sql += f"\n\nORDER BY {definition.timeDimension[0]} ASC"
     elif definition.measures:
-        sql += f" ORDER BY {definition.measures[0]['alias']} DESC"
+        sql += f"\n\nORDER BY {definition.measures[0]['alias']} DESC"
     
-    sql += " LIMIT 5000;"
+    sql += "\n\nLIMIT 5000;"
     
     logger.info(f"SQL generation completed in {time.time() - start_time:.2f}s")
     logger.info(f"Generated SQL:\n{sql}")
@@ -148,22 +143,15 @@ def execute_sql_in_duckDB(sql: str, db_filename: str) -> tuple[list, dict]:
     Executes a SQL query in DuckDB and returns both results and metadata.
     """
     start_time = time.time()
-    logger.info(f"Executing SQL query in DuckDB:\n    {sql}")
+    logger.info(f"Executing SQL query in DuckDB")
     
     metadata = {}
     try:
-        with duckdb.connect(":memory:") as con:
+        with duckdb.connect("data/nyc_open_data_explorer.duckdb") as con:
             # Setup spatial extensions
             con.execute("INSTALL spatial;")
             con.execute("LOAD spatial;")
             con.execute("SET default_collation='nocase';")
-            
-            # Create view from SQL file
-            with open("sqls/requests_311.sql", "r") as f:
-                view_sql = f.read()
-            
-            view_sql = view_sql.format(object_name="requests_311")
-            con.execute(view_sql)
             
             # Execute the query directly
             df = con.execute(sql).fetchdf()
