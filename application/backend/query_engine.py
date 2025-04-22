@@ -90,7 +90,7 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
     # Combine all metadata
     select_clause += date_metadata + location_reference
     
-    sql = f"SELECT\n\n  {select_clause}\nFROM {table_name}"
+    sql = f"SELECT\n  {select_clause}\nFROM {table_name}"
     
     # Add filters with location placeholders if needed
     if definition.preAggregationFilters:
@@ -115,24 +115,24 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
     # Add grouping if dimensions exist
     if dims:
         group_clause = ", ".join(str(i) for i in range(1, len(dims) + 1))
-        sql += f"\n\nGROUP BY {group_clause}"
+        sql += f"\nGROUP BY {group_clause}"
     
     # Add post-aggregation filters (HAVING)
     if definition.postAggregationFilters:
-        sql += f"\n\nHAVING {definition.postAggregationFilters}"
+        sql += f"\nHAVING {definition.postAggregationFilters}"
     
     # Add ordering
     if len(dims) == 1 and dims[0] in ['created_weekday_datepart', 'closed_weekday_datepart']:
         if dims[0] == 'created_weekday_datepart':
-            sql += f"\n\nORDER BY MIN(created_weekday_order) ASC"
+            sql += f"\nORDER BY MIN(created_weekday_order) ASC"
         elif dims[0] == 'closed_weekday_datepart':
-            sql += f"\n\nORDER BY MIN(closed_weekday_order) ASC"
+            sql += f"\nORDER BY MIN(closed_weekday_order) ASC"
     elif definition.timeDimension:
-        sql += f"\n\nORDER BY {definition.timeDimension[0]} ASC"
+        sql += f"\nORDER BY {definition.timeDimension[0]} ASC"
     elif definition.measures:
-        sql += f"\n\nORDER BY {definition.measures[0]['alias']} DESC"
+        sql += f"\nORDER BY {definition.measures[0]['alias']} DESC"
     
-    sql += "\n\nLIMIT 5000;"
+    sql += "\nLIMIT 5000;"
     
     logger.info(f"SQL generation completed in {time.time() - start_time:.2f}s")
     logger.info(f"Generated SQL:\n{sql}")
