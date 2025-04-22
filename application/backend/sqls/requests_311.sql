@@ -172,6 +172,8 @@ SELECT
         WHEN 9 THEN 'Park'
         ELSE 'Unspecified'
     END AS neighborhood_type,
-    population_2010 AS neighborhood_population_2010,
+    nta_population.population_2010,
 FROM
-    read_parquet('data/requests_311.parquet');
+    read_parquet('data/requests_311.parquet') as requests_311
+LEFT JOIN nta_population
+    using (neighborhood_code)

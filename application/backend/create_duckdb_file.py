@@ -21,15 +21,15 @@ def create_duckdb_file(output_path='data/nyc_open_data_explorer.duckdb'):
     
     try:
         # Read the SQL file
-        with open("sqls/requests_311.sql", "r") as f:
-            requests_311_sql = f.read()
         with open("sqls/nta_population.sql", "r") as f:
             nta_population_sql = f.read()
+        with open("sqls/requests_311.sql", "r") as f:
+            requests_311_sql = f.read()
         
         
         # Execute the SQL
-        con.execute(requests_311_sql)
         con.execute(nta_population_sql)
+        con.execute(requests_311_sql)
         
         logger.info(f"DuckDB file created in {time.time() - start_time:.2f}s")
         
