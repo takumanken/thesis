@@ -1,8 +1,13 @@
 CREATE OR REPLACE VIEW nta_population AS
 
 SELECT
-  "NTA Code" AS neighborhood_code,
-  MIN(CASE WHEN "Year" = 2000 THEN "Population" END) AS population_2000,
-  MIN(CASE WHEN "Year" = 2010 THEN "Population" END) AS population_2010,
-FROM read_csv('data/NTA_population.csv')
-GROUP BY ALL;
+  "NTA Name" as nta_name,
+  "Pop 20" as population_2020,
+  "Nta2020" as neighborhood_code,
+  "Boro Code" as boro_code,
+  UPPER("Boro Name") as borough,
+  "NTA Abbrev" as nta_abbrev,
+  "NTA Type" as nta_type,
+  "Cdta2020" as cdta_2020,
+  "CDTA Name" as cdta_name
+FROM read_csv('data/nta_population.csv');

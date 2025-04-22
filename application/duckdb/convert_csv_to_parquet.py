@@ -18,7 +18,7 @@ duckdb.sql("""
     COPY (
         SELECT 
             c.*,
-            n.cdta2020 AS neighborhood_code,
+            n.nta2020 AS neighborhood_code,
             n.ntaname AS neighborhood_name,
             n.shape_area AS neighborhood_area,
             n.ntatype AS neighborhood_type
