@@ -1,7 +1,7 @@
 INSTALL spatial;
 LOAD spatial;
 
-CREATE OR REPLACE VIEW {object_name} AS
+CREATE OR REPLACE VIEW requests_311 AS
 SELECT
     "Unique Key" AS unique_key,
     "Status" AS status,
