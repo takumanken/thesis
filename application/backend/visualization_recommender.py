@@ -14,7 +14,7 @@ TIME_DIMENSIONS = [
     "closed_day_datepart", "closed_hour_datepart"
 ]
 GEO_DIMENSIONS = ["borough", "county", "location", "incident_zip", "neighborhood_name"]
-ADDITIVE_MEASURES = ["num_of_requests"]
+ADDITIVE_MEASURES = ["num_of_requests", "population"]
 
 def classify_dimensions(dimensions: list[str]) -> tuple[list[str], list[str], list[str]]:
     """
