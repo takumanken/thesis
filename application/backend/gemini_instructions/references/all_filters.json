@@ -858,5 +858,13 @@
     "OTHER",
     "PHONE",
     "UNKNOWN"
+  ],
+  "neighborhood_type": [
+    "Airport",
+    "Cemetery",
+    "Other Special Areas",
+    "Park",
+    "Residential",
+    "Rikers Island"
   ]
 }

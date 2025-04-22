@@ -455,6 +455,20 @@
                     "days to fix",
                     "time taken in days"
                 ]
+            },
+            {
+                "physical_name": "neighborhood_type",
+                "display_name": "Neighborhood Type",
+                "data_type": "string",
+                "description": "Type of neighborhood.",
+                "description_to_user": "The classification of the neighborhood to distinguish if it is residential or a non-residential area like a park, airport, cemetery, or other special area.",
+                "synonym": [
+                    "neighborhood category",
+                    "community type",
+                    "area type",
+                    "locality type",
+                    "district type"
+                ]
             }
         ]
     },

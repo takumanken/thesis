@@ -163,8 +163,15 @@ SELECT
     IFNULL("Location Type", 'Unspecified') AS location_type,
     IFNULL("Address Type", 'Unspecified') AS address_type,
     IFNULL("Open Data Channel Type", 'Unspecified') AS open_data_channel_type,
-    neighborhood_area,
-    neighborhood_type,
+    CASE neighborhood_type
+        WHEN 0 THEN 'Residential'
+        WHEN 5 THEN 'Rikers Island'
+        WHEN 6 THEN 'Other Special Areas'
+        WHEN 7 THEN 'Cemetery'
+        WHEN 8 THEN 'Airport'
+        WHEN 9 THEN 'Park'
+        ELSE 'Unspecified'
+    END AS neighborhood_type,
     population_2010 AS neighborhood_population_2010,
 FROM
     read_parquet('data/requests_311.parquet');

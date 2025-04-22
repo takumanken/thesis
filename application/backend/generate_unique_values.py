@@ -25,6 +25,7 @@ TARGET_COLUMNS = [
     'location_type',
     'address_type',
     'open_data_channel_type',
+    'neighborhood_type',
 ]
 
 def generate_unique_values(output_dir='../backend/gemini_instructions/references/'):
