@@ -164,7 +164,7 @@ function loadGeoJsonData(svg, container, geoDimension, aggregatedData, config, m
   const isNeighborhood = geoDimension === "neighborhood_name";
   const geoJsonFile = isNeighborhood
     ? "assets/geojson/2020_nyc_neighborhood_tabulation_areas_nta.geojson"
-    : "assets/geojson/2025_nyc_borough.geojson";
+    : "assets/geojson/2020_nyc_neighborhood_tabulation_areas_borough.geojson";
 
   d3.json(geoJsonFile)
     .then((geoJson) => {
