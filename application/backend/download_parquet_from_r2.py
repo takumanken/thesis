@@ -45,7 +45,7 @@ def download_parquet_from_r2():
         # Download each object
         for object_name in OBJECT_NAMES:
             download_path = os.path.join(DOWNLOAD_DIRECTORY, object_name)
-            s3_client.download_file(s3_client, BUCKET_NAME, object_name, download_path)
+            s3_client.download_file(BUCKET_NAME, object_name, download_path)
             logger.info(f"Downloading {object_name} from bucket {BUCKET_NAME}")
         
         # Download the file
