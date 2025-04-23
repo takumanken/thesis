@@ -10,8 +10,12 @@ ACCOUNT_ID = secrets['R2_ACCOUNT_ID']
 ACCESS_KEY_ID = secrets['R2_ACCESS_KEY_ID']
 SECRET_ACCESS_KEY = secrets['R2_SECRET_ACCESS_KEY']
 BUCKET_NAME = secrets['R2_BUCKET_NAME']
-OBJECT_NAME = 'requests_311.parquet'
-FILE_PATH = '../backend/data/requests_311.parquet'
+
+PARQUET_OBJECT_NAME = 'requests_311.parquet'
+PARQUET_FILE_PATH = f'../backend/data/{PARQUET_OBJECT_NAME}'
+
+CSV_OBJECT_NAME = 'NTA_population.csv'
+CSV_FILE_PATH = f'../backend/data/{CSV_OBJECT_NAME}'
 
 ENDPOINT_URL = f'https://{ACCOUNT_ID}.r2.cloudflarestorage.com'
 
@@ -26,7 +30,10 @@ s3_client = session.client(
     config=Config(signature_version='s3v4')
 )
 
-with open(FILE_PATH, 'rb') as data:
-    s3_client.upload_fileobj(data, BUCKET_NAME, OBJECT_NAME)
+with open(PARQUET_FILE_PATH, 'rb') as data:
+    s3_client.upload_fileobj(data, BUCKET_NAME, PARQUET_OBJECT_NAME)
+
+with open(CSV_FILE_PATH, 'rb') as data:
+    s3_client.upload_fileobj(data, BUCKET_NAME, CSV_OBJECT_NAME)
 
 print("Upload complete!")

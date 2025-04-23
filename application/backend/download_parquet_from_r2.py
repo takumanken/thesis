@@ -21,9 +21,8 @@ def download_parquet_from_r2():
         BUCKET_NAME = os.environ.get('R2_BUCKET_NAME')
                 
         # Define file names and paths
-        OBJECT_NAME = 'requests_311.parquet'
+        OBJECT_NAMES = ['requests_311.parquet', 'NTA_population.csv']
         DOWNLOAD_DIRECTORY = 'data'
-        DOWNLOAD_PATH = os.path.join(DOWNLOAD_DIRECTORY, OBJECT_NAME)
 
         # Ensure the download directory exists
         os.makedirs(DOWNLOAD_DIRECTORY, exist_ok=True)
@@ -43,13 +42,14 @@ def download_parquet_from_r2():
             config=Config(signature_version='s3v4')
         )
         
-        logger.info(f"Downloading {OBJECT_NAME} from bucket {BUCKET_NAME}")
+        # Download each object
+        for object_name in OBJECT_NAMES:
+            download_path = os.path.join(DOWNLOAD_DIRECTORY, object_name)
+            s3_client.download_file(s3_client, BUCKET_NAME, object_name, download_path)
+            logger.info(f"Downloading {object_name} from bucket {BUCKET_NAME}")
         
         # Download the file
-        s3_client.download_file(BUCKET_NAME, OBJECT_NAME, DOWNLOAD_PATH)
-        
-        logger.info(f"Download complete! File saved to {DOWNLOAD_PATH}")
-        return DOWNLOAD_PATH
+        logger.info(f"Download complete!")
         
     except Exception as e:
         logger.error(f"Error downloading parquet file: {str(e)}")
