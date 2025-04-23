@@ -56,8 +56,9 @@ SYSTEM_INSTRUCTION_FILE = "gemini_instructions/data_aggregation_instruction.md"
 FILTER_VALUES_FILE = "gemini_instructions/references/all_filters.json"
 DATA_SCHEMA_FILE = "data/data_schema.json"
 
-# Store schema metadata for frontend
-frontend_schema = None
+# Load data schema
+with open(DATA_SCHEMA_FILE, "r") as f:
+    data_schema = json.load(f)
 
 # Environment setup
 def setup_environment():
@@ -75,49 +76,24 @@ def setup_environment():
     # Load filter values
     with open(FILTER_VALUES_FILE, "r") as f:
         all_filters = json.load(f)
-    
-    # Load data schema
-    with open(DATA_SCHEMA_FILE, "r") as f:
-        data_schema = json.load(f)
-    
+        
     # Prepare simplified schema for AI - remove description_to_user to avoid confusion
     simplified_schema = {"dimensions": {}, "measures": []}
-    
-    # Create frontend schema with only needed fields
-    frontend_schema = {"dimensions": {}, "measures": []}
-    
+
     # Process dimensions
     for dim_type, dims in data_schema["dimensions"].items():
         simplified_schema["dimensions"][dim_type] = []
-        frontend_schema["dimensions"][dim_type] = []
         
         for dim in dims:
-            # For AI (without description_to_user)
             dim_copy = {k: v for k, v in dim.items() if k != "description_to_user"}
             simplified_schema["dimensions"][dim_type].append(dim_copy)
-            
-            # For frontend (only with required fields)
-            frontend_schema["dimensions"][dim_type].append({
-                "physical_name": dim.get("physical_name", ""),
-                "display_name": dim.get("display_name", ""),
-                "data_type": dim.get("data_type", ""),
-                "description_to_user": dim.get("description_to_user", "")
-            })
-    
+
     # Process measures
     for measure in data_schema["measures"]:
         # For AI
         measure_copy = {k: v for k, v in measure.items() if k != "description_to_user"}
         simplified_schema["measures"].append(measure_copy)
-        
-        # For frontend
-        frontend_schema["measures"].append({
-            "physical_name": measure.get("physical_name", ""),
-            "display_name": measure.get("display_name", ""),
-            "data_type": measure.get("data_type", ""),
-            "description_to_user": measure.get("description_to_user", "")
-        })
-        
+                
     # Replace the placeholders
     system_instruction = system_instruction.replace("{all_filters}", json.dumps(all_filters))
     system_instruction = system_instruction.replace("{data_schema}", json.dumps(simplified_schema))
@@ -212,7 +188,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             "availableChartTypes": available_charts,
             "dimensionStats": dimension_stats,
             "textResponse": None,
-            "schemaMetadata": frontend_schema
+            "schemaMetadata": data_schema
         }
 
         # Add data description
