@@ -3,21 +3,21 @@
         {
             "data_source_id": 1,
             "data_source_short_name": "NYC Open Data - 311 Requests",
-            "data_source_name": "311 Service Requests from 2010 to Present",
+            "data_source_name": "NYC Open Data - 311 Service Requests from 2010 to Present",
             "data_source_url": "https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2010-to-Present/erm2-nwe9/about_data",
             "description_to_user": "Data about service requests made to NYC's 311 system, including details about the request and its resolution."
         },
         {
             "data_source_id": 2,
             "data_source_short_name": "NYC Open Data - NTA Polygons",
-            "data_source_name": "2020 Neighborhood Tabulation Areas (NTAs)",
+            "data_source_name": "NYC Open Data - 2020 Neighborhood Tabulation Areas (NTAs)",
             "data_source_url": "https://data.cityofnewyork.us/City-Government/2020-Neighborhood-Tabulation-Areas-NTAs-/9nt8-h7nd/about_data",
             "description_to_user": "Geospatial data about NYC Neighborhood Tabulation Areas (NTAs), including their boundaries, names and types."
         },
         {
             "data_source_id": 3,
             "data_source_short_name": "NYC Planning - Census 2020",
-            "data_source_name": "NYC 2020 Census Data by NYC Department of City Planning",
+            "data_source_name": "NYC Department City Planning - NYC 2020 Census Data",
             "data_source_url": "https://www.nyc.gov/content/planning/pages/resources/datasets/decennial-census",
             "description_to_user": "Basic demographic and housing characteristics including total population, race/ethnicity, age, housing tenure, and household composition. * In this portal, total population of NTAs level is only available."
         }

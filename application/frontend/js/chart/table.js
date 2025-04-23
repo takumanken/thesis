@@ -140,13 +140,13 @@ function injectTableStyles() {
 
     /* Table cells */
     .viz-table-container .gridjs-td {
-      padding: 6px 8px;
+      padding: 5px 5px;
       font-size: 12px;
     }
     
     /* Table headers */
     .viz-table-container .gridjs-th {
-      padding: 6px 8px;
+      padding: 5px 5px;
       font-size: 12px;
       font-weight: 500;
       background-color: var(--color-background, #f5f5f5);
@@ -160,12 +160,12 @@ function injectTableStyles() {
     /* Pagination */
     .viz-table-container .gridjs-pagination {
       font-size: 12px;
-      padding: 8px 0;
+      padding: 5px 0;
     }
     
     /* Pagination buttons */
     .viz-table-container .gridjs-pages button {
-      padding: 4px 8px;
+      padding: 5px 5px;
     }
   `;
 

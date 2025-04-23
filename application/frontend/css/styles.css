@@ -159,7 +159,7 @@ body {
     height: 100%;
     margin: 0 var(--space-xl) var(--space-xl);
     max-height: calc(100vh - 180px);
-    padding: 30px;
+    padding: 25px;
     display: flex;
 }
 
@@ -177,10 +177,11 @@ body {
 }
 
 .viz-description {
-    color: var(--color-text-secondary);
+    color: #696969;
     font-size: 0.9rem;
-    line-height: 1.75;
-    margin-bottom: 15px;
+    line-height: 1.5;
+    margin-bottom: 10px;
+    font-weight: 100;
 }
 
 /* 5. CHART COMPONENTS
@@ -373,6 +374,43 @@ body {
 
 .viz-filters .tag-item.period .material-icons {
     color: var(--color-period-icon);
+}
+
+/* Data Source Pills */
+.data-source-pills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 10px 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #868DB4;
+}
+
+.data-source-label {
+  margin-right: 8px;
+  font-weight: normal;
+  font-size: 0.9em;
+}
+
+.data-source-pill {
+  display: inline-flex;
+  align-items: center;
+  background-color: #F0F1F6;
+  border-radius: 16px;
+  padding: 4px 12px;
+  margin-right: 6px;
+  margin-bottom: 4px;
+  color: #868DB4;
+  font-weight: 500;
+  font-size: 0.8em;
+}
+
+.data-source-pill .material-symbols-outlined {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+  font-size: 14px;
+  padding-right: 4px;
 }
 
 /* Empty state message */

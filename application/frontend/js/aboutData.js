@@ -35,6 +35,7 @@ const MONTHS_LONG = [
  * Updates the entire "About Data" section in the UI.
  */
 export async function updateAboutData() {
+  // Find all containers
   const containers = {
     attributes: document.querySelector(".viz-dimensions .dimension-tags"),
     measures: document.querySelector(".viz-metrics .metrics-tags"),
@@ -46,10 +47,15 @@ export async function updateAboutData() {
     return;
   }
 
-  Object.values(containers).forEach((container) => (container.innerHTML = "")); // Clear containers
+  // Clear containers
+  Object.values(containers).forEach((container) => (container.innerHTML = ""));
 
+  // Get schema and create tooltip
   const schema = getSchema();
-  const tooltip = chartStyles.createTooltip(); // Create a single tooltip instance
+  const tooltip = chartStyles.createTooltip();
+
+  // Update data source pills - add this line
+  updateDataSourcePills();
 
   // Update sections using a more generic approach where possible
   updatePillSection(
@@ -331,4 +337,142 @@ function getMeasureTypeIcon(dataType) {
     default:
       return "functions";
   }
+}
+
+/**
+ * Creates and updates data source pills displayed under the viz title
+ */
+export function updateDataSourcePills() {
+  // Find the container where we'll add the data source pills
+  const vizArea = document.querySelector(".visualization-area");
+  const vizTitle = document.querySelector(".viz-title");
+
+  if (!vizArea || !vizTitle) return;
+
+  // Remove any existing data source pills
+  const existingPills = document.querySelector(".data-source-pills");
+  if (existingPills) existingPills.remove();
+
+  // Don't show pills if there's no data
+  if (!state.dataset || !state.dataset.length) return;
+
+  // Create container for data source pills
+  const container = document.createElement("div");
+  container.className = "data-source-pills";
+
+  // Add "Answered with:" label
+  const label = document.createElement("span");
+  label.className = "data-source-label";
+  label.textContent = "Answered with:";
+  container.appendChild(label);
+
+  // Get data sources based on the current visualization
+  const dataSources = getDataSourcesFromState();
+
+  // Create tooltip instance
+  const tooltip = chartStyles.createTooltip();
+
+  // Create a pill for each data source
+  dataSources.forEach((source) => {
+    // Create pill container
+    const pill = document.createElement("div");
+    pill.className = "data-source-pill";
+
+    // Add database icon and source name
+    pill.innerHTML = `
+      <span class="material-symbols-outlined">database</span>
+      ${source.data_source_short_name || source.data_source_name}
+    `;
+
+    // Add tooltip behavior
+    const tooltipContent = formatDataSourceTooltip(source);
+    addTooltipBehavior(pill, tooltip, tooltipContent);
+
+    const pillLink = document.createElement("a");
+    pillLink.href = source.data_source_url;
+    pillLink.target = "_blank";
+    pillLink.rel = "noopener noreferrer";
+    pillLink.appendChild(pill);
+    container.appendChild(pillLink);
+  });
+
+  // Insert after the title using the title's parent
+  const titleParent = vizTitle.parentNode;
+  if (vizTitle.nextElementSibling) {
+    titleParent.insertBefore(container, vizTitle.nextElementSibling);
+  } else {
+    titleParent.appendChild(container);
+  }
+}
+
+/**
+ * Format data source information for tooltip display
+ */
+function formatDataSourceTooltip(source) {
+  if (!source) return "";
+
+  const name = source.data_source_name
+    ? `<div style="font-weight: bold; margin-bottom: 6px;">${source.data_source_name}</div>`
+    : "";
+
+  const description = source.description_to_user ? `<div>${source.description_to_user}</div>` : "";
+
+  // URL is no longer displayed in tooltip
+  return `${name}${description}`;
+}
+
+/**
+ * Determine data sources based on fields used in visualization
+ * @returns {Array} Array of data source objects
+ */
+function getDataSourcesFromState() {
+  const schema = getSchema();
+  if (!schema?.data_sources?.length) {
+    // Return default with minimal information if no schema
+    return [
+      {
+        data_source_short_name: "NYC Open Data - 311 Request",
+        data_source_name: "NYC 311 Service Requests",
+      },
+    ];
+  }
+
+  // Get all dimensions and measures currently used
+  const dimensions = getStateDimensions();
+  const measures = getStateMeasures();
+
+  // Track unique data sources by ID
+  const dataSourcesById = new Map();
+
+  // Process dimensions
+  dimensions.forEach((dimensionName) => {
+    const info = findDimensionInSchema(dimensionName, schema);
+    if (info?.data_source_id) {
+      dataSourcesById.set(info.data_source_id, true);
+    }
+  });
+
+  // Process measures
+  measures.forEach((measureName) => {
+    const info = findMeasureInSchema(measureName, schema);
+    if (info?.data_source_id) {
+      dataSourcesById.set(info.data_source_id, true);
+    }
+  });
+
+  // If we didn't find any data sources, return the default
+  if (dataSourcesById.size === 0) {
+    return [schema.data_sources[0]]; // Return first data source as default
+  }
+
+  // Get the full data source objects for all identified IDs
+  const dataSources = [];
+  dataSourcesById.forEach((_, sourceId) => {
+    const source = schema.data_sources.find((ds) => ds.data_source_id === sourceId);
+    if (source) {
+      dataSources.push(source);
+    }
+  });
+
+  return dataSources;
 }

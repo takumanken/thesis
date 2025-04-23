@@ -6,7 +6,7 @@ import { state } from "./state.js";
 import { chartControls } from "./chart/utils/chartControls.js";
 import { chartStyles } from "./chart/utils/chartStyles.js";
 import { cleanupOrphanedTooltips } from "./chart/utils/chartUtils.js";
-import { updateAboutData } from "./aboutData.js";
+import { updateAboutData, updateDataSourcePills } from "./aboutData.js";
 
 // Import chart renderers
 import renderTable from "./chart/table.js";
@@ -72,6 +72,7 @@ function visualizeData() {
 
   // Update About Data section
   updateAboutData();
+  updateDataSourcePills();
 
   // Show container and render the chart
   wrapper.style.display = "flex";
