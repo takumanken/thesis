@@ -21,7 +21,7 @@ function renderBarChart(container) {
   const config = setupChartConfiguration(container, dataset);
 
   // Setup DOM structure and create visualization components
-  const { svg, xAxisSvg } = createDomStructure(container, config);
+  const svg = createDomStructure(container, config);
   const scales = createScales(dataset, measure, config);
   const tooltip = chartStyles.createTooltip();
 
@@ -29,7 +29,6 @@ function renderBarChart(container) {
   renderBars(svg, dataset, scales, measure, dimension, config, tooltip);
   renderBarLabels(svg, dataset, scales, measure);
   renderYAxis(svg, dataset, scales.y, dimension, config.margin);
-  renderXAxis(xAxisSvg, scales.x, config.margin);
 
   // Setup resize handling
   chartUtils.setupResizeHandler(container, () => renderBarChart(container));
@@ -55,6 +54,9 @@ function extractChartData() {
  */
 function setupChartConfiguration(container, dataset) {
   const margin = chartStyles.getChartMargins("horizontal_bar_chart");
+  // Reduce top margin since we're removing the x-axis
+  margin.top = 15;
+
   const barHeight = chartStyles.barChart.bar.height;
   const containerWidth = container.clientWidth || 800;
 
@@ -81,10 +83,10 @@ function setupChartConfiguration(container, dataset) {
 }
 
 /**
- * Creates chart DOM structure with axes and content areas
+ * Creates chart DOM structure with content area
  * @param {HTMLElement} container - Chart container
  * @param {Object} config - Chart configuration
- * @returns {Object} SVG elements for rendering
+ * @returns {Object} SVG element for rendering
  */
 function createDomStructure(container, config) {
   const { margin, fullChartHeight, needsScrolling } = config;
@@ -92,45 +94,32 @@ function createDomStructure(container, config) {
   // Clear existing content
   container.innerHTML = "";
 
-  // Create axis container (fixed at top)
-  const xAxisContainer = document.createElement("div");
-  xAxisContainer.className = "viz-axis-container";
-
   // Create scrollable content area
   const scrollContainer = document.createElement("div");
   scrollContainer.className = "viz-bar-scroll";
   Object.assign(scrollContainer.style, {
     position: "absolute",
-    top: `${margin.top}px`,
-    bottom: "20px",
+    top: "0",
+    bottom: "0",
     left: "0",
     right: "0",
     overflowY: needsScrolling ? "auto" : "hidden",
     overflowX: "hidden",
   });
 
-  // Append containers
-  container.appendChild(xAxisContainer);
+  // Append container
   container.appendChild(scrollContainer);
 
-  // Create SVGs
+  // Create SVG
   const svg = d3
     .select(scrollContainer)
     .append("svg")
     .attr("class", "viz-bar-canvas")
     .attr("width", "100%")
-    .attr("height", fullChartHeight - margin.top)
+    .attr("height", fullChartHeight)
     .attr("preserveAspectRatio", "xMinYMin meet");
 
-  const xAxisSvg = d3
-    .select(xAxisContainer)
-    .append("svg")
-    .attr("class", "viz-axis-canvas")
-    .attr("width", "100%")
-    .attr("height", margin.top)
-    .attr("preserveAspectRatio", "xMinYMin meet");
-
-  return { svg, xAxisSvg };
+  return svg;
 }
 
 /**
@@ -150,7 +139,7 @@ function createScales(dataset, measure, config) {
     // Use createCategoryScale for y-axis (index-based)
     y: chartScales.createCategoryScale(
       d3.range(dataset.length),
-      [0, fullChartHeight - margin.top - margin.bottom],
+      [margin.top, fullChartHeight - margin.bottom],
       chartStyles.barChart.bar.padding
     ),
   };
@@ -214,18 +203,6 @@ function renderYAxis(svg, dataset, yScale, dimension, margin) {
     maxLabelLength: 25,
     showTickLines: false,
     className: "y-axis",
-  });
-}
-
-/**
- * Renders X axis with value scale
- */
-function renderXAxis(svg, xScale, margin) {
-  chartAxes.renderMeasureAxis(svg, xScale, {
-    orientation: "top",
-    position: { x: 0, y: margin.top - 1 },
-    tickCount: 5,
-    className: "x-axis",
   });
 }
 
