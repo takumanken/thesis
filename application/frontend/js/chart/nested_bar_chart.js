@@ -181,7 +181,7 @@ function drawGridLines(svg, data, dimensions, measures, config) {
  * Draws column headers
  */
 function drawColumnHeaders(svg, dimensions, measures, config) {
-  const headerY = config.margin.top - 15;
+  const headerY = config.margin.top - 10;
 
   // Primary dimension
   drawHeader(svg, chartUtils.getDisplayName(dimensions[0]), config.dim1X, headerY);
@@ -266,7 +266,7 @@ function drawBar(svg, bar, tooltip) {
     .attr("rx", chartStyles.barChart.bar.cornerRadius)
     .attr("fill", (d) => d.color);
 
-  // Add value label
+  // Add value label with better positioning
   barGroup
     .append("text")
     .attr("x", (d) => d.x + d.width + 5)
@@ -277,16 +277,22 @@ function drawBar(svg, bar, tooltip) {
     .attr("font-family", chartStyles.fontFamily)
     .attr("font-size", "11px")
     .attr("pointer-events", "none")
-    .text((d) => chartUtils.formatValue(d.value));
+    .text((d) => chartUtils.formatValue(d.value))
+    // Ensure text doesn't get cut off with ellipsis if needed
+    .each(function (d) {
+      const textWidth = this.getComputedTextLength();
+      const availableWidth = 25; // Approx space available for label
+      if (textWidth > availableWidth) {
+        d3.select(this).text(chartUtils.formatValue(d.value, true)); // Use compact format
+      }
+    });
 
-  // Attach tooltip with translated field names
+  // Tooltip remains the same
   chartUtils.attachMouseTooltip(
     rect,
     tooltip,
-    (d) => `
-      <strong>${d.category}${d.segment ? " → " + d.segment : ""}</strong><br>
-      <strong>${chartUtils.getDisplayName(d.measure)}:</strong> ${chartUtils.formatValue(d.value)}
-    `
+    (d) => `<strong>${d.category}${d.segment ? " → " + d.segment : ""}</strong><br>
+      <strong>${chartUtils.getDisplayName(d.measure)}:</strong> ${chartUtils.formatValue(d.value)}`
   );
 }
 
@@ -397,9 +403,10 @@ function drawVerticalSeparators(svg, config, dimensions, measures, bottomY) {
     className: "bar-area-separator",
   });
 
-  // Measure separators
+  // Measure separators - align with measure boundaries
   if (measures.length > 1) {
     for (let i = 1; i < measures.length; i++) {
+      // Position dividers exactly at measure boundaries
       const x = barStartX + i * measureWidth;
       chartAxes.createReferenceLine(svg, {
         orientation: "vertical",
@@ -437,10 +444,15 @@ function calculateMeasuresLayout(data, measures, barStartX, width, margin, rowHe
  */
 function createMeasureScales(measures, maxValues, barStartX, measureWidth) {
   const xScales = {};
+  // Reserve more space for labels (30px instead of 10px)
+  const labelSpace = 45;
 
   measures.forEach((measure, i) => {
     const startX = barStartX + i * measureWidth;
-    const endX = startX + measureWidth - 10;
+    // End the scale earlier to ensure room for labels
+    const endX = startX + measureWidth - labelSpace;
+
+    // Ensure all scales start at 0 for consistent visualization
     xScales[measure] = d3.scaleLinear().domain([0, maxValues[measure]]).range([startX, endX]);
   });
 
