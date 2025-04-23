@@ -1,15 +1,17 @@
 /**
  * About Data Module
- * Displays metadata about the current visualization
+ * Displays metadata (attributes, measures, filters) about the current visualization.
  */
 import { state } from "./state.js";
 import { chartStyles } from "./chart/utils/chartStyles.js";
 
-// Configuration
+// --- Configuration ---
+
 const TOOLTIP_WIDTH = "200px";
 const EMPTY_SCHEMA = {
   dimensions: { time_dimension: [], geo_dimension: [], categorical_dimension: [] },
   measures: [],
+  data_sources: [],
 };
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTHS_LONG = [
@@ -27,11 +29,12 @@ const MONTHS_LONG = [
   "December",
 ];
 
+// --- Main Update Function ---
+
 /**
- * Main entry point - updates the About Data section
+ * Updates the entire "About Data" section in the UI.
  */
 export async function updateAboutData() {
-  // Get and validate containers
   const containers = {
     attributes: document.querySelector(".viz-dimensions .dimension-tags"),
     measures: document.querySelector(".viz-metrics .metrics-tags"),
@@ -39,126 +42,128 @@ export async function updateAboutData() {
   };
 
   if (!Object.values(containers).every(Boolean)) {
-    console.error("About Data containers not found");
+    console.error("About Data UI containers not found.");
     return;
   }
 
-  // Clear and prepare
-  Object.values(containers).forEach((container) => (container.innerHTML = ""));
-  const schema = getSchema();
-  const tooltip = chartStyles.createTooltip();
+  Object.values(containers).forEach((container) => (container.innerHTML = "")); // Clear containers
 
-  // Update each section
-  updateAttributesSection(containers.attributes, tooltip, schema);
-  updateMeasuresSection(containers.measures, tooltip, schema);
+  const schema = getSchema();
+  const tooltip = chartStyles.createTooltip(); // Create a single tooltip instance
+
+  // Update sections using a more generic approach where possible
+  updatePillSection(
+    containers.attributes,
+    tooltip,
+    schema,
+    getStateDimensions,
+    findDimensionInSchema,
+    getDimensionTypeIcon,
+    "No attributes in this visualization"
+  );
+
+  updatePillSection(
+    containers.measures,
+    tooltip,
+    schema,
+    getStateMeasures,
+    findMeasureInSchema,
+    getMeasureTypeIcon,
+    "No measures in this visualization"
+  );
+
+  // Filters section has more specific logic
   updateFiltersSection(containers.filters, tooltip, schema);
 }
 
-/**
- * Get schema from state (or fallback to empty schema)
- */
-function getSchema() {
-  return state.schemaMetadata || EMPTY_SCHEMA;
-}
+// --- Section Update Logic ---
 
 /**
- * Update the Attributes section
+ * Generic function to update a section with pills (Attributes, Measures).
+ * @param {HTMLElement} container - The container element for the pills.
+ * @param {object} tooltip - The tippy tooltip instance.
+ * @param {object} schema - The schema metadata object.
+ * @param {function(): string[]} getItemsFn - Function to get the list of item names from state.
+ * @param {function(string, object): object|null} findInfoFn - Function to find schema info for an item.
+ * @param {function(string|null): string} getIconFn - Function to get the icon name for an item type.
+ * @param {string} emptyMsg - Message to display if no items are found.
  */
-function updateAttributesSection(container, tooltip, schema) {
-  const dimensions = getStateDimensions();
+function updatePillSection(container, tooltip, schema, getItemsFn, findInfoFn, getIconFn, emptyMsg) {
+  const items = getItemsFn();
 
-  if (!dimensions.length) {
-    showEmptyMessage(container, "No attributes in this visualization");
+  if (!items.length) {
+    showEmptyMessage(container, emptyMsg);
     return;
   }
 
-  dimensions.forEach((dimension) => {
-    const info = findDimensionInSchema(dimension, schema);
-    const iconName = getDimensionTypeIcon(info?.data_type);
-    const label = info?.display_name || dimension;
-    const description = info?.description_to_user || "Dimension attribute";
-
-    container.appendChild(createPill(iconName, label, description, tooltip));
+  items.forEach((itemName) => {
+    const info = findInfoFn(itemName, schema);
+    const iconName = getIconFn(info?.data_type);
+    const label = info?.display_name || itemName;
+    const description = info?.description_to_user || `${itemName} attribute`; // Default description
+    container.appendChild(createPill(iconName, label, description, tooltip, info, schema));
   });
 }
 
 /**
- * Update the Measures section
- */
-function updateMeasuresSection(container, tooltip, schema) {
-  const measures = getStateMeasures();
-
-  if (!measures.length) {
-    showEmptyMessage(container, "No measures in this visualization");
-    return;
-  }
-
-  measures.forEach((measure) => {
-    const info = findMeasureInSchema(measure, schema);
-    const iconName = getMeasureTypeIcon(info?.data_type);
-    const label = info?.display_name || measure;
-    const description = info?.description_to_user || "Measure attribute";
-
-    container.appendChild(createPill(iconName, label, description, tooltip));
-  });
-}
-
-/**
- * Update the Filters section
+ * Updates the Filters section (more specific logic needed).
  */
 function updateFiltersSection(container, tooltip, schema) {
-  // Add date range pill first
-  const hasDatePill = addDateRangePill(container, tooltip);
-
-  // Get filter data
+  const hasDatePill = addDateRangePill(container, tooltip, schema);
   const filters = state.dataInsights?.filter_description || [];
-  const preFilters = state.aggregationDefinition?.preAggregationFilters;
-  const postFilters = state.aggregationDefinition?.postAggregationFilters;
+  // Consider pre/post aggregation filters if they become structured similarly
+  // const preFilters = state.aggregationDefinition?.preAggregationFilters;
+  // const postFilters = state.aggregationDefinition?.postAggregationFilters;
 
-  // Handle empty state
-  if (!filters.length && !preFilters && !postFilters && !hasDatePill) {
-    showEmptyMessage(container, "No filters applied");
-    return;
-  }
+  let hasOtherFilters = false;
 
-  // Add standard filters
   if (Array.isArray(filters) && filters.length > 0) {
     filters.forEach((filter) => {
       const fieldName = filter.filtered_field_name || filter.field || "Filter";
-      const fieldInfo = findFieldInSchema(fieldName, schema);
+      const fieldInfo = findFieldInSchema(fieldName, schema); // Try finding info for filter field
       const label = fieldInfo?.display_name || fieldName;
       const description = filter.description || "Applied filter";
-
-      container.appendChild(createPill("filter_alt", label, description, tooltip));
+      container.appendChild(createPill("filter_alt", label, description, tooltip, fieldInfo, schema));
+      hasOtherFilters = true;
     });
   } else if (typeof filters === "string" && filters) {
-    container.appendChild(createPill("filter_alt", "Filter", filters, tooltip));
+    // Handle simple string filter description
+    container.appendChild(createPill("filter_alt", "Filter", filters, tooltip, null, schema));
+    hasOtherFilters = true;
+  }
+
+  if (!hasDatePill && !hasOtherFilters) {
+    showEmptyMessage(container, "No filters applied");
   }
 }
 
 /**
- * Add date range pill to container
- * @returns {boolean} Whether a date pill was added
+ * Adds the date range pill if applicable.
+ * @returns {boolean} True if a date pill was added, false otherwise.
  */
-function addDateRangePill(container, tooltip) {
+function addDateRangePill(container, tooltip, schema) {
   const dateRange = state.aggregationDefinition?.createdDateRange;
-  if (!dateRange?.length || dateRange.length < 2) return false;
+  if (!dateRange?.length || dateRange.length < 2 || !dateRange[0] || !dateRange[1]) {
+    return false;
+  }
 
   const [minDate, maxDate] = dateRange;
-  if (!minDate || !maxDate) return false;
-
   const formattedRange = `${formatDate(minDate, true)} - ${formatDate(maxDate, true)}`;
   const tooltipText = `Limited to requests created between ${formatDate(minDate)} and ${formatDate(maxDate)}`;
+  const dateFieldInfo = findDimensionInSchema("created_date", schema); // Assume 'created_date' is the field
 
-  container.appendChild(createPill("date_range", formattedRange, tooltipText, tooltip, "period", "Date Range"));
-
+  container.appendChild(
+    createPill("date_range", formattedRange, tooltipText, tooltip, dateFieldInfo, schema, "period", "Date Range")
+  );
   return true;
 }
 
+// --- Pill & Tooltip Creation ---
+
 /**
- * Create a pill element with tooltip
+ * Creates a pill element with associated tooltip content.
  */
-function createPill(iconName, text, description, tooltip, extraClass = "", titleOverride = null) {
+function createPill(iconName, text, description, tooltip, info, schema, extraClass = "", titleOverride = null) {
   const pill = document.createElement("div");
   pill.className = `tag-item ${extraClass}`;
   pill.innerHTML = `
@@ -167,35 +172,52 @@ function createPill(iconName, text, description, tooltip, extraClass = "", title
   `;
 
   const tooltipTitle = titleOverride || text;
+  const dataSourceLine = getDataSourceLine(info, schema);
+  const descriptionPara = description ? `<p style="margin-top: 5px;">${description}</p>` : "";
+
   const tooltipContent = `
-    <strong>${tooltipTitle}</strong>
-    ${description ? `<p>${description}</p>` : ""}
+    <strong>${tooltipTitle}</strong><br>
+    ${dataSourceLine}
+    ${descriptionPara}
   `;
 
-  // Add tooltip behavior
-  addTooltipToPill(pill, tooltip, tooltipContent);
-
+  addTooltipBehavior(pill, tooltip, tooltipContent);
   return pill;
 }
 
 /**
- * Add tooltip behavior to a pill element
+ * Generates the HTML string for the data source line in the tooltip.
  */
-function addTooltipToPill(pill, tooltip, content) {
+function getDataSourceLine(info, schema) {
+  if (!info?.data_source_id || !schema?.data_sources) return "";
+
+  const dataSource = schema.data_sources.find((ds) => ds.data_source_id === info.data_source_id);
+  if (!dataSource?.data_source_short_name) return "";
+
+  const databaseIconSvg = `<span class="material-symbols-outlined" style="font-size: 14px; padding-right: 4px">database</span>`;
+  return `
+    <span style="color: #888; font-size: 0.9em; display: inline-flex; align-items: center;">
+      ${databaseIconSvg}
+      ${dataSource.data_source_short_name}
+    </span><br>`;
+}
+
+/**
+ * Attaches mouse event listeners to a pill for showing/hiding the tooltip.
+ */
+function addTooltipBehavior(pill, tooltip, content) {
   d3.select(pill)
     .on("mousemove", (event) => {
       chartStyles.tooltip.show(tooltip, event, content);
-      styleTooltipForAboutData(tooltip);
+      styleTooltipForAboutData(tooltip); // Apply specific styles
     })
     .on("mouseleave", () => {
-      resetTooltipStyle(tooltip);
+      resetTooltipStyle(tooltip); // Reset styles
       chartStyles.tooltip.hide(tooltip);
     });
 }
 
-/**
- * Apply About Data specific styling to tooltip
- */
+/** Applies specific CSS styles to the tooltip for this section. */
 function styleTooltipForAboutData(tooltip) {
   tooltip
     .classed("about-data-tooltip", true)
@@ -204,114 +226,109 @@ function styleTooltipForAboutData(tooltip) {
     .style("white-space", "normal");
 }
 
-/**
- * Reset tooltip styling
- */
+/** Resets tooltip styles to default. */
 function resetTooltipStyle(tooltip) {
   tooltip.classed("about-data-tooltip", false).style("max-width", null).style("width", null).style("white-space", null);
 }
 
-/**
- * Show empty message in container
- */
-function showEmptyMessage(container, message) {
-  container.innerHTML = `<span class='empty-message'>${message}</span>`;
+// --- State & Schema Accessors ---
+
+/** Gets schema from state or returns an empty fallback. */
+function getSchema() {
+  return state.schemaMetadata || EMPTY_SCHEMA;
 }
 
-/**
- * Format date string without timezone issues
- */
-function formatDate(dateStr, short = false) {
-  if (!dateStr || !dateStr.includes("-")) return dateStr;
-
-  const [year, month, day] = dateStr.split("-").map((n) => parseInt(n, 10));
-  const monthNames = short ? MONTHS_SHORT : MONTHS_LONG;
-
-  return `${monthNames[month - 1]} ${day}, ${year}`;
-}
-
-/**
- * Get appropriate icon for dimension type
- */
-function getDimensionTypeIcon(dataType) {
-  const type = (dataType || "string").toLowerCase();
-
-  if (type === "date") return "calendar_today";
-  if (["point", "geo"].includes(type)) return "location_on";
-  if (type === "string") return "abc";
-  if (["integer", "number", "float"].includes(type)) return "tag";
-
-  return "label";
-}
-
-/**
- * Get appropriate icon for measure type
- */
-function getMeasureTypeIcon(dataType) {
-  const type = (dataType || "number").toLowerCase();
-
-  if (type === "integer") return "tag";
-  if (["float", "number"].includes(type)) return "functions";
-  if (type === "percentage") return "percent";
-
-  return "functions";
-}
-
-/**
- * Get all dimensions from state
- */
+/** Gets unique dimension names from the current aggregation definition. */
 function getStateDimensions() {
   const agg = state.aggregationDefinition || {};
-  const dimensions = [];
-
-  // Collect dimensions from all sources
-  if (Array.isArray(agg.dimensions)) {
-    dimensions.push(...agg.dimensions);
-  }
-
-  ["timeDimension", "geoDimension", "categoricalDimension"].forEach((type) => {
-    if (Array.isArray(agg[type])) {
-      dimensions.push(...agg[type]);
-    }
-  });
-
-  return [...new Set(dimensions)]; // Remove duplicates
+  const dimensions = new Set([
+    ...(agg.dimensions || []),
+    ...(agg.timeDimension || []),
+    ...(agg.geoDimension || []),
+    ...(agg.categoricalDimension || []),
+  ]);
+  return Array.from(dimensions);
 }
 
-/**
- * Get all measures from state
- */
+/** Gets measure alias names from the current aggregation definition. */
 function getStateMeasures() {
   const measures = state.aggregationDefinition?.measures || [];
   return Array.isArray(measures) ? measures.map((m) => m.alias).filter(Boolean) : [];
 }
 
-/**
- * Find any field in schema
- */
+/** Finds schema info for any field (dimension or measure). */
 function findFieldInSchema(fieldName, schema) {
   return findDimensionInSchema(fieldName, schema) || findMeasureInSchema(fieldName, schema);
 }
 
-/**
- * Find dimension in schema
- */
+/** Finds schema info for a dimension field. */
 function findDimensionInSchema(dimensionName, schema) {
   if (!schema?.dimensions || !dimensionName) return null;
-
   for (const type of ["time_dimension", "geo_dimension", "categorical_dimension"]) {
-    const dimensions = schema.dimensions[type] || [];
-    const found = dimensions.find((dim) => dim.physical_name === dimensionName);
+    const found = (schema.dimensions[type] || []).find((dim) => dim.physical_name === dimensionName);
     if (found) return found;
   }
-
   return null;
 }
 
-/**
- * Find measure in schema
- */
+/** Finds schema info for a measure field. */
 function findMeasureInSchema(measureName, schema) {
   if (!schema?.measures || !measureName) return null;
   return schema.measures.find((m) => m.physical_name === measureName);
+}
+
+// --- Formatting & Utility Helpers ---
+
+/** Shows a message within a container when there are no items. */
+function showEmptyMessage(container, message) {
+  container.innerHTML = `<span class='empty-message'>${message}</span>`;
+}
+
+/** Formats a YYYY-MM-DD date string. */
+function formatDate(dateStr, short = false) {
+  if (!dateStr || !dateStr.includes("-")) return dateStr;
+  try {
+    const [year, month, day] = dateStr.split("-").map((n) => parseInt(n, 10));
+    const monthNames = short ? MONTHS_SHORT : MONTHS_LONG;
+    return `${monthNames[month - 1]} ${day}, ${year}`;
+  } catch (e) {
+    console.error("Error formatting date:", dateStr, e);
+    return dateStr; // Fallback to original string on error
+  }
+}
+
+/** Gets the Material Icon name based on dimension data type. */
+function getDimensionTypeIcon(dataType) {
+  const type = (dataType || "string").toLowerCase();
+  switch (type) {
+    case "date":
+      return "calendar_today";
+    case "point":
+    case "geo":
+      return "location_on";
+    case "string":
+      return "abc";
+    case "integer":
+    case "number":
+    case "float":
+      return "tag";
+    default:
+      return "label";
+  }
+}
+
+/** Gets the Material Icon name based on measure data type. */
+function getMeasureTypeIcon(dataType) {
+  const type = (dataType || "number").toLowerCase();
+  switch (type) {
+    case "integer":
+      return "tag";
+    case "float":
+    case "number":
+      return "functions";
+    case "percentage":
+      return "percent";
+    default:
+      return "functions";
+  }
 }
