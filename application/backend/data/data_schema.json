@@ -1,4 +1,27 @@
 {
+    "data_sources": [
+        {
+            "data_source_id": 1,
+            "data_source_short_name": "311 Service Requests",
+            "data_source_name": "311 Service Requests from 2010 to Present",
+            "data_source_url": "https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2010-to-Present/erm2-nwe9/about_data",
+            "description_to_user": "Data about service requests made to NYC's 311 system, including details about the request and its resolution."
+        },
+        {
+            "data_source_id": 2,
+            "data_source_short_name": "Neighborhoods Polygons",
+            "data_source_name": "2020 Neighborhood Tabulation Areas (NTAs)",
+            "data_source_url": "https://data.cityofnewyork.us/City-Government/2020-Neighborhood-Tabulation-Areas-NTAs-/9nt8-h7nd/about_data",
+            "description_to_user": "Geospatial data about NYC neighborhoods, including their boundaries and names."
+        },
+        {
+            "data_source_id": 3,
+            "data_source_short_name": "NYC Census 2020",
+            "data_source_name": "2020 Census Data",
+            "data_source_url": "https://www.nyc.gov/content/planning/pages/resources/datasets/decennial-census",
+            "description_to_user": "Basic demographic and housing characteristics including total population, race/ethnicity, age, housing tenure, and household composition. * In this portal, total population is only available at the neighborhood level."
+        }
+    ],
     "dimensions": {
         "time_dimension": [
             {
@@ -14,7 +37,8 @@
                     "per week",
                     "week submitted",
                     "submission week"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "closed_week",
@@ -28,7 +52,8 @@
                     "completion week",
                     "weekly resolution",
                     "finished week"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "created_date",
@@ -43,7 +68,8 @@
                     "date submitted",
                     "reported date",
                     "date reported"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "created_month",
@@ -58,7 +84,8 @@
                     "per month",
                     "month submitted",
                     "submission month"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "created_year",
@@ -73,7 +100,8 @@
                     "per year",
                     "annual",
                     "year submitted"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "closed_date",
@@ -88,7 +116,8 @@
                     "completion date",
                     "resolution date",
                     "date fixed"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "closed_month",
@@ -102,7 +131,8 @@
                     "monthly resolution",
                     "resolution by month",
                     "completion month"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "closed_year",
@@ -116,7 +146,8 @@
                     "resolution by year",
                     "completion year",
                     "yearly resolution"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "created_month_datepart",
@@ -127,7 +158,8 @@
                 "synonym": [
                     "month number",
                     "month of year"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "created_day_datepart",
@@ -138,7 +170,8 @@
                 "synonym": [
                     "day number",
                     "day of month"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "created_hour_datepart",
@@ -152,7 +185,8 @@
                     "hour of day",
                     "time submitted",
                     "hour submitted"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "created_weekday_datepart",
@@ -164,7 +198,8 @@
                     "weekday",
                     "day of week",
                     "day name"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "closed_day_datepart",
@@ -174,7 +209,8 @@
                 "description_to_user": "The day of the month (1-31) when requests were resolved.",
                 "synonym": [
                     "resolution day number"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "closed_hour_datepart",
@@ -187,7 +223,8 @@
                     "resolution time",
                     "time of resolution",
                     "hour of resolution"
-                ]
+                ],
+                "data_source_id": 1
             }
         ],
         "geo_dimension": [
@@ -203,7 +240,8 @@
                     "nyc borough",
                     "city borough",
                     "town"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "county",
@@ -212,10 +250,10 @@
                 "description": "County of the incident.",
                 "description_to_user": "The county where the reported issue is located.",
                 "synonym": [
-                    "region",
                     "county area",
                     "administrative district"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "location",
@@ -231,7 +269,8 @@
                     "geo location",
                     "geographic coordinates",
                     "hotspot"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "incident_zip",
@@ -244,7 +283,8 @@
                     "postal code",
                     "zipcode",
                     "area code"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "neighborhood_name",
@@ -258,7 +298,8 @@
                     "area name",
                     "district name",
                     "part of city"
-                ]
+                ],
+                "data_source_id": 2
             }
         ],
         "categorical_dimension": [
@@ -275,7 +316,8 @@
                     "ticket number",
                     "case number",
                     "sr number"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "status",
@@ -290,7 +332,8 @@
                     "request status",
                     "progress",
                     "stage"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "agency_category",
@@ -303,7 +346,8 @@
                     "department category",
                     "agency group",
                     "city department type"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "agency_name",
@@ -320,7 +364,8 @@
                     "handling agency",
                     "exact agency",
                     "detailed agency name"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "complaint_type_large",
@@ -339,7 +384,8 @@
                     "What kinds of complaints",
                     "What type of issue",
                     "What complaint type"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "complaint_type_middle",
@@ -354,7 +400,8 @@
                     "specific issue",
                     "complaint subtype",
                     "specific type"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "complaint_type_detailed",
@@ -368,7 +415,8 @@
                     "detailed problem",
                     "precise issue type",
                     "detailed issue category"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "descriptor",
@@ -383,7 +431,8 @@
                     "complaint details",
                     "issue description",
                     "problem details"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "community_board",
@@ -397,7 +446,8 @@
                     "neighborhood board",
                     "cb district",
                     "community district number"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "location_type",
@@ -411,7 +461,8 @@
                     "location category",
                     "site type",
                     "address category"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "address_type",
@@ -424,7 +475,8 @@
                     "address format",
                     "address specification",
                     "location reference type"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "open_data_channel_type",
@@ -439,7 +491,8 @@
                     "reporting channel",
                     "how reported",
                     "input method"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "time_to_resolve_day",
@@ -454,7 +507,8 @@
                     "days to complete",
                     "days to fix",
                     "time taken in days"
-                ]
+                ],
+                "data_source_id": 1
             },
             {
                 "physical_name": "neighborhood_type",
@@ -468,7 +522,8 @@
                     "area type",
                     "locality type",
                     "district type"
-                ]
+                ],
+                "data_source_id": 2
             }
         ]
     },
@@ -489,7 +544,8 @@
                 "how many",
                 "request count",
                 "total requests"
-            ]
+            ],
+            "data_source_id": 1
         },
         {
             "physical_name": "avg_days_to_resolve",
@@ -506,7 +562,8 @@
                 "time to fix",
                 "days to complete",
                 "resolution duration"
-            ]
+            ],
+            "data_source_id": 1
         },
         {
             "physical_name": "population",
@@ -522,7 +579,8 @@
                 "people count",
                 "residents",
                 "local population"
-            ]
+            ],
+            "data_source_id": 3
         }
     ]
 }
