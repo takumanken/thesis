@@ -181,20 +181,20 @@ function drawGridLines(svg, data, dimensions, measures, config) {
  * Draws column headers
  */
 function drawColumnHeaders(svg, dimensions, measures, config) {
-  const headerY = config.margin.top - 20;
+  const headerY = config.margin.top - 15;
 
   // Primary dimension
-  drawHeader(svg, dimensions[0], config.dim1X, headerY);
+  drawHeader(svg, chartUtils.getDisplayName(dimensions[0]), config.dim1X, headerY);
 
   // Secondary dimension (if applicable)
   if (config.hasTwoDimensions && config.dim2X) {
-    drawHeader(svg, dimensions[1], config.dim2X, headerY);
+    drawHeader(svg, chartUtils.getDisplayName(dimensions[1]), config.dim2X, headerY);
   }
 
   // Measures
   measures.forEach((measure, i) => {
     const centerX = config.barStartX + i * config.measureWidth + config.measureWidth / 2;
-    drawHeader(svg, measure, centerX, headerY, "middle");
+    drawHeader(svg, chartUtils.getDisplayName(measure), centerX, headerY, "middle");
   });
 }
 
@@ -441,13 +441,7 @@ function createMeasureScales(measures, maxValues, barStartX, measureWidth) {
   measures.forEach((measure, i) => {
     const startX = barStartX + i * measureWidth;
     const endX = startX + measureWidth - 10;
-
-    // Use utility for each measure scale
-    xScales[measure] = chartScales.createMeasureScale(
-      [{ [measure]: maxValues[measure] }], // Create minimal dataset with just the max value
-      measure,
-      [startX, endX]
-    );
+    xScales[measure] = d3.scaleLinear().domain([0, maxValues[measure]]).range([startX, endX]);
   });
 
   return xScales;
