@@ -82,11 +82,14 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
     
     # Add location reference if location is in the dimensions
     location_reference = ""
-    if dims and any("location" in dim.lower() for dim in dims):
-        location_reference = """\n  , min(borough) as reference_borough\n  , min(neighborhood_name)as reference_neighborhood
-        """
-        logger.info("Adding location reference to query (borough and neighborhood)")
-    
+    if dims and any("location" in dim or "incident_zip" in dim or "neighborhood_name" in dim for dim in dims):
+        location_reference = """\n  , min(borough) as reference_borough"""
+        logger.info("Adding location reference to query (borough)")
+
+        if dims and any("location" in dim for dim in dims):
+            location_reference += """,\n  string_agg(distinct nullif(neighborhood_name, 'Unspecified'), ', ') as reference_neighborhood"""
+            logger.info("Adding location reference to query (neighborhood_name)")
+        
     # Combine all metadata
     select_clause += date_metadata + location_reference
     

@@ -1,6 +1,6 @@
 /**
  * Choropleth Map Component
- * Displays geographic data with a measure value represented by color intensity
+ * Displays geographic data with color intensity representing measure values
  */
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
@@ -8,185 +8,180 @@ import { chartColors } from "./utils/chartColors.js";
 import * as chartUtils from "./utils/chartUtils.js";
 
 // Constants
-const SUPPORTED_GEO_DIMENSIONS = ["borough", "neighborhood_name", "county"];
-const COUNTY_MAPPING = {
-  BRONX: "BRONX",
-  BROOKLYN: "KINGS",
-  MANHATTAN: "NEW YORK",
-  QUEENS: "QUEENS",
-  "STATEN ISLAND": "RICHMOND",
+const SUPPORTED_GEO_DIMENSIONS = ["borough", "neighborhood_name", "county", "incident_zip"];
+
+// Geographic configuration for different dimension types
+const GEO_CONFIG = {
+  borough: {
+    geoFile: "assets/geojson/2020_nyc_neighborhood_tabulation_areas_borough.geojson",
+    idField: "boroname",
+    idTransform: (name) => name?.toUpperCase(),
+    displayField: "boroname",
+    showLabels: true,
+  },
+  neighborhood_name: {
+    geoFile: "assets/geojson/2020_nyc_neighborhood_tabulation_areas_nta.geojson",
+    idField: "ntaname",
+    displayField: "ntaname",
+    showLabels: false,
+  },
+  county: {
+    geoFile: "assets/geojson/2020_nyc_neighborhood_tabulation_areas_borough.geojson",
+    idField: "county",
+    displayField: "county",
+    displayTransform: (props) => {
+      const countyNameMap = {
+        BRONX: "Bronx",
+        KINGS: "Kings",
+        "NEW YORK": "New York",
+        QUEENS: "Queens",
+        RICHMOND: "Richmond",
+      };
+      return `${countyNameMap[props.county] || props.county} County`;
+    },
+    showLabels: true,
+  },
+  incident_zip: {
+    geoFile: "assets/geojson/modified_zip_code_tabulation_areas.geojson",
+    idField: "modzcta",
+    displayField: "label",
+    displayFallback: "modzcta",
+    showLabels: false,
+  },
 };
 
 /**
  * Main render function for choropleth map
- * @param {HTMLElement} container - DOM element to render the chart
  */
 function renderChoroplethMap(container) {
-  if (!chartUtils.validateRenderingContext(container, "No geographic data available for display")) return;
+  // Validate rendering context
+  if (!chartUtils.validateRenderingContext(container)) return;
 
-  // Extract data and settings
-  const dataset = state.dataset;
-  const { geoDimension, measure } = extractDimensions();
+  // Extract dimension and measure from state
+  const { geoDimension, measure } = {
+    geoDimension: state.aggregationDefinition?.geoDimension?.[0] || "",
+    measure: state.aggregationDefinition?.measures?.[0]?.alias || "",
+  };
 
-  // Validate geo dimension
+  // Check if dimension is supported
   if (!SUPPORTED_GEO_DIMENSIONS.includes(geoDimension)) {
-    container.innerHTML = `<p>Geographic dimension "${geoDimension}" is not supported for map visualization.</p>`;
+    container.innerHTML = `<p>Geographic dimension "${geoDimension}" is not supported.</p>`;
     return;
   }
 
-  // Process data for visualization
-  const { aggregatedData, maxValue } = processData(dataset, geoDimension, measure);
+  // Prepare data - since it's already aggregated, just index it for lookups
+  const { dataIndex, maxValue } = prepareData(state.dataset, geoDimension, measure);
+  if (maxValue <= 0) {
+    container.innerHTML = `<p>No data available for this geographic dimension.</p>`;
+    return;
+  }
 
-  // Create chart configuration and elements
-  const config = createConfig(container, maxValue);
-  const svg = createChartElements(container);
-  const tooltip = chartStyles.createTooltip();
-
-  // Load and render map components
-  loadGeoJsonData(svg, container, geoDimension, aggregatedData, config, measure, tooltip);
-
-  // Setup resize handling
-  chartUtils.setupResizeHandler(container, () => renderChoroplethMap(container));
-}
-
-// ===== DATA PROCESSING =====
-
-/**
- * Extract dimension and measure from state
- */
-function extractDimensions() {
-  const geoDimension = state.aggregationDefinition.geoDimension?.[0];
-  const measure = state.aggregationDefinition.measures[0].alias;
-  return { geoDimension, measure };
-}
-
-/**
- * Process data for map visualization
- */
-function processData(dataset, geoDimension, measure) {
-  const aggregatedData = {};
-
-  dataset.forEach((d) => {
-    let region = d[geoDimension];
-
-    // Standardize borough and county names to uppercase
-    if (geoDimension === "borough" || geoDimension === "county") {
-      region = region?.toUpperCase();
-    }
-
-    // Skip undefined or "unspecified" regions
-    if (!region || region === "Unspecified" || region.toLowerCase() === "unspecified") {
-      return;
-    }
-
-    // Aggregate values
-    aggregatedData[region] = (aggregatedData[region] || 0) + (+d[measure] || 0);
-  });
-
-  const maxValue = Math.max(...Object.values(aggregatedData), 0);
-  return { aggregatedData, maxValue };
-}
-
-/**
- * Process GeoJSON features to match with aggregated data
- */
-function processGeoFeatures(geoJson, geoDimension, aggregatedData) {
-  geoJson.features.forEach((feature) => {
-    let regionName;
-    const props = feature.properties;
-
-    // Extract appropriate region name based on dimension
-    if (geoDimension === "borough") {
-      regionName = props.boroname?.toUpperCase();
-    } else if (geoDimension === "neighborhood_name") {
-      regionName = props.ntaname;
-    } else if (geoDimension === "county") {
-      const boroughName = props.boroname?.toUpperCase();
-      regionName = COUNTY_MAPPING[boroughName];
-      props.county = regionName;
-    }
-
-    // Assign value from aggregated data
-    props.value = regionName ? aggregatedData[regionName] || 0 : 0;
-
-    // Create display name for tooltips
-    props.displayName =
-      geoDimension === "county" && props.boroname
-        ? `${props.county || props.boroname} County`
-        : props.boroname || props.ntaname;
-  });
-
-  return geoJson;
-}
-
-// ===== CHART SETUP =====
-
-/**
- * Create chart configuration
- */
-function createConfig(container, maxValue) {
-  const width = container.clientWidth || 800;
-  const height = container.clientHeight || 500;
-
-  // Create color scale using sequential blues
-  const colorScale = d3
-    .scaleSequential()
-    .domain([0, maxValue])
-    .interpolator(d3.interpolate(chartColors.sequential.blue.light, chartColors.sequential.blue.base));
-
-  return {
-    width,
-    height,
-    colorScale,
+  // Set up chart components
+  const config = {
+    width: container.clientWidth || 800,
+    height: container.clientHeight || 500,
     maxValue,
     margin: { top: 10, right: 30, bottom: 50, left: 30 },
+    colorScale: d3
+      .scaleSequential()
+      .domain([0, maxValue])
+      .interpolator(d3.interpolate(chartColors.sequential.blue.light, chartColors.sequential.blue.base)),
   };
-}
 
-/**
- * Create chart DOM elements
- */
-function createChartElements(container) {
-  return d3
+  // Create base SVG and tooltip
+  const svg = d3
     .select(container)
     .append("svg")
     .attr("width", "100%")
     .attr("height", "98%")
     .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const tooltip = chartStyles.createTooltip();
+
+  // Load and render map
+  renderMap(svg, container, geoDimension, dataIndex, config, measure, tooltip);
+
+  // Handle resize
+  chartUtils.setupResizeHandler(container, () => renderChoroplethMap(container));
 }
 
-// ===== MAP RENDERING =====
+/**
+ * Prepare data for visualization
+ */
+function prepareData(dataset, geoDimension, measure) {
+  const dataIndex = {};
+  let maxValue = 0;
+
+  // Index data by region for quick lookup
+  dataset.forEach((d) => {
+    // Skip invalid entries
+    if (
+      !d[geoDimension] ||
+      d[geoDimension] === "Unspecified" ||
+      (geoDimension === "incident_zip" && d[geoDimension] === "99999")
+    ) {
+      return;
+    }
+
+    // Get region name, applying transformation if needed
+    let region = d[geoDimension];
+    const transform = GEO_CONFIG[geoDimension]?.idTransform;
+    if (transform) region = transform(region);
+
+    dataIndex[region] = d;
+    maxValue = Math.max(maxValue, +d[measure] || 0);
+  });
+
+  return { dataIndex, maxValue };
+}
 
 /**
- * Load GeoJSON and render map components
+ * Load and render GeoJSON map
  */
-function loadGeoJsonData(svg, container, geoDimension, aggregatedData, config, measure, tooltip) {
-  const isNeighborhood = geoDimension === "neighborhood_name";
-  const geoJsonFile = isNeighborhood
-    ? "assets/geojson/2020_nyc_neighborhood_tabulation_areas_nta.geojson"
-    : "assets/geojson/2020_nyc_neighborhood_tabulation_areas_borough.geojson";
+function renderMap(svg, container, geoDimension, dataIndex, config, measure, tooltip) {
+  const geoConfig = GEO_CONFIG[geoDimension];
 
-  d3.json(geoJsonFile)
+  d3.json(geoConfig.geoFile)
     .then((geoJson) => {
-      // Set up projection to fit container
+      // Set up projection
       const contentWidth = config.width - config.margin.left - config.margin.right;
       const contentHeight = config.height - config.margin.top - config.margin.bottom;
       const projection = d3.geoMercator().fitSize([contentWidth, contentHeight], geoJson);
       const path = d3.geoPath().projection(projection);
 
-      // Process features with data
-      const processedFeatures = processGeoFeatures(geoJson, geoDimension, aggregatedData);
+      // Attach data to features
+      geoJson.features.forEach((feature) => {
+        const props = feature.properties;
+        const id = props[geoConfig.idField];
 
-      // Render map elements
-      renderMap(svg, processedFeatures, path, config.colorScale, geoDimension, measure, tooltip);
+        // Apply ID transformation if configured
+        const lookupKey = geoConfig.idTransform ? geoConfig.idTransform(id) : id;
 
-      // Add labels for larger regions
-      if (geoDimension === "borough" || geoDimension === "county") {
-        addRegionLabels(svg, processedFeatures, path);
+        // Get data for this region
+        const dataItem = dataIndex[lookupKey];
+        props.value = dataItem ? +dataItem[measure] || 0 : 0;
+
+        // Set display name
+        if (geoConfig.displayTransform) {
+          props.displayName = geoConfig.displayTransform(props);
+        } else {
+          props.displayName = props[geoConfig.displayField] || props[geoConfig.displayFallback] || id;
+        }
+
+        // Store reference to data item for tooltip
+        props.dataItem = dataItem;
+      });
+
+      // Render regions
+      renderRegions(svg, geoJson, path, config.colorScale, geoDimension, measure, tooltip);
+
+      // Add labels if configured
+      if (geoConfig.showLabels) {
+        addRegionLabels(svg, geoJson, path);
       }
 
-      // Add color legend
-      addColorLegend(svg, config);
+      // Add legend
+      addLegend(svg, config);
     })
     .catch((error) => {
       console.error("Error loading map data:", error);
@@ -195,34 +190,75 @@ function loadGeoJsonData(svg, container, geoDimension, aggregatedData, config, m
 }
 
 /**
- * Render map regions with colors and interactions
+ * Render map regions with colors and tooltips
  */
-function renderMap(svg, geoJson, path, colorScale, geoDimension, measure, tooltip) {
-  const regions = svg
+function renderRegions(svg, geoJson, path, colorScale, geoDimension, measure, tooltip) {
+  svg
     .selectAll("path.region")
     .data(geoJson.features)
     .join("path")
     .attr("class", "region")
     .attr("d", path)
-    .attr("fill", (d) => colorScale(d.properties.value))
+    .attr("fill", (d) => (d.properties.value > 0 ? colorScale(d.properties.value) : "#F5F5F5"))
     .attr("stroke", "#ffffff")
     .attr("stroke-width", 0.5)
-    .style("cursor", "pointer");
+    .style("cursor", (d) => (d.properties.value > 0 ? "pointer" : "default"))
+    .on("mouseover", function (event, d) {
+      // Only show tooltip for regions with data
+      if (!d.properties.value || d.properties.value <= 0) return;
 
-  // Attach tooltip behavior using standardized utility with translated field names
-  chartUtils.attachMouseTooltip(regions, tooltip, (feature) => {
-    const p = feature.properties;
-    return geoDimension === "neighborhood_name"
-      ? `<strong>${chartUtils.getDisplayName("neighborhood_name")}:</strong> ${p.ntaname}<br>
-         <strong>${chartUtils.getDisplayName("borough")}:</strong> ${p.boroname || "Unknown"}<br>
-         <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(p.value)}`
-      : `<strong>${p.displayName}</strong><br>
-         <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(p.value)}`;
-  });
+      // Create tooltip content
+      const content = createTooltipContent(d, geoDimension, measure);
+
+      // Position and show tooltip - fix positioning
+      tooltip
+        .html(content)
+        .style("left", `${event.pageX + 15}px`)
+        .style("top", `${event.pageY - 28}px`)
+        .style("visibility", "visible") // Ensure this comes after positioning
+        .style("opacity", 1); // Add opacity for smoother appearance
+    })
+    .on("mousemove", function (event) {
+      // Update position on mouse movement with slight offset
+      tooltip.style("left", `${event.pageX + 15}px`).style("top", `${event.pageY - 28}px`);
+    })
+    .on("mouseout", function () {
+      // Hide tooltip
+      tooltip.style("opacity", 0).style("visibility", "hidden");
+    });
+
+  // Debug if tooltip exists and is properly configured
+  console.log("Tooltip object:", tooltip.node());
 }
 
 /**
- * Add text labels for regions (boroughs or counties)
+ * Create tooltip content
+ */
+function createTooltipContent(feature, geoDimension, measure) {
+  const p = feature.properties;
+
+  // Get appropriate borough name
+  let boroughName = p.dataItem?.reference_borough || p.boroname || "Unknown";
+
+  // Build tooltip based on dimension type
+  if (geoDimension === "neighborhood_name") {
+    return `<strong>${chartUtils.getDisplayName("neighborhood_name")}:</strong> ${p.ntaname}<br>
+            <strong>${chartUtils.getDisplayName("borough")}:</strong> ${boroughName}<br>
+            <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(p.value)}`;
+  }
+
+  if (geoDimension === "incident_zip") {
+    return `<strong>ZIP Code:</strong> ${p.displayName}<br>
+            <strong>${chartUtils.getDisplayName("borough")}:</strong> ${boroughName}<br>
+            <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(p.value)}`;
+  }
+
+  return `<strong>${p.displayName}</strong><br>
+          <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(p.value)}`;
+}
+
+/**
+ * Add labels to regions
  */
 function addRegionLabels(svg, geoJson, path) {
   svg
@@ -241,46 +277,48 @@ function addRegionLabels(svg, geoJson, path) {
     .style("pointer-events", "none")
     .each(function (d) {
       const text = d3.select(this);
-      const name = d.properties.displayName;
-      const value = chartUtils.formatValue(d.properties.value);
+      text.append("tspan").attr("x", 0).attr("dy", "-0.7em").text(d.properties.displayName);
 
-      // Add name and value on separate lines
-      text.append("tspan").attr("x", 0).attr("dy", "-0.7em").text(name);
-      text.append("tspan").attr("x", 0).attr("dy", "1.4em").style("font-size", "11px").text(value);
+      text
+        .append("tspan")
+        .attr("x", 0)
+        .attr("dy", "1.4em")
+        .style("font-size", "11px")
+        .text(chartUtils.formatValue(d.properties.value));
     });
 }
 
 /**
- * Add color legend to the map
+ * Add color legend
  */
-function addColorLegend(svg, config) {
+function addLegend(svg, config) {
   const legendWidth = 300;
   const legendHeight = 10;
   const legendX = config.width - legendWidth - 20;
   const legendY = config.height - 40;
 
-  const legend = svg.append("g").attr("class", "legend").attr("transform", `translate(${legendX}, ${legendY})`);
-
-  // Create gradient definition
+  // Create gradient
   const defs = svg.append("defs");
   const gradient = defs
     .append("linearGradient")
     .attr("id", "legend-gradient")
     .attr("x1", "0%")
-    .attr("y1", "0%")
     .attr("x2", "100%")
+    .attr("y1", "0%")
     .attr("y2", "0%");
 
   gradient.append("stop").attr("offset", "0%").attr("stop-color", config.colorScale(0));
   gradient.append("stop").attr("offset", "100%").attr("stop-color", config.colorScale(config.maxValue));
 
-  // Draw gradient rectangle
+  // Create legend group
+  const legend = svg.append("g").attr("class", "legend").attr("transform", `translate(${legendX}, ${legendY})`);
+
+  // Add gradient rectangle
   legend.append("rect").attr("width", legendWidth).attr("height", legendHeight).style("fill", "url(#legend-gradient)");
 
-  // Add scale and axis
+  // Add axis
   const legendScale = d3.scaleLinear().domain([0, config.maxValue]).range([0, legendWidth]);
-  const legendAxis = d3.axisBottom(legendScale).ticks(5);
-  legend.append("g").attr("transform", `translate(0, ${legendHeight})`).call(legendAxis);
+  legend.append("g").attr("transform", `translate(0, ${legendHeight})`).call(d3.axisBottom(legendScale).ticks(5));
 }
 
 export default renderChoroplethMap;
