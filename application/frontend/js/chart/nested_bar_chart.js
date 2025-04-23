@@ -250,19 +250,34 @@ function drawData(svg, data, dimensions, measures, config, tooltip) {
 }
 
 /**
- * Draws a single bar with tooltip
+ * Draws a single bar with tooltip and value label
  */
 function drawBar(svg, bar, tooltip) {
+  // Create a group for the bar and its label
+  const barGroup = svg.append("g").datum(bar);
+
   // Create the bar element
-  const rect = svg
+  const rect = barGroup
     .append("rect")
-    .datum(bar) // Bind the data directly
     .attr("x", (d) => d.x)
     .attr("y", (d) => d.y)
     .attr("width", (d) => d.width)
     .attr("height", (d) => d.height)
     .attr("rx", chartStyles.barChart.bar.cornerRadius)
     .attr("fill", (d) => d.color);
+
+  // Add value label
+  barGroup
+    .append("text")
+    .attr("x", (d) => d.x + d.width + 5)
+    .attr("y", (d) => d.y + d.height / 2)
+    .attr("text-anchor", "start")
+    .attr("dominant-baseline", "middle")
+    .attr("fill", chartStyles.colors.text)
+    .attr("font-family", chartStyles.fontFamily)
+    .attr("font-size", "11px")
+    .attr("pointer-events", "none")
+    .text((d) => chartUtils.formatValue(d.value));
 
   // Attach tooltip with translated field names
   chartUtils.attachMouseTooltip(
