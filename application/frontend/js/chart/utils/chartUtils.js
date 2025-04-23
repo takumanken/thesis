@@ -27,6 +27,27 @@ export function formatValue(value) {
 }
 
 /**
+ * Formats numeric values with thousands separators without abbreviation
+ * @param {number|string} value - Number to format
+ * @param {number} [decimals=0] - Number of decimal places
+ * @returns {string} Formatted value with thousands separators
+ */
+export function formatFullNumber(value, decimals = 0) {
+  // Handle null, undefined and non-numeric values
+  if (value === null || value === undefined || value === "") return "";
+
+  // Parse the value to a number
+  const num = typeof value === "number" ? value : parseFloat(value);
+  if (isNaN(num)) return value;
+
+  // Format with thousands separators and specified decimals
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
+  }).format(num);
+}
+
+/**
  * Creates a debounced function
  * @param {Function} func - Function to debounce
  * @param {number} wait - Delay in milliseconds

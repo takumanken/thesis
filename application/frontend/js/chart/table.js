@@ -5,6 +5,7 @@
 import { state } from "../state.js";
 import { chartStyles } from "./utils/chartStyles.js";
 import * as chartUtils from "./utils/chartUtils.js";
+import { formatFullNumber } from "./utils/chartUtils.js";
 
 /**
  * Renders a data table visualization
@@ -64,7 +65,9 @@ function createColumnConfig() {
 
     // Add measure-specific formatting if applicable
     if (isMeasure(field, measures)) {
-      // Only add right-alignment, no value formatting
+      // Format measures with thousands separators but no abbreviation
+      column.formatter = (cell) => formatFullNumber(cell, 2);
+
       column.attributes = (cell, row) => ({
         style: {
           "text-align": "right",
