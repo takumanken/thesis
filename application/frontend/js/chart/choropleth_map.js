@@ -141,15 +141,18 @@ function prepareData(dataset, geoDimension, measure) {
 function renderMap(svg, container, geoDimension, dataIndex, config, measure, tooltip) {
   const geoConfig = GEO_CONFIG[geoDimension];
 
+  // Create a consistent projection for all map types
+  const projection = d3
+    .geoMercator()
+    .center([-73.97, 40.705])
+    .scale(config.width * 45)
+    .translate([config.width / 2, config.height / 2]);
+
+  const path = d3.geoPath().projection(projection);
+
   d3.json(geoConfig.geoFile)
     .then((geoJson) => {
-      // Set up projection
-      const contentWidth = config.width - config.margin.left - config.margin.right;
-      const contentHeight = config.height - config.margin.top - config.margin.bottom;
-      const projection = d3.geoMercator().fitSize([contentWidth, contentHeight], geoJson);
-      const path = d3.geoPath().projection(projection);
-
-      // Attach data to features
+      // Attach data to features - keep this part the same
       geoJson.features.forEach((feature) => {
         const props = feature.properties;
         const id = props[geoConfig.idField];
