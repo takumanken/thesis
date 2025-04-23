@@ -5,4 +5,4 @@ SELECT
   name,
   borough,
   population_2020
-FROM read_csv('data/nta_population.csv');
+FROM read_csv('data/NTA_population.csv');
