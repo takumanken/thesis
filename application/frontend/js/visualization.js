@@ -76,6 +76,8 @@ function visualizeData() {
   // Show container and render the chart
   wrapper.style.display = "flex";
   renderChart(chartContainer);
+
+  console.log("State at visualization end:", JSON.parse(JSON.stringify(state)));
 }
 
 /**
