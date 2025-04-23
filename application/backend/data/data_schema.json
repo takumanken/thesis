@@ -291,7 +291,7 @@
                 "display_name": "Neighborhood (NTA)",
                 "data_type": "string",
                 "description": "Neighborhood name.",
-                "description_to_user": "The specific neighborhood (NTA) where the issue was reported. NTA stands for Neighborhood Tabulation Area.",
+                "description_to_user": "The specific neighborhood (NTA) where the issue was reported. NTA stands for Neighborhood Tabulation Area. Calculated by the coorinates of the incident.",
                 "synonym": [
                     "community",
                     "locality",
@@ -515,7 +515,7 @@
                 "display_name": "Neighborhood Type",
                 "data_type": "string",
                 "description": "Type of neighborhood.",
-                "description_to_user": "The classification of the neighborhood to distinguish if it is residential or a non-residential area like a park, airport, cemetery, or other special area.",
+                "description_to_user": "The classification of the neighborhood tabulation area (NTA) based on its characteristics. NTA is calculated by the coordinates of the incident.",
                 "synonym": [
                     "neighborhood category",
                     "community type",
