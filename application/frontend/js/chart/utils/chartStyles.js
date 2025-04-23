@@ -127,7 +127,7 @@ export const chartStyles = {
         return { ...this.barChart.margin, left: 150 };
 
       case "nested_bar_chart":
-        return { top: 40, right: 120, bottom: 30, left: 30 };
+        return { top: 40, right: 0, bottom: 30, left: 30 };
 
       case "horizontal_bar_chart":
         return this.barChart.margin;
