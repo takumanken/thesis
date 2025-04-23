@@ -20,6 +20,13 @@
             "data_source_name": "NYC Department City Planning - NYC 2020 Census Data",
             "data_source_url": "https://www.nyc.gov/content/planning/pages/resources/datasets/decennial-census",
             "description_to_user": "Basic demographic and housing characteristics including total population, race/ethnicity, age, housing tenure, and household composition. * In this portal, total population of NTAs level is only available."
+        },
+        {
+            "data_source_id": 4,
+            "data_source_short_name": "NYC Open Data - Zip Code Polygons",
+            "data_source_name": "NYC Open Data - Modified Zip Code Tabulation Areas (MODZCTA)",
+            "data_source_url": "https://data.cityofnewyork.us/Health/Modified-Zip-Code-Tabulation-Areas-MODZCTA-/pri4-ifjk/about_data",
+            "description_to_user": "Geospatial data about NYC Modified Zip Code Tabulation Areas (MODZCTA), including their boundaries"
         }
     ],
     "dimensions": {
@@ -284,7 +291,7 @@
                     "zipcode",
                     "area code"
                 ],
-                "data_source_id": 1
+                "data_source_id": 4
             },
             {
                 "physical_name": "neighborhood_name",
