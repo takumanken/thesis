@@ -53,19 +53,18 @@ function renderTable(container, rowsPerPage = 15) {
 function createColumnConfig() {
   if (!state.dataset?.length) return [];
 
-  const fields = Object.keys(state.dataset[0]);
+  const fields = state.fields;
   const measures = getMeasures();
 
   return fields.map((field) => {
     // Basic column config with translated display name
     const column = {
-      name: chartUtils.getDisplayName(field), // Use display name from schema
+      name: chartUtils.getDisplayName(field),
       id: field,
     };
 
     // Add measure-specific formatting if applicable
     if (isMeasure(field, measures)) {
-      // Format measures with thousands separators but no abbreviation
       column.formatter = (cell) => formatFullNumber(cell, 2);
 
       column.attributes = (cell, row) => ({
@@ -105,25 +104,26 @@ function getMeasures() {
 }
 
 /**
- * Checks if a column contains numeric values
- * @param {Array} dataset - Dataset to analyze
+ * Checks if a column contains numeric values based on field metadata
+ * @param {Array} dataset - Dataset (not used with metadata approach)
  * @param {string} field - Field name to check
- * @returns {boolean} True if numeric
+ * @returns {boolean} True if the field is numeric
  */
 function isNumericColumn(dataset, field) {
-  const sampleSize = Math.min(10, dataset.length);
-  let numericCount = 0;
+  // Get field metadata from state
+  const fieldMetadata = state.aggregationDefinition?.fieldMetadata || [];
 
-  for (let i = 0; i < sampleSize; i++) {
-    const value = dataset[i][field];
-    if (value !== null && value !== undefined && value !== "") {
-      if (typeof value === "number" || !isNaN(parseFloat(value))) {
-        numericCount++;
-      }
-    }
+  // Find the metadata for this field
+  const metadata = fieldMetadata.find((f) => f.physical_name === field);
+
+  // Check if this field has a numeric data type
+  if (metadata && metadata.data_type) {
+    const dataType = metadata.data_type.toLowerCase();
+    return dataType === "integer" || dataType === "float";
   }
 
-  return numericCount / sampleSize >= 0.8;
+  // If no metadata found or data_type is missing, assume non-numeric
+  return false;
 }
 
 /**
