@@ -63,6 +63,7 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
     measures = agg_def.measures or []
     
     time_dim, geo_dim, cat_dim = classify_dimensions(dimensions)
+    logger.info(f"Dimensions: {dimensions}, Measures: {measures}, Time: {time_dim}, Geo: {geo_dim}, Cat: {cat_dim}")
     dim_count = len(dimensions)
     time_count = len(time_dim)
     geo_count = len(geo_dim)
@@ -99,7 +100,7 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
         available.append("nested_bar_chart")
         ideal = "nested_bar_chart"
     
-    if cat_dim == 2 and measure_count == 1 and not high_cardinality:
+    if cat_count == 2 and measure_count == 1 and not high_cardinality:
         available.append("grouped_bar_chart")
         ideal = "grouped_bar_chart"
     
