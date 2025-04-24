@@ -259,7 +259,7 @@ function renderBars(
     .join("rect")
     .attr("y", (d) => scales.y(d.data[groupKey]) - config.barHeight / 2) // Center bars on y position
     .attr("x", (d) => scales.x(d[0]))
-    .attr("width", (d) => Math.max(0, scales.x(d[1]) - scales.x(d[0])))
+    .attr("width", (d) => Math.max(0, scales.x(d[1]) - scales.x(d[0]) - 2))
     .attr("height", config.barHeight) // Use fixed bar height from config
     .attr("fill", (d, i, nodes) => color(d3.select(nodes[i].parentNode).datum().key));
 

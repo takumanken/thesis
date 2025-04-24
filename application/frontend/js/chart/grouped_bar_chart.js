@@ -11,6 +11,20 @@ import * as chartScales from "./utils/chartScales.js";
 import * as chartAxes from "./utils/chartAxes.js";
 import * as legendUtil from "./utils/legendUtil.js";
 
+// -------------------------------------------------------------------------
+// CHART DESIGN PARAMETERS
+// -------------------------------------------------------------------------
+const CHART_DESIGN = {
+  barHeight: 15, // Height of each bar in pixels
+  rowSpacing: 2, // Space between subgroup bars
+  groupPadding: 8, // Space between groups
+  cornerRadius: 0, // Rounded corner radius
+  maxChartHeight: 650, // Maximum overall chart height
+  minChartHeight: 500, // Minimum overall chart height
+  labelGap: 10, // Gap between axis and labels
+};
+// -------------------------------------------------------------------------
+
 /**
  * Main render function for grouped bar chart
  */
@@ -30,7 +44,7 @@ function renderGroupedBarChart(container) {
   const scales = createScales(sortedGroups, sortedSubGroups, dataset, measure, config);
 
   // Render chart
-  setupContainer(chartContainer);
+  setupContainer(chartContainer, config);
   const { svg, xAxisSvg } = createChartElements(chartContainer, config);
   const tooltip = chartStyles.createTooltip();
 
@@ -100,8 +114,8 @@ function processData(dataset, groupKey, subGroupKey, measure) {
  */
 function createConfig(sortedGroups, dataset, groupKey, subGroupKey) {
   const margin = chartStyles.getChartMargins("grouped_bar_chart");
-  const barHeight = chartStyles.barChart.bar.height * 0.6;
-  const groupPadding = chartStyles.barChart.bar.height * 0.8;
+  const barHeight = CHART_DESIGN.barHeight;
+  const groupPadding = CHART_DESIGN.groupPadding;
 
   // Calculate heights for each group based on number of subgroups
   const groupHeights = {};
@@ -115,9 +129,8 @@ function createConfig(sortedGroups, dataset, groupKey, subGroupKey) {
 
   // Calculate overall dimensions
   const contentHeight = Object.values(groupHeights).reduce((sum, h) => sum + h, 0);
-  const minHeight = 500;
-  const fullHeight = Math.max(margin.top + margin.bottom + contentHeight, minHeight);
-  const displayHeight = Math.min(fullHeight, chartStyles.barChart.maxHeight);
+  const fullHeight = Math.max(margin.top + margin.bottom + contentHeight, CHART_DESIGN.minChartHeight);
+  const displayHeight = Math.min(fullHeight, CHART_DESIGN.maxChartHeight);
 
   return {
     margin,
@@ -154,7 +167,7 @@ function createScales(sortedGroups, sortedSubGroups, dataset, measure, config) {
     innerY: chartScales.createCategoryScale(
       sortedSubGroups,
       [0, d3.max(Object.values(config.groupHeights)) - config.groupPadding],
-      chartStyles.barChart.bar.padding
+      CHART_DESIGN.rowSpacing / CHART_DESIGN.barHeight // Calculate padding factor for consistent spacing
     ),
 
     color: chartScales.createColorScale(sortedSubGroups),
@@ -166,10 +179,11 @@ function createScales(sortedGroups, sortedSubGroups, dataset, measure, config) {
 /**
  * Set up container styles
  */
-function setupContainer(container) {
+function setupContainer(container, config) {
   Object.assign(container.style, {
     position: "relative",
     width: "100%",
+    height: `${config.displayHeight}px`,
   });
 }
 
@@ -177,6 +191,9 @@ function setupContainer(container) {
  * Create chart DOM elements
  */
 function createChartElements(container, config) {
+  // Clear container first
+  container.innerHTML = "";
+
   // Create axis and scroll containers
   const xAxisContainer = document.createElement("div");
   xAxisContainer.className = "viz-axis-container";
@@ -232,11 +249,11 @@ function drawBars(svg, dataset, scales, config, groupKey, subGroupKey, measure, 
     .data(barData)
     .join("rect")
     .attr("x", config.margin.left)
-    .attr("y", (d) => d.y)
+    .attr("y", (d) => d.y - CHART_DESIGN.groupPadding)
     .attr("width", (d) => Math.max(0, scales.x(d.val) - config.margin.left))
     .attr("height", scales.innerY.bandwidth())
     .attr("fill", (d) => scales.color(d.sub))
-    .attr("rx", chartStyles.barChart.bar.cornerRadius);
+    .attr("rx", CHART_DESIGN.cornerRadius);
 
   // Attach tooltips with translated field names
   chartUtils.attachMouseTooltip(
@@ -265,13 +282,13 @@ function drawYAxis(svg, sortedGroups, groupPositions, config) {
     className: "y-axis-line",
   });
 
-  // Keep the custom labels (this is specialized for grouped bar chart)
+  // Add labels for each group
   yAxisGroup
     .selectAll(".group-label")
     .data(sortedGroups)
     .join("text")
     .attr("class", "group-label")
-    .attr("x", -10)
+    .attr("x", -CHART_DESIGN.labelGap)
     .attr("y", (d) => {
       const effectiveBarsHeight = config.groupHeights[d] - config.groupPadding;
       return groupPositions[d] + effectiveBarsHeight / 2;
