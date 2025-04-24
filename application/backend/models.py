@@ -22,4 +22,6 @@ class AggregationDefinition(BaseModel):
     geoDimension: List[str] = []
     categoricalDimension: List[str] = []
     response_type: str = "data"
-    createdDateRange: Optional[List[str]] = None
+    createdDateRange: Optional[List[str]] = None,
+    datasourceMetadata: Optional[List[dict]] = None,
+    fieldMetadata: Optional[List[dict]] = None

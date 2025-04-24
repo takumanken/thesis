@@ -177,11 +177,35 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         
         # Determine best visualization
         available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats)
+
+        # Add field metadata
+        field_metadata = []
+        fields = list(dataset[0].keys()) if dataset and len(dataset) > 0 else []
+        all_field_description = data_schema["dimensions"]["time_dimension"] + data_schema["dimensions"]["geo_dimension"] + data_schema["dimensions"]["categorical_dimension"] + data_schema["measures"]
+
+        for field in fields:
+            for field_description in all_field_description:
+                if field_description["physical_name"] == field:
+                    field_metadata.append(field_description)
         
+        # Add datasource metadata
+        datasource_metadata = []
+        used_datasources = set(field['data_source_id'] for field in field_metadata)
+        
+        for used_datasource in used_datasources:
+            for datasource in data_schema["data_sources"]:
+                if datasource["data_source_id"] == used_datasource:
+                    datasource_metadata.append(datasource)
+
+        agg_def = agg_def.copy(update={
+            "datasourceMetadata": datasource_metadata,
+            "fieldMetadata": field_metadata
+        })
+            
         # Build response - add schema metadata for frontend
         response_payload = {
             "dataset": dataset,
-            "fields": list(dataset[0].keys()) if dataset else [],
+            "fields": fields,
             "sql": sql,
             "aggregationDefinition": agg_def.dict(),
             "chartType": ideal_chart,
