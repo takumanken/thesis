@@ -152,7 +152,11 @@ function injectTableStyles() {
       padding: 5px 5px;
       font-size: 12px;
       font-weight: 500;
-      background-color: var(--color-background, #f5f5f5);
+    }
+
+    /* button */
+    button.gridjs-sort {
+      width: 10px;
     }
     
     /* Zebra striping */
