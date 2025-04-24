@@ -68,8 +68,7 @@ function createChartConfig(container, data, dimensions, measures) {
     barStartX,
     width,
     margin,
-    rowHeight,
-    rowSpacing
+    rowHeight
   );
 
   return {
@@ -151,14 +150,14 @@ function drawBackgrounds(svg, data, config) {
 }
 
 function drawGridLines(svg, data, dimensions, measures, config) {
-  const { width, margin, rowHeight, rowPadding } = config;
-  const totalHeight = calculateTotalHeight(data, rowHeight, rowPadding);
+  const { width, margin, rowHeight } = config;
+  const totalHeight = calculateTotalHeight(data, rowHeight);
   const bottomY = margin.top + totalHeight;
 
   // Horizontal borders
   chartAxes.createReferenceLine(svg, {
     orientation: "horizontal",
-    position: margin.top - rowPadding / 2,
+    position: margin.top - config.rowPadding / 2,
     start: 0,
     end: width,
     className: "top-border",
@@ -166,7 +165,7 @@ function drawGridLines(svg, data, dimensions, measures, config) {
 
   chartAxes.createReferenceLine(svg, {
     orientation: "horizontal",
-    position: bottomY - rowPadding / 2,
+    position: bottomY - config.rowPadding / 2,
     start: 0,
     end: width,
     className: "bottom-border",
@@ -245,7 +244,7 @@ function drawData(svg, data, dimensions, measures, config, tooltip) {
               x: config.xScales[measure].range()[0],
               y: rowCenter - CHART_DESIGN.barHeight / 2,
               width: Math.max(1, config.xScales[measure](val) - config.xScales[measure].range()[0]),
-              height: CHART_DESIGN.barHeight, // Use exact bar height
+              height: CHART_DESIGN.barHeight,
               color: config.colors(measure),
             },
             tooltip
@@ -283,8 +282,7 @@ function drawBar(svg, bar, tooltip) {
     .text((d) => chartUtils.formatValue(d.value))
     .each(function (d) {
       const textWidth = this.getComputedTextLength();
-      const availableWidth = 25;
-      if (textWidth > availableWidth) {
+      if (textWidth > 25) {
         d3.select(this).text(chartUtils.formatValue(d.value, true));
       }
     });
@@ -298,8 +296,8 @@ function drawBar(svg, bar, tooltip) {
 }
 
 function drawDimensionText(svg, text, x, y, config) {
-  let fontSize = chartStyles.fontSize.axisLabel;
-  let fontSizeInteger = parseInt(fontSize.replace("px", ""));
+  const fontSize = chartStyles.fontSize.axisLabel;
+  const fontSizeInteger = parseInt(fontSize.replace("px", ""));
 
   svg
     .append("text")
@@ -394,9 +392,9 @@ function drawVerticalSeparators(svg, config, dimensions, measures, bottomY) {
   }
 }
 
-function calculateMeasuresLayout(data, measures, barStartX, width, margin, rowHeight, rowPadding) {
+function calculateMeasuresLayout(data, measures, barStartX, width, margin, rowHeight) {
   const barAreaWidth = width - margin.right - barStartX;
-  const measureWidth = Math.max(80, barAreaWidth / measures.length);
+  const measureWidth = Math.max(CHART_DESIGN.minMeasureWidth, barAreaWidth / measures.length);
 
   const totalRows = data.reduce((sum, category) => sum + category.segments.length, 0);
   const contentHeight = totalRows * rowHeight;
@@ -410,12 +408,10 @@ function calculateMeasuresLayout(data, measures, barStartX, width, margin, rowHe
 
 function createMeasureScales(measures, maxValues, barStartX, measureWidth) {
   const xScales = {};
-  const labelSpace = 45;
-  const leftPadding = 0;
 
   measures.forEach((measure, i) => {
-    const startX = barStartX + i * measureWidth + leftPadding;
-    const endX = barStartX + (i + 1) * measureWidth - labelSpace;
+    const startX = barStartX + i * measureWidth;
+    const endX = barStartX + (i + 1) * measureWidth - CHART_DESIGN.labelSpace;
 
     xScales[measure] = d3.scaleLinear().domain([0, maxValues[measure]]).range([startX, endX]);
   });
@@ -434,7 +430,7 @@ function getMaxMeasureValues(data, measures) {
   return maxValues;
 }
 
-function calculateTotalHeight(data, rowHeight, rowPadding) {
+function calculateTotalHeight(data, rowHeight) {
   const totalRows = data.reduce((sum, category) => sum + category.segments.length, 0);
   return totalRows * rowHeight;
 }
@@ -458,8 +454,8 @@ function measureTextWidths(container, data) {
   svg.remove();
 
   return {
-    dim1Width: Math.min(300, Math.max(120, dim1Width + 30)),
-    dim2Width: Math.min(300, Math.max(150, dim2Width + 30)),
+    dim1Width: Math.min(CHART_DESIGN.maxDim1Width, Math.max(CHART_DESIGN.minDim1Width, dim1Width + 30)),
+    dim2Width: Math.min(CHART_DESIGN.maxDim2Width, Math.max(CHART_DESIGN.minDim2Width, dim2Width + 30)),
   };
 }
 
