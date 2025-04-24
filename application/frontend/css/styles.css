@@ -369,7 +369,6 @@ body {
 .viz-filters .tag-item.period {
     background-color: var(--color-period-bg);
     color: var(--color-period-text);
-    margin-bottom: 12px; /* Extra margin to separate from other filters */
 }
 
 .viz-filters .tag-item.period .material-icons {
