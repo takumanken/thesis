@@ -211,8 +211,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             "chartType": ideal_chart,
             "availableChartTypes": available_charts,
             "dimensionStats": dimension_stats,
-            "textResponse": None,
-            "schemaMetadata": data_schema
+            "textResponse": None
         }
 
         # Add data description

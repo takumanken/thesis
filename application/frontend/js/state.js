@@ -12,7 +12,6 @@ export const state = {
     dataDescription: null,
     filter_description: [],
   },
-  schemaMetadata: null,
 
   // Update method
   update(newData) {
@@ -24,7 +23,6 @@ export const state = {
     this.chartType = newData.chartType || "table";
     this.availableChartTypes = newData.availableChartTypes || ["table"];
     this.textResponse = newData.textResponse || null;
-    this.schemaMetadata = newData.schemaMetadata || this.schemaMetadata;
 
     // Handle dataInsights property
     if (newData.dataInsights) {
