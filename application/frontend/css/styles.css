@@ -164,6 +164,7 @@ body {
 }
 
 .visualization-area {
+    border-right: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
     padding-right: 30px;
@@ -261,7 +262,6 @@ body {
 /* 6. SIDEBAR & CONTROLS
    =============================================== */
 .control-panel {
-    border-left: 1px solid var(--color-border);
     flex: 0 0 var(--sidebar-width);
     height: 100%;
     max-height: calc(100% - 20px);
