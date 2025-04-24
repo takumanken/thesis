@@ -9,6 +9,19 @@ import * as chartUtils from "./utils/chartUtils.js";
 import * as chartScales from "./utils/chartScales.js";
 import * as chartAxes from "./utils/chartAxes.js";
 
+// -------------------------------------------------------------------------
+// CHART DESIGN PARAMETERS
+// -------------------------------------------------------------------------
+const CHART_DESIGN = {
+  barHeight: 15, // Height of each bar in pixels
+  rowSpacing: 5, // Space between rows in pixels
+  cornerRadius: 0, // Rounded corner radius
+  maxChartHeight: 650, // Maximum overall chart height
+  valueGap: 5, // Gap between bar and value label
+  labelMaxLength: 25, // Maximum length for category labels
+};
+// -------------------------------------------------------------------------
+
 /**
  * Main render function for single bar chart
  * @param {HTMLElement} container - DOM element to render the chart
@@ -27,8 +40,8 @@ function renderBarChart(container) {
 
   // Render all chart components
   renderBars(svg, dataset, scales, measure, dimension, config, tooltip);
-  renderBarLabels(svg, dataset, scales, measure);
-  renderYAxis(svg, dataset, scales.y, dimension, config.margin);
+  renderBarLabels(svg, dataset, scales, measure, config);
+  renderYAxis(svg, dataset, scales.y, dimension, config.margin, config);
 
   // Setup resize handling
   chartUtils.setupResizeHandler(container, () => renderBarChart(container));
@@ -175,7 +188,7 @@ function renderBars(svg, dataset, scales, measure, dimension, config, tooltip) {
 /**
  * Renders value labels next to bars
  */
-function renderBarLabels(svg, dataset, scales, measure) {
+function renderBarLabels(svg, dataset, scales, measure, config) {
   svg
     .selectAll("text.bar-label")
     .data(dataset)

@@ -10,6 +10,25 @@ import * as chartUtils from "./utils/chartUtils.js";
 import * as chartScales from "./utils/chartScales.js";
 import * as chartAxes from "./utils/chartAxes.js";
 
+// -------------------------------------------------------------------------
+// CHART DESIGN PARAMETERS
+// -------------------------------------------------------------------------
+const CHART_DESIGN = {
+  barHeight: 15, // Height of each bar in pixels
+  rowSpacing: 10, // Space between rows in pixels
+  cornerRadius: 0, // Rounded corner radius
+  labelGap: 20, // Gap between dimensions and between dimension and bar
+  maxDim1Width: 300, // Maximum width for dimension 1 labels
+  maxDim2Width: 300, // Maximum width for dimension 2 labels
+  minDim1Width: 120, // Minimum width for dimension 1 labels
+  minDim2Width: 150, // Minimum width for dimension 2 labels
+  minMeasureWidth: 80, // Minimum width for each measure column
+  labelSpace: 45, // Space reserved for labels at end of bars
+  headerGap: 10, // Distance from top margin to headers
+  maxChartHeight: 650, // Maximum overall chart height
+};
+// -------------------------------------------------------------------------
+
 /**
  * Main render function for nested bar chart
  */
@@ -36,8 +55,10 @@ function createChartConfig(container, data, dimensions, measures) {
   const margin = chartStyles.getChartMargins("nested_bar_chart");
   const width = container.clientWidth || 1440;
 
-  const rowHeight = chartStyles.barChart.bar.height;
-  const rowPadding = chartStyles.barChart.bar.height * chartStyles.barChart.bar.padding;
+  // Make consistent with stacked bar chart
+  const barHeight = CHART_DESIGN.barHeight;
+  const rowSpacing = CHART_DESIGN.rowSpacing;
+  const rowHeight = barHeight + rowSpacing;
 
   const hasTwoDimensions = dimensions.length > 1;
   const { dim1X, dim2X, barStartX } = calculateColumnPositions(margin.left, textMeasurements, hasTwoDimensions);
@@ -48,19 +69,20 @@ function createChartConfig(container, data, dimensions, measures) {
     width,
     margin,
     rowHeight,
-    rowPadding
+    rowSpacing
   );
 
   return {
     margin,
     width,
-    height: Math.min(height, chartStyles.barChart.maxHeight),
+    height: Math.min(height, CHART_DESIGN.maxChartHeight),
     fullHeight: height,
     dim1X,
     dim2X,
     barStartX,
     rowHeight,
-    rowPadding,
+    rowPadding: rowSpacing,
+    barHeight,
     measureWidth,
     xScales,
     colors: getMeasureColors(measures),
@@ -99,23 +121,30 @@ function drawStructure(svg, data, dimensions, measures, config) {
   drawColumnHeaders(svg, dimensions, measures, config);
 }
 
+/**
+ * Draw the alternating background stripes
+ */
 function drawBackgrounds(svg, data, config) {
   let y = config.margin.top;
   let rowIndex = 0;
 
   data.forEach((category) => {
     category.segments.forEach(() => {
+      // Calculate the exact vertical position where the bar would be
+      const rowCenter = y + config.barHeight / 2;
+      const barTop = rowCenter - config.barHeight / 2;
+
       if (rowIndex % 2 === 0) {
         svg
           .append("rect")
           .attr("x", 0)
-          .attr("y", y - config.rowPadding / 2)
+          .attr("y", barTop - config.rowPadding / 2)
           .attr("width", config.width)
-          .attr("height", config.rowHeight + config.rowPadding)
+          .attr("height", config.barHeight + config.rowPadding)
           .attr("fill", chartStyles.colors.alternateBackground)
           .attr("opacity", 0.5);
       }
-      y += config.rowHeight + config.rowPadding;
+      y += config.rowHeight;
       rowIndex++;
     });
   });
@@ -150,6 +179,24 @@ function drawGridLines(svg, data, dimensions, measures, config) {
   drawVerticalSeparators(svg, config, dimensions, measures, bottomY);
 }
 
+/**
+ * Draw dividers between categories
+ */
+function drawCategorySeparators(svg, data, config, width) {
+  let y = config.margin.top;
+
+  data.forEach((category, i) => {
+    // Add the total height of all segments in this category
+    const categoryHeight = category.segments.length * config.rowHeight;
+    y += categoryHeight;
+
+    // Draw separator after the category if not the last one
+    if (i < data.length - 1) {
+      chartStyles.drawGridLine(svg, 0, width, y - CHART_DESIGN.rowSpacing / 2, y - CHART_DESIGN.rowSpacing / 2);
+    }
+  });
+}
+
 function drawColumnHeaders(svg, dimensions, measures, config) {
   const headerY = config.margin.top - 15;
 
@@ -182,6 +229,9 @@ function drawData(svg, data, dimensions, measures, config, tooltip) {
         drawDimensionText(svg, segment.name, config.dim2X, y, config);
       }
 
+      // Calculate vertical center similar to stacked chart
+      const rowCenter = y + config.barHeight / 2;
+
       measures.forEach((measure, i) => {
         const val = segment.measures[measure];
         if (val) {
@@ -193,9 +243,9 @@ function drawData(svg, data, dimensions, measures, config, tooltip) {
               segment: segment.name,
               measure: measure,
               x: config.xScales[measure].range()[0],
-              y: y + config.rowHeight * 0.15,
+              y: rowCenter - CHART_DESIGN.barHeight / 2,
               width: Math.max(1, config.xScales[measure](val) - config.xScales[measure].range()[0]),
-              height: config.rowHeight * 0.7,
+              height: CHART_DESIGN.barHeight, // Use exact bar height
               color: config.colors(measure),
             },
             tooltip
@@ -203,7 +253,7 @@ function drawData(svg, data, dimensions, measures, config, tooltip) {
         }
       });
 
-      y += config.rowHeight + config.rowPadding;
+      y += config.rowHeight;
     });
   });
 }
@@ -216,8 +266,8 @@ function drawBar(svg, bar, tooltip) {
     .attr("x", (d) => d.x)
     .attr("y", (d) => d.y)
     .attr("width", (d) => d.width)
-    .attr("height", (d) => d.height)
-    .attr("rx", chartStyles.barChart.bar.cornerRadius)
+    .attr("height", CHART_DESIGN.barHeight)
+    .attr("rx", CHART_DESIGN.cornerRadius)
     .attr("fill", (d) => d.color);
 
   barGroup
@@ -248,12 +298,15 @@ function drawBar(svg, bar, tooltip) {
 }
 
 function drawDimensionText(svg, text, x, y, config) {
+  let fontSize = chartStyles.fontSize.axisLabel;
+  let fontSizeInteger = parseInt(fontSize.replace("px", ""));
+
   svg
     .append("text")
     .attr("x", x)
-    .attr("y", y + config.rowHeight / 2)
+    .attr("y", y + fontSizeInteger * 0.75)
     .attr("font-family", chartStyles.fontFamily)
-    .attr("font-size", chartStyles.fontSize.axisLabel)
+    .attr("font-size", fontSize)
     .attr("dominant-baseline", "middle")
     .attr("text-anchor", "start")
     .attr("fill", chartStyles.colors.text)
@@ -301,20 +354,10 @@ function getMeasureColors(measures) {
   return chartScales.createColorScale(measures, colorRange);
 }
 
-function drawCategorySeparators(svg, data, config, width) {
-  let y = config.margin.top;
-
-  data.forEach((category, i) => {
-    if (i < data.length - 1) {
-      y += (config.rowHeight + config.rowPadding) * category.segments.length;
-      chartStyles.drawGridLine(svg, 0, width, y - config.rowPadding / 2, y - config.rowPadding / 2);
-    }
-  });
-}
-
 function drawVerticalSeparators(svg, config, dimensions, measures, bottomY) {
   const { margin, dim2X, barStartX, measureWidth } = config;
   const topY = margin.top - 30;
+  const endY = bottomY - CHART_DESIGN.rowSpacing / 2;
 
   // Dimension separator
   if (dim2X) {
@@ -322,7 +365,7 @@ function drawVerticalSeparators(svg, config, dimensions, measures, bottomY) {
       orientation: "vertical",
       position: dim2X - 10,
       start: topY,
-      end: bottomY,
+      end: endY,
       className: "dimension-separator",
     });
   }
@@ -332,7 +375,7 @@ function drawVerticalSeparators(svg, config, dimensions, measures, bottomY) {
     orientation: "vertical",
     position: barStartX,
     start: topY,
-    end: bottomY,
+    end: endY,
     className: "bar-area-separator",
   });
 
@@ -344,7 +387,7 @@ function drawVerticalSeparators(svg, config, dimensions, measures, bottomY) {
         orientation: "vertical",
         position: x,
         start: topY,
-        end: bottomY,
+        end: endY,
         className: "measure-separator",
       });
     }
@@ -356,7 +399,7 @@ function calculateMeasuresLayout(data, measures, barStartX, width, margin, rowHe
   const measureWidth = Math.max(80, barAreaWidth / measures.length);
 
   const totalRows = data.reduce((sum, category) => sum + category.segments.length, 0);
-  const contentHeight = totalRows * (rowHeight + rowPadding);
+  const contentHeight = totalRows * rowHeight;
   const height = margin.top + margin.bottom + contentHeight;
 
   const maxValues = getMaxMeasureValues(data, measures);
@@ -393,7 +436,7 @@ function getMaxMeasureValues(data, measures) {
 
 function calculateTotalHeight(data, rowHeight, rowPadding) {
   const totalRows = data.reduce((sum, category) => sum + category.segments.length, 0);
-  return totalRows * (rowHeight + rowPadding);
+  return totalRows * rowHeight;
 }
 
 function measureTextWidths(container, data) {
