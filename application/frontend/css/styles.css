@@ -128,8 +128,8 @@ body {
     align-items: center;
     color: var(--color-text-secondary);
     display: flex;
-    font-size: 14px;
-    gap: 10px;
+    font-size: 12px;
+    gap: 5px;
 }
 
 /* 4. DASHBOARD COMPONENTS
