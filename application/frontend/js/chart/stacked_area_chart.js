@@ -62,7 +62,7 @@ function renderStackedAreaChart(container) {
 
   // Create legend - reverse order to match visual stacking
   const colorScale = d3.scaleOrdinal().domain(sortedCategories).range(chartColors.mainPalette);
-  legendUtil.createColorLegend(legendContainer, [...sortedCategories].reverse(), colorScale);
+  legendUtil.createColorLegend(legendContainer, [...sortedCategories].reverse(), colorScale, {}, categoricalDimension);
 
   // Setup resize handling
   chartUtils.setupResizeHandler(container, () => renderStackedAreaChart(container));

@@ -54,7 +54,7 @@ function renderStackedBarChart(container) {
   // Render chart components
   renderBars(elements.svg, stackData, sortedStacks, scales, groupKey, stackKey, measure, isPercentage, color, tooltip);
   renderAxes(elements.svg, elements.xAxisSvg, scales, config, isPercentage);
-  legendUtil.createColorLegend(legendContainer, sortedStacks, color);
+  legendUtil.createColorLegend(legendContainer, sortedStacks, color, {}, stackKey);
   setupEventHandlers(container);
 }
 

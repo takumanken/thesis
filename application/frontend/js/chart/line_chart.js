@@ -62,7 +62,7 @@ function renderLineChart(container) {
   // Add legend if grouped data
   if (groupDimension && sortedGroups.length > 0) {
     const colorScale = d3.scaleOrdinal().domain(sortedGroups).range(chartColors.mainPalette);
-    legendUtil.createColorLegend(legendContainer, sortedGroups, colorScale);
+    legendUtil.createColorLegend(legendContainer, sortedGroups, colorScale, {}, groupDimension);
   }
 
   // Setup resize handler

@@ -1,4 +1,5 @@
 import { chartStyles } from "./chartStyles.js";
+import * as chartUtils from "./chartUtils.js";
 
 /**
  * Creates a legend beside the chart in a fixed layout
@@ -121,11 +122,12 @@ export function createHorizontalLayout(container, options = {}) {
  * @param {Array} items - Items to include in legend
  * @param {Function} colorAccessor - Function that returns color for an item
  * @param {Object} options - Additional options
+ * @param {string} [dimensionName] - Name of the dimension used for coloring (will be translated to display name)
  */
-export function createColorLegend(container, items, colorAccessor, options = {}) {
+export function createColorLegend(container, items, colorAccessor, options = {}, dimensionName = null) {
   // Default options
   const config = {
-    title: "Legend",
+    title: dimensionName ? chartUtils.getDisplayName(dimensionName) : "Legend",
     showTitle: items.length > 0,
     itemHeight: 12,
     itemSpacing: 6,
@@ -137,9 +139,9 @@ export function createColorLegend(container, items, colorAccessor, options = {})
     const heading = document.createElement("h3");
     heading.textContent = config.title;
     Object.assign(heading.style, {
-      fontSize: "14px",
+      fontSize: "12px",
       margin: "0 0 8px 0",
-      fontWeight: "500",
+      fontWeight: "200",
       fontFamily: chartStyles.fontFamily,
     });
     container.appendChild(heading);

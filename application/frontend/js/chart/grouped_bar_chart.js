@@ -40,7 +40,7 @@ function renderGroupedBarChart(container) {
   drawXAxis(xAxisSvg, scales.x, config.margin);
 
   // Create legend and setup events
-  legendUtil.createColorLegend(legendContainer, sortedSubGroups, scales.color);
+  legendUtil.createColorLegend(legendContainer, sortedSubGroups, scales.color, {}, subGroupKey);
   setupEventHandlers(container);
 }
 
