@@ -52,7 +52,19 @@ function renderStackedBarChart(container) {
   const tooltip = chartStyles.createTooltip();
 
   // Render chart components
-  renderBars(elements.svg, stackData, sortedStacks, scales, groupKey, stackKey, measure, isPercentage, color, tooltip);
+  renderBars(
+    elements.svg,
+    stackData,
+    sortedStacks,
+    scales,
+    groupKey,
+    stackKey,
+    measure,
+    isPercentage,
+    color,
+    tooltip,
+    config
+  );
   renderAxes(elements.svg, elements.xAxisSvg, scales, config, isPercentage);
   legendUtil.createColorLegend(legendContainer, sortedStacks, color, {}, stackKey);
   setupEventHandlers(container);
@@ -120,15 +132,16 @@ function createConfig(sortedGroups) {
   const rowSpacing = CHART_DESIGN.rowSpacing;
   const rowHeight = barHeight + rowSpacing;
 
-  // Calculate chart dimensions
+  // Calculate chart dimensions - dynamically based on number of groups
   const contentHeight = sortedGroups.length * rowHeight;
   const fullHeight = margin.top + margin.bottom + contentHeight;
-  const adjustedFullHeight = Math.max(fullHeight, CHART_DESIGN.minChartHeight);
+  const adjustedFullHeight = fullHeight;
+
   const displayHeight = Math.min(adjustedFullHeight, CHART_DESIGN.maxChartHeight);
 
   return {
     margin,
-    barHeight,
+    barHeight, // Add actual barHeight to config
     rowHeight,
     rowSpacing,
     fullHeight: adjustedFullHeight,
@@ -138,21 +151,30 @@ function createConfig(sortedGroups) {
 }
 
 /**
- * Create scales for the chart
+ * Create scales for the chart - use a fixed step size for Y scale
  */
 function createScales(sortedGroups, stackData, config, isPercentage) {
   const chartEl = document.querySelector(".viz-chart-area");
   const chartWidth = chartEl?.clientWidth || 800;
-  const height = config.fullHeight - config.margin.top - config.margin.bottom;
+
+  // Calculate step size for Y scale to match our desired row height
+  const yDomain = sortedGroups;
+  const yStep = config.rowHeight;
+  const yRange = [0, yStep * yDomain.length];
 
   return {
-    y: chartScales.createCategoryScale(sortedGroups, [0, height], config.rowSpacing / (config.rowHeight * 2)),
+    // Use D3's scalePoint which allows us to specify the step size exactly
+    y: d3
+      .scalePoint()
+      .domain(yDomain)
+      .range(yRange)
+      .padding(0.5) // Center points in their step
+      .round(true), // Round to pixel values
 
     x: isPercentage
       ? chartScales.createPercentageScale([config.margin.left, chartWidth - config.margin.right], false)
       : chartScales.createMeasureScale(
           stackData,
-          // Custom accessor for stacked data
           (d) =>
             d3.sum(
               Object.entries(d)
@@ -213,9 +235,21 @@ function createChartElements(container, config) {
 }
 
 /**
- * Render stacked bars
+ * Render stacked bars with fixed height
  */
-function renderBars(svg, stackData, sortedStacks, scales, groupKey, stackKey, measure, isPercentage, color, tooltip) {
+function renderBars(
+  svg,
+  stackData,
+  sortedStacks,
+  scales,
+  groupKey,
+  stackKey,
+  measure,
+  isPercentage,
+  color,
+  tooltip,
+  config
+) {
   const stackGen = d3.stack().keys(sortedStacks);
   const groups = svg.append("g").selectAll("g").data(stackGen(stackData)).join("g");
 
@@ -223,12 +257,13 @@ function renderBars(svg, stackData, sortedStacks, scales, groupKey, stackKey, me
     .selectAll("rect")
     .data((layer) => layer)
     .join("rect")
-    .attr("y", (d) => scales.y(d.data[groupKey]))
+    .attr("y", (d) => scales.y(d.data[groupKey]) - config.barHeight / 2) // Center bars on y position
     .attr("x", (d) => scales.x(d[0]))
     .attr("width", (d) => Math.max(0, scales.x(d[1]) - scales.x(d[0])))
-    .attr("height", scales.y.bandwidth())
+    .attr("height", config.barHeight) // Use fixed bar height from config
     .attr("fill", (d, i, nodes) => color(d3.select(nodes[i].parentNode).datum().key));
 
+  // Tooltip code remains unchanged
   chartUtils.attachMouseTooltip(rects, tooltip, (d, el) => {
     const stackVal = d3.select(el.parentNode).datum().key;
     const grp = d.data[groupKey];
