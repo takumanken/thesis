@@ -90,17 +90,17 @@ function processData(dataset, groupKey, stackKey, measure, isPercentage) {
       obj[stack] = item ? item[measure] || 0 : 0;
     });
 
+    // Calculate total for all chart types
+    const total = stacks.reduce((sum, stack) => sum + (obj[stack] || 0), 0);
+    obj._total = total;
+
     // Calculate percentages if needed
-    if (isPercentage) {
-      const total = d3.sum(Object.values(obj).filter((v) => typeof v === "number"));
-      if (total > 0) {
-        // Store original values and calculate percentages
-        stacks.forEach((stack) => {
-          obj[`${stack}_original`] = obj[stack];
-          obj[stack] = (obj[stack] / total) * 100;
-        });
-      }
-      obj._total = total;
+    if (isPercentage && total > 0) {
+      // Store original values and calculate percentages
+      stacks.forEach((stack) => {
+        obj[`${stack}_original`] = obj[stack];
+        obj[stack] = (obj[stack] / total) * 100;
+      });
     }
 
     return obj;
@@ -233,7 +233,10 @@ function renderBars(svg, stackData, sortedStacks, scales, groupKey, stackKey, me
     const stackVal = d3.select(el.parentNode).datum().key;
     const grp = d.data[groupKey];
     const raw = isPercentage ? d.data[`${stackVal}_original`] : d.data[stackVal];
-    const pct = isPercentage ? d.data[stackVal] : (raw / d.data._total) * 100;
+
+    const total = d.data._total;
+    const pct = total > 0 ? (raw / total) * 100 : 0;
+
     return `
         <strong>${chartUtils.getDisplayName(groupKey)}:</strong> ${grp}<br>
         <strong>${chartUtils.getDisplayName(stackKey)}:</strong> ${stackVal}<br>
