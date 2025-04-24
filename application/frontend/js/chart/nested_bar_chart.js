@@ -89,47 +89,161 @@ function createChartConfig(container, data, dimensions, measures) {
   };
 }
 
+/**
+ * Creates chart layout with fixed headers and scrollable content
+ */
 function setupContainer(container, config) {
+  // Clear container
+  container.innerHTML = "";
+
+  // Create header container and scrollable content container
+  const headerContainer = document.createElement("div");
+  headerContainer.className = "viz-header-container";
+
+  const scrollContainer = document.createElement("div");
+  scrollContainer.className = "viz-content-scroll";
+
+  // Set up styles
   Object.assign(container.style, {
     position: "relative",
     width: "100%",
     height: `${config.height}px`,
-    overflow: config.height < config.fullHeight ? "auto" : "visible",
   });
+
+  Object.assign(headerContainer.style, {
+    position: "absolute",
+    top: "0",
+    left: "0",
+    right: "0",
+    height: `${config.margin.top}px`,
+    zIndex: "1",
+  });
+
+  Object.assign(scrollContainer.style, {
+    position: "absolute",
+    top: `${config.margin.top}px`,
+    bottom: "0",
+    left: "0",
+    right: "0",
+    overflowY: config.height < config.fullHeight ? "auto" : "hidden",
+    overflowX: "hidden",
+  });
+
+  // Add to DOM
+  container.appendChild(headerContainer);
+  container.appendChild(scrollContainer);
+
+  return { headerContainer, scrollContainer };
 }
 
+/**
+ * Renders the chart with fixed headers and scrollable content
+ */
 function renderChart(container, data, dimensions, measures, config) {
-  const svg = d3
-    .select(container)
+  const { headerContainer, scrollContainer } = setupContainer(container, config);
+
+  // Create header SVG
+  const headerSvg = d3
+    .select(headerContainer)
     .append("svg")
     .attr("width", config.width)
-    .attr("height", config.fullHeight)
-    .attr("class", "viz-nested-bar-chart");
+    .attr("height", config.margin.top)
+    .attr("class", "viz-nested-bar-headers");
+
+  // Create content SVG
+  const contentSvg = d3
+    .select(scrollContainer)
+    .append("svg")
+    .attr("width", config.width)
+    .attr("height", config.fullHeight - config.margin.top)
+    .attr("class", "viz-nested-bar-content");
 
   const tooltip = chartStyles.createTooltip();
 
-  drawStructure(svg, data, dimensions, measures, config);
-  drawData(svg, data, dimensions, measures, config, tooltip);
+  // Draw header elements in the fixed header SVG
+  drawColumnHeaders(headerSvg, dimensions, measures, config);
+
+  // Draw content elements in the scrollable content SVG
+  drawBackgrounds(contentSvg, data, config);
+  drawGridLines(contentSvg, data, dimensions, measures, config);
+  drawData(contentSvg, data, dimensions, measures, config, tooltip);
+}
+
+/**
+ * Draws column headers in the fixed header SVG
+ */
+function drawColumnHeaders(svg, dimensions, measures, config) {
+  const headerY = config.margin.top - 10;
+
+  // Draw primary dimension header
+  drawHeader(svg, chartUtils.getDisplayName(dimensions[0]), config.dim1X, headerY);
+
+  // Draw secondary dimension header if applicable
+  if (config.hasTwoDimensions && config.dim2X) {
+    drawHeader(svg, chartUtils.getDisplayName(dimensions[1]), config.dim2X, headerY);
+  }
+
+  // Draw measure headers
+  measures.forEach((measure, i) => {
+    const centerX = config.barStartX + i * config.measureWidth + config.measureWidth / 2;
+    drawHeader(svg, chartUtils.getDisplayName(measure), centerX, headerY, "middle");
+  });
+
+  // Draw vertical separators in header
+  const endY = config.margin.top;
+  const startY = 10;
+
+  // Draw vertical grid lines that separate dimensions from measures
+  if (config.dim2X) {
+    chartAxes.createReferenceLine(svg, {
+      orientation: "vertical",
+      position: config.dim2X - 10,
+      start: startY,
+      end: endY,
+      className: "dimension-separator",
+    });
+  }
+
+  chartAxes.createReferenceLine(svg, {
+    orientation: "vertical",
+    position: config.barStartX,
+    start: startY,
+    end: endY,
+    className: "bar-area-separator",
+  });
+
+  // Draw measure separators
+  if (measures.length > 1) {
+    for (let i = 1; i < measures.length; i++) {
+      const x = config.barStartX + i * config.measureWidth;
+      chartAxes.createReferenceLine(svg, {
+        orientation: "vertical",
+        position: x,
+        start: startY,
+        end: endY,
+        className: "measure-separator",
+      });
+    }
+  }
+
+  // Draw bottom border for header
+  chartAxes.createReferenceLine(svg, {
+    orientation: "horizontal",
+    position: endY,
+    start: 0,
+    end: config.width,
+    className: "header-border",
+  });
 }
 
 // Chart structure functions
 
-function drawStructure(svg, data, dimensions, measures, config) {
-  drawBackgrounds(svg, data, config);
-  drawGridLines(svg, data, dimensions, measures, config);
-  drawColumnHeaders(svg, dimensions, measures, config);
-}
-
-/**
- * Draw the alternating background stripes
- */
 function drawBackgrounds(svg, data, config) {
-  let y = config.margin.top;
+  let y = config.margin.top - 30;
   let rowIndex = 0;
 
   data.forEach((category) => {
     category.segments.forEach(() => {
-      // Calculate the exact vertical position where the bar would be
       const rowCenter = y + config.barHeight / 2;
       const barTop = rowCenter - config.barHeight / 2;
 
@@ -154,18 +268,9 @@ function drawGridLines(svg, data, dimensions, measures, config) {
   const totalHeight = calculateTotalHeight(data, rowHeight);
   const bottomY = margin.top + totalHeight;
 
-  // Horizontal borders
   chartAxes.createReferenceLine(svg, {
     orientation: "horizontal",
-    position: margin.top - config.rowPadding / 2,
-    start: 0,
-    end: width,
-    className: "top-border",
-  });
-
-  chartAxes.createReferenceLine(svg, {
-    orientation: "horizontal",
-    position: bottomY - config.rowPadding / 2,
+    position: bottomY - config.rowPadding / 2 - 30,
     start: 0,
     end: width,
     className: "bottom-border",
@@ -178,39 +283,16 @@ function drawGridLines(svg, data, dimensions, measures, config) {
   drawVerticalSeparators(svg, config, dimensions, measures, bottomY);
 }
 
-/**
- * Draw dividers between categories
- */
 function drawCategorySeparators(svg, data, config, width) {
   let y = config.margin.top;
 
   data.forEach((category, i) => {
-    // Add the total height of all segments in this category
     const categoryHeight = category.segments.length * config.rowHeight;
     y += categoryHeight;
 
-    // Draw separator after the category if not the last one
     if (i < data.length - 1) {
       chartStyles.drawGridLine(svg, 0, width, y - CHART_DESIGN.rowSpacing / 2, y - CHART_DESIGN.rowSpacing / 2);
     }
-  });
-}
-
-function drawColumnHeaders(svg, dimensions, measures, config) {
-  const headerY = config.margin.top - 20;
-
-  // Primary dimension
-  drawHeader(svg, chartUtils.getDisplayName(dimensions[0]), config.dim1X, headerY);
-
-  // Secondary dimension (if applicable)
-  if (config.hasTwoDimensions && config.dim2X) {
-    drawHeader(svg, chartUtils.getDisplayName(dimensions[1]), config.dim2X, headerY);
-  }
-
-  // Measures
-  measures.forEach((measure, i) => {
-    const centerX = config.barStartX + i * config.measureWidth + config.measureWidth / 2;
-    drawHeader(svg, chartUtils.getDisplayName(measure), centerX, headerY, "middle");
   });
 }
 
@@ -218,7 +300,7 @@ function drawColumnHeaders(svg, dimensions, measures, config) {
 
 function drawData(svg, data, dimensions, measures, config, tooltip) {
   const barsGroup = svg.append("g").attr("class", "bars-container");
-  let y = config.margin.top;
+  let y = config.margin.top - 30;
 
   data.forEach((category) => {
     drawDimensionText(svg, category.name, config.dim1X, y, config);
@@ -228,7 +310,6 @@ function drawData(svg, data, dimensions, measures, config, tooltip) {
         drawDimensionText(svg, segment.name, config.dim2X, y, config);
       }
 
-      // Calculate vertical center similar to stacked chart
       const rowCenter = y + config.barHeight / 2;
 
       measures.forEach((measure, i) => {
@@ -354,10 +435,9 @@ function getMeasureColors(measures) {
 
 function drawVerticalSeparators(svg, config, dimensions, measures, bottomY) {
   const { margin, dim2X, barStartX, measureWidth } = config;
-  const topY = margin.top - 30;
-  const endY = bottomY - CHART_DESIGN.rowSpacing / 2;
+  const topY = margin.top - 40;
+  const endY = bottomY - CHART_DESIGN.rowSpacing / 2 - 30;
 
-  // Dimension separator
   if (dim2X) {
     chartAxes.createReferenceLine(svg, {
       orientation: "vertical",
@@ -368,7 +448,6 @@ function drawVerticalSeparators(svg, config, dimensions, measures, bottomY) {
     });
   }
 
-  // Bar area start separator
   chartAxes.createReferenceLine(svg, {
     orientation: "vertical",
     position: barStartX,
@@ -377,7 +456,6 @@ function drawVerticalSeparators(svg, config, dimensions, measures, bottomY) {
     className: "bar-area-separator",
   });
 
-  // Measure separators
   if (measures.length > 1) {
     for (let i = 1; i < measures.length; i++) {
       const x = barStartX + i * measureWidth;
