@@ -99,7 +99,7 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
         available.append("nested_bar_chart")
         ideal = "nested_bar_chart"
     
-    if dim_count == 2 and measure_count == 1 and not high_cardinality:
+    if cat_dim == 2 and measure_count == 1 and not high_cardinality:
         available.append("grouped_bar_chart")
         ideal = "grouped_bar_chart"
     
