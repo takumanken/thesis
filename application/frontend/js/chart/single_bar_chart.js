@@ -13,8 +13,8 @@ import * as chartAxes from "./utils/chartAxes.js";
 // CHART DESIGN PARAMETERS
 // -------------------------------------------------------------------------
 const CHART_DESIGN = {
-  barHeight: 15, // Height of each bar in pixels
-  rowSpacing: 5, // Space between rows in pixels
+  barHeight: 18, // Height of each bar in pixels
+  rowSpacing: 25, // Space between rows in pixels
   cornerRadius: 0, // Rounded corner radius
   maxChartHeight: 650, // Maximum overall chart height
   valueGap: 5, // Gap between bar and value label
@@ -67,16 +67,19 @@ function extractChartData() {
  */
 function setupChartConfiguration(container, dataset) {
   const margin = chartStyles.getChartMargins("horizontal_bar_chart");
-  // Reduce top margin since we're removing the x-axis
   margin.top = 15;
 
-  const barHeight = chartStyles.barChart.bar.height;
+  // Use CHART_DESIGN parameters for consistent bar heights
+  const barHeight = CHART_DESIGN.barHeight;
+  const rowSpacing = CHART_DESIGN.rowSpacing;
+  const rowHeight = barHeight + rowSpacing;
   const containerWidth = container.clientWidth || 800;
 
-  // Determine chart dimensions
+  // Calculate dimensions based on data and row height
   const dataLength = dataset?.length || 0;
-  const fullChartHeight = margin.top + margin.bottom + barHeight * dataLength;
-  const displayHeight = Math.min(fullChartHeight, chartStyles.barChart.maxHeight);
+  const contentHeight = rowHeight * dataLength;
+  const fullChartHeight = margin.top + margin.bottom + contentHeight;
+  const displayHeight = Math.min(fullChartHeight, CHART_DESIGN.maxChartHeight);
 
   // Configure container element
   Object.assign(container.style, {
@@ -90,6 +93,9 @@ function setupChartConfiguration(container, dataset) {
     containerWidth,
     displayHeight,
     fullChartHeight,
+    barHeight,
+    rowHeight,
+    rowSpacing,
     needsScrolling: fullChartHeight > displayHeight,
     barColor: chartColors.sequential.blue.base,
   };
@@ -102,8 +108,6 @@ function setupChartConfiguration(container, dataset) {
  * @returns {Object} SVG element for rendering
  */
 function createDomStructure(container, config) {
-  const { margin, fullChartHeight, needsScrolling } = config;
-
   // Clear existing content
   container.innerHTML = "";
 
@@ -116,7 +120,7 @@ function createDomStructure(container, config) {
     bottom: "0",
     left: "0",
     right: "0",
-    overflowY: needsScrolling ? "auto" : "hidden",
+    overflowY: config.needsScrolling ? "auto" : "hidden",
     overflowX: "hidden",
   });
 
@@ -129,7 +133,7 @@ function createDomStructure(container, config) {
     .append("svg")
     .attr("class", "viz-bar-canvas")
     .attr("width", "100%")
-    .attr("height", fullChartHeight)
+    .attr("height", config.fullChartHeight)
     .attr("preserveAspectRatio", "xMinYMin meet");
 
   return svg;
@@ -145,16 +149,22 @@ function createDomStructure(container, config) {
 function createScales(dataset, measure, config) {
   const { margin, containerWidth, fullChartHeight } = config;
 
+  // Use fixed step size for Y scale similar to stacked bar chart
+  const yDomain = d3.range(dataset.length);
+  const yStep = config.rowHeight;
+  const yRange = [margin.top, margin.top + yStep * yDomain.length];
+
   return {
     // Use createMeasureScale for x-axis
     x: chartScales.createMeasureScale(dataset, measure, [margin.left, containerWidth - margin.right]),
 
-    // Use createCategoryScale for y-axis (index-based)
-    y: chartScales.createCategoryScale(
-      d3.range(dataset.length),
-      [margin.top, fullChartHeight - margin.bottom],
-      chartStyles.barChart.bar.padding
-    ),
+    // Use scalePoint for y-axis with fixed step size
+    y: d3
+      .scalePoint()
+      .domain(yDomain)
+      .range(yRange)
+      .padding(0.5) // Center points
+      .round(true), // Round to pixel values
   };
 }
 
@@ -168,13 +178,13 @@ function renderBars(svg, dataset, scales, measure, dimension, config, tooltip) {
     .join("rect")
     .attr("class", "bar")
     .attr("x", config.margin.left)
-    .attr("y", (d, i) => scales.y(i))
+    .attr("y", (d, i) => scales.y(i) - config.barHeight / 2) // Center bars on y position
     .attr("width", (d) => Math.max(0, scales.x(+d[measure] || 0) - config.margin.left))
-    .attr("height", scales.y.bandwidth())
+    .attr("height", config.barHeight) // Use fixed bar height
     .attr("fill", config.barColor)
-    .attr("rx", chartStyles.barChart.bar.cornerRadius);
+    .attr("rx", CHART_DESIGN.cornerRadius); // Use CHART_DESIGN value
 
-  // Attach tooltips with default highlight behavior and translated field names
+  // Attach tooltips
   chartUtils.attachMouseTooltip(
     bars,
     tooltip,
@@ -194,8 +204,8 @@ function renderBarLabels(svg, dataset, scales, measure, config) {
     .data(dataset)
     .join("text")
     .attr("class", "bar-label")
-    .attr("x", (d) => scales.x(+d[measure] || 0) + chartStyles.barChart.valueGap)
-    .attr("y", (d, i) => scales.y(i) + scales.y.bandwidth() / 2)
+    .attr("x", (d) => scales.x(+d[measure] || 0) + CHART_DESIGN.valueGap) // Use CHART_DESIGN value
+    .attr("y", (d, i) => scales.y(i)) // Center on point
     .attr("dy", "0.35em")
     .attr("text-anchor", "start")
     .attr("fill", chartStyles.colors.text)
@@ -213,7 +223,7 @@ function renderYAxis(svg, dataset, yScale, dimension, margin) {
     orientation: "left",
     position: { x: margin.left, y: 0 },
     labelField: dimension,
-    maxLabelLength: 25,
+    maxLabelLength: CHART_DESIGN.labelMaxLength,
     showTickLines: false,
     className: "y-axis",
   });

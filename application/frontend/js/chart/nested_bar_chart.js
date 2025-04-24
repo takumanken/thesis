@@ -15,8 +15,9 @@ import * as chartAxes from "./utils/chartAxes.js";
 // -------------------------------------------------------------------------
 const CHART_DESIGN = {
   barHeight: 15, // Height of each bar in pixels
-  rowSpacing: 10, // Space between rows in pixels
+  rowSpacing: 20, // Space between rows in pixels
   cornerRadius: 0, // Rounded corner radius
+  maxChartHeight: 650, // Maximum overall chart height
   labelGap: 20, // Gap between dimensions and between dimension and bar
   maxDim1Width: 300, // Maximum width for dimension 1 labels
   maxDim2Width: 300, // Maximum width for dimension 2 labels
@@ -25,7 +26,6 @@ const CHART_DESIGN = {
   minMeasureWidth: 80, // Minimum width for each measure column
   labelSpace: 45, // Space reserved for labels at end of bars
   headerGap: 10, // Distance from top margin to headers
-  maxChartHeight: 650, // Maximum overall chart height
 };
 // -------------------------------------------------------------------------
 
@@ -141,7 +141,7 @@ function drawBackgrounds(svg, data, config) {
           .attr("width", config.width)
           .attr("height", config.barHeight + config.rowPadding)
           .attr("fill", chartStyles.colors.alternateBackground)
-          .attr("opacity", 0.5);
+          .attr("opacity", 1);
       }
       y += config.rowHeight;
       rowIndex++;
@@ -197,7 +197,7 @@ function drawCategorySeparators(svg, data, config, width) {
 }
 
 function drawColumnHeaders(svg, dimensions, measures, config) {
-  const headerY = config.margin.top - 15;
+  const headerY = config.margin.top - 20;
 
   // Primary dimension
   drawHeader(svg, chartUtils.getDisplayName(dimensions[0]), config.dim1X, headerY);

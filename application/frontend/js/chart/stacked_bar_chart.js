@@ -15,11 +15,11 @@ import * as legendUtil from "./utils/legendUtil.js";
 // CHART DESIGN PARAMETERS
 // -------------------------------------------------------------------------
 const CHART_DESIGN = {
-  barHeight: 15, // Height of each bar in pixels
-  rowSpacing: 10, // Space between rows in pixels
+  barHeight: 18, // Height of each bar in pixels
+  rowSpacing: 25, // Space between rows in pixels
   cornerRadius: 0, // Rounded corner radius
-  minChartHeight: 400, // Minimum overall chart height
   maxChartHeight: 650, // Maximum overall chart height
+  minChartHeight: 400, // Minimum overall chart height
   percentagePrecision: 1, // Decimal places for percentage values
 };
 // -------------------------------------------------------------------------
