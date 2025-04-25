@@ -144,8 +144,22 @@ I'm happy to create any of these queries using the available 311 data, or you ca
 
 ## IX. EXAMPLES
 
-### Example 1: Monthly Service Requests
-**Query**: "Show me how many service requests were created each month this year."  
+### Example 1: Common Complaints
+**Query**: "What are the most common complaints?"  
+**Output**:
+```json
+{
+    "dimensions": ["complaint_type_large"],
+    "measures": [
+        { "expression": "count(1)", "alias": "num_of_requests" }
+    ],
+    "preAggregationFilters": "",
+    "postAggregationFilters": ""
+}
+```
+
+### Example 2
+**Query**: "Show me how many service requests were created each month this year."
 **Output**:
 ```json
 {
@@ -158,7 +172,7 @@ I'm happy to create any of these queries using the available 311 data, or you ca
 }
 ```
 
-### Example 2: Open Requests in Brooklyn
+### Example 3
 **Query**: "List all open requests in Brooklyn."  
 **Output**:
 ```json
@@ -170,7 +184,7 @@ I'm happy to create any of these queries using the available 311 data, or you ca
 }
 ```
 
-### Example 3: Noise Complaints by Borough
+### Example 4
 **Query**: "Show me noise complaints by borough in the last 5 years."  
 **Output**:
 ```json
@@ -184,7 +198,25 @@ I'm happy to create any of these queries using the available 311 data, or you ca
 }
 ```
 
-### Example 4: Top 10 Most Common Complaint Types
+### Example 5
+**Query**: "What are the top 10 most frequent complaint types?"  
+**Output**:
+```json
+{
+    "dimensions": ["complaint_type_large"],
+    "measures": [
+        { "expression": "count(1)", "alias": "num_of_requests" }
+    ],
+    "preAggregationFilters": "",
+    "postAggregationFilters": "",
+    "topN": {
+        "orderByKey": ["num_of_requests DESC"],
+        "topN": 10
+    }
+}
+```
+
+### Example 6
 **Query**: "What are the top 10 most frequent complaint types?"  
 **Output**:
 ```json
