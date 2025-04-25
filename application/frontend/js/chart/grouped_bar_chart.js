@@ -284,7 +284,6 @@ function drawYAxis(svg, sortedGroups, groupPositions, config) {
     className: "y-axis-line",
   });
 
-  console.log(chartStyles.fontSize.axisLabel);
   const fontSizeInteger = parseInt(chartStyles.fontSize.axisLabel, 10);
 
   // Add labels for each group
