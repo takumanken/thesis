@@ -268,7 +268,7 @@ function getTooltipContent(d, dimensions, measure, totalValue) {
 
     return `
       <strong>${d.parent.data.name} › ${d.data.name}</strong><br>
-      ${chartUtils.getDisplayName(measure)}: ${chartUtils.formatValue(d.value)}<br>
+      ${chartUtils.getDisplayName(measure)}: ${chartUtils.formatFullNumber(d.value, measure)}<br>
       Share of total: ${shareOfTotal}%<br>
       Share of ${d.parent.data.name}: ${shareOfParent}%
     `;
@@ -277,7 +277,7 @@ function getTooltipContent(d, dimensions, measure, totalValue) {
   // Parent node or single-dimension cell
   return `
     <strong>${d.data.name}</strong><br>
-    ${chartUtils.getDisplayName(measure)}: ${chartUtils.formatValue(d.value)}<br>
+    ${chartUtils.getDisplayName(measure)}: ${chartUtils.formatFullNumber(d.value, measure)}<br>
     Share of total: ${shareOfTotal}%
   `;
 }

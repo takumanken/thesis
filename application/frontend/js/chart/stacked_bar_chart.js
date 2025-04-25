@@ -257,13 +257,12 @@ function renderBars(
     .selectAll("rect")
     .data((layer) => layer)
     .join("rect")
-    .attr("y", (d) => scales.y(d.data[groupKey]) - config.barHeight / 2) // Center bars on y position
+    .attr("y", (d) => scales.y(d.data[groupKey]) - config.barHeight / 2)
     .attr("x", (d) => scales.x(d[0]))
     .attr("width", (d) => Math.max(0, scales.x(d[1]) - scales.x(d[0]) - 1))
-    .attr("height", config.barHeight) // Use fixed bar height from config
+    .attr("height", config.barHeight)
     .attr("fill", (d, i, nodes) => color(d3.select(nodes[i].parentNode).datum().key));
 
-  // Tooltip code remains unchanged
   chartUtils.attachMouseTooltip(rects, tooltip, (d, el) => {
     const stackVal = d3.select(el.parentNode).datum().key;
     const grp = d.data[groupKey];
@@ -275,7 +274,7 @@ function renderBars(
     return `
         <strong>${chartUtils.getDisplayName(groupKey)}:</strong> ${grp}<br>
         <strong>${chartUtils.getDisplayName(stackKey)}:</strong> ${stackVal}<br>
-        <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(raw)}<br>
+        <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(raw, measure)}<br>
         <strong>Pct:</strong> ${pct.toFixed(CHART_DESIGN.percentagePrecision)}%
       `;
   });

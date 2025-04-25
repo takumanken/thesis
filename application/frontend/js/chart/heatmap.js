@@ -282,20 +282,13 @@ function addTooltipFunctionality(map, points, measure) {
 
 /**
  * Create tooltip content with enhanced location information
- * @param {number} lat - Latitude
- * @param {number} lng - Longitude
- * @param {number} value - Measure value
- * @param {string} measure - Measure name
- * @param {string} borough - Borough name
- * @param {string} neighborhood - Neighborhood name
- * @returns {string} HTML content for tooltip
  */
 function createTooltipContent(lat, lng, value, measure, borough, neighborhood) {
   return `
     <strong>${chartUtils.getDisplayName("borough")}:</strong> ${borough}<br>
     <strong>${chartUtils.getDisplayName("neighborhood_name")}:</strong> ${neighborhood}<br>
     <strong>Location:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}<br>
-    <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(value)}
+    <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(value, measure)}
   `;
 }
 

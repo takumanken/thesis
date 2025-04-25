@@ -178,11 +178,11 @@ function renderBars(svg, dataset, scales, measure, dimension, config, tooltip) {
     .join("rect")
     .attr("class", "bar")
     .attr("x", config.margin.left)
-    .attr("y", (d, i) => scales.y(i) - config.barHeight / 2) // Center bars on y position
+    .attr("y", (d, i) => scales.y(i) - config.barHeight / 2)
     .attr("width", (d) => Math.max(0, scales.x(+d[measure] || 0) - config.margin.left))
-    .attr("height", config.barHeight) // Use fixed bar height
+    .attr("height", config.barHeight)
     .attr("fill", config.barColor)
-    .attr("rx", CHART_DESIGN.cornerRadius); // Use CHART_DESIGN value
+    .attr("rx", CHART_DESIGN.cornerRadius);
 
   // Attach tooltips
   chartUtils.attachMouseTooltip(
@@ -190,7 +190,7 @@ function renderBars(svg, dataset, scales, measure, dimension, config, tooltip) {
     tooltip,
     (d) => `
       <strong>${chartUtils.getDisplayName(dimension)}:</strong> ${d[dimension] || "N/A"}<br>
-      <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(+d[measure] || 0)}
+      <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(+d[measure] || 0, measure)}
     `
   );
 }

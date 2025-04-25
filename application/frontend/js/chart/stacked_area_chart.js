@@ -379,7 +379,7 @@ function createTooltipContent({
   return `
     <strong>${chartUtils.getDisplayName(categoricalDimension)}:</strong> ${category}<br>
     <strong>${chartUtils.getDisplayName(timeDimension)}:</strong> ${timeStr}<br>
-    <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(value)}<br>
+    <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(value, measure)}<br>
     <strong>Percentage:</strong> ${pct.toFixed(1)}%
   `;
 }

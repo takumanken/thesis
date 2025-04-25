@@ -274,7 +274,7 @@ function drawSingleLine(svg, data, scales, lineGenerator, tooltip, timeDimension
           event,
           `
             <strong>${timeDimension}:</strong> ${timeValue}<br>
-            <strong>${measure}:</strong> ${chartUtils.formatValue(closestPoint.data[measure])}
+            <strong>${measure}:</strong> ${chartUtils.formatFullNumber(closestPoint.data[measure], measure)}
           `
         );
       } else {
@@ -463,7 +463,10 @@ function showPointHighlight(
     `
       <strong>${chartUtils.getDisplayName(categoricalDimension)}:</strong> ${point.group}<br>
       <strong>${chartUtils.getDisplayName(timeDimension)}:</strong> ${timeValue}<br>
-      <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(point.data[measure])}
+      <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(
+      point.data[measure],
+      measure
+    )}
     `
   );
 }

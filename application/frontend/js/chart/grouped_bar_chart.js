@@ -262,7 +262,7 @@ function drawBars(svg, dataset, scales, config, groupKey, subGroupKey, measure, 
     (d) => `
       <strong>${chartUtils.getDisplayName(groupKey)}:</strong> ${d.group}<br>
       <strong>${chartUtils.getDisplayName(subGroupKey)}:</strong> ${d.sub}<br>
-      <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(d.val)}
+      <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(d.val, measure)}
     `
   );
 }

@@ -180,7 +180,7 @@ function renderMap(svg, container, geoDimension, dataIndex, config, measure, too
 
       // Add labels if configured
       if (geoConfig.showLabels) {
-        addRegionLabels(svg, geoJson, path);
+        addRegionLabels(svg, geoJson, path, measure);
       }
 
       // Add legend
@@ -247,23 +247,23 @@ function createTooltipContent(feature, geoDimension, measure) {
   if (geoDimension === "neighborhood_name") {
     return `<strong>${chartUtils.getDisplayName("neighborhood_name")}:</strong> ${p.ntaname}<br>
             <strong>${chartUtils.getDisplayName("borough")}:</strong> ${boroughName}<br>
-            <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(p.value)}`;
+            <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(p.value, measure)}`;
   }
 
   if (geoDimension === "incident_zip") {
     return `<strong>ZIP Code:</strong> ${p.displayName}<br>
             <strong>${chartUtils.getDisplayName("borough")}:</strong> ${boroughName}<br>
-            <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(p.value)}`;
+            <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(p.value, measure)}`;
   }
 
   return `<strong>${p.displayName}</strong><br>
-          <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatValue(p.value)}`;
+          <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(p.value, measure)}`;
 }
 
 /**
  * Add labels to regions
  */
-function addRegionLabels(svg, geoJson, path) {
+function addRegionLabels(svg, geoJson, path, measure) {
   svg
     .selectAll(".region-label")
     .data(geoJson.features)
@@ -287,7 +287,7 @@ function addRegionLabels(svg, geoJson, path) {
         .attr("x", 0)
         .attr("dy", "1.4em")
         .style("font-size", "11px")
-        .text(chartUtils.formatValue(d.properties.value));
+        .text(chartUtils.formatFullNumber(d.properties.value, measure));
     });
 }
 

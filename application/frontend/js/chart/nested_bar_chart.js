@@ -374,7 +374,7 @@ function drawBar(svg, bar, tooltip) {
     rect,
     tooltip,
     (d) => `<strong>${d.category}${d.segment ? " → " + d.segment : ""}</strong><br>
-      <strong>${chartUtils.getDisplayName(d.measure)}:</strong> ${chartUtils.formatValue(d.value)}`
+      <strong>${chartUtils.getDisplayName(d.measure)}:</strong> ${chartUtils.formatFullNumber(d.value, d.measure)}`
   );
 }
 
