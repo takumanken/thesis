@@ -196,7 +196,7 @@ function renderMap(svg, container, geoDimension, dataIndex, config, measure, too
  * Render map regions with colors and tooltips
  */
 function renderRegions(svg, geoJson, path, colorScale, geoDimension, measure, tooltip) {
-  svg
+  const regions = svg
     .selectAll("path.region")
     .data(geoJson.features)
     .join("path")
@@ -205,33 +205,35 @@ function renderRegions(svg, geoJson, path, colorScale, geoDimension, measure, to
     .attr("fill", (d) => (d.properties.value > 0 ? colorScale(d.properties.value) : "#F5F5F5"))
     .attr("stroke", "#ffffff")
     .attr("stroke-width", 0.5)
-    .style("cursor", (d) => (d.properties.value > 0 ? "pointer" : "default"))
-    .on("mouseover", function (event, d) {
+    .style("cursor", (d) => (d.properties.value > 0 ? "pointer" : "default"));
+
+  // Replace custom tooltip handling with standard utility function
+  chartUtils.attachMouseTooltip(
+    regions,
+    tooltip,
+    (d) => {
       // Only show tooltip for regions with data
-      if (!d.properties.value || d.properties.value <= 0) return;
+      if (!d.properties.value || d.properties.value <= 0) return "";
 
-      // Create tooltip content
-      const content = createTooltipContent(d, geoDimension, measure);
+      // Use the same standardized tooltip content
+      return createTooltipContent(d, geoDimension, measure);
+    },
+    // Custom highlight function for polygon elements
+    (el, d) => {
+      if (!d || !d.properties.value || d.properties.value <= 0) {
+        // Reset to original color or default fill
+        const origFill = el.property("__origFill") || "#F5F5F5";
+        el.attr("fill", origFill);
+        return;
+      }
 
-      // Position and show tooltip - fix positioning
-      tooltip
-        .html(content)
-        .style("left", `${event.pageX + 15}px`)
-        .style("top", `${event.pageY - 28}px`)
-        .style("visibility", "visible") // Ensure this comes after positioning
-        .style("opacity", 1); // Add opacity for smoother appearance
-    })
-    .on("mousemove", function (event) {
-      // Update position on mouse movement with slight offset
-      tooltip.style("left", `${event.pageX + 15}px`).style("top", `${event.pageY - 28}px`);
-    })
-    .on("mouseout", function () {
-      // Hide tooltip
-      tooltip.style("opacity", 0).style("visibility", "hidden");
-    });
+      // Get original fill or use the computed color
+      const origFill = el.property("__origFill") || colorScale(d.properties.value);
 
-  // Debug if tooltip exists and is properly configured
-  console.log("Tooltip object:", tooltip.node());
+      // Apply darker fill for highlight
+      el.attr("fill", d3.color(origFill).darker(0.3));
+    }
+  );
 }
 
 /**
