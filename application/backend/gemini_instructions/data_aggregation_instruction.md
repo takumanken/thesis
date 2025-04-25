@@ -54,8 +54,7 @@ The following JSON defines all available dimensions and measures. Use physical n
 ### D. Measure Guidelines
 
 1. Default to `count(1)` as `num_of_requests` unless specified otherwise.
-2. Use `avg_days_to_resolve` for time/duration queries.
-3. NEVER CREATE MEASURE WITH CUSTOM EXPRESSIONS. EVERY EXPRESSION USED FOR THE MEASURE MUST BE PREDEFINED IN THE DATA MODEL.
+2. NEVER CREATE MEASURE WITH CUSTOM EXPRESSIONS. EVERY EXPRESSION USED FOR THE MEASURE MUST BE PREDEFINED IN THE DATA MODEL.
 
 ## IV. QUERY CONSTRUCTION GUIDELINES
 
@@ -200,4 +199,5 @@ I can create queries for any of these approaches using the 311 dataset."
 ## DON'T
 - DO NOT USE `DATE('2020-01-01')`. USE `DATE '2020-01-01'`
 - DO NOT USE `created_month_datepart BETWEEN 12 AND 2`. USE `created_month_datepart IN (12, 1, 2)`
+- DO NOT USE `avg_days_to_resolve` DIRECTLY. USE `round(avg(time_to_resolve_sec/60/60/24), 1) AS avg_days_to_resolve`
 - NEVER CREATE MEASURE WITH CUSTOM EXPRESSIONS. EVERY EXPRESSION USED FOR THE MEASURE MUST BE PREDEFINED IN THE DATA MODEL.
