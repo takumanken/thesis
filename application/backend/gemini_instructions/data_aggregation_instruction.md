@@ -45,7 +45,8 @@ The following JSON defines all available dimensions and measures. Use physical n
 ### C. Geographic Guidelines
 
 - Use "location" for point-level data or map-based visualizations. However, when you use location as the dimension, you should not include any other dimensions.
-- Use "borough", "neighborhood_name", or "county" only when explicitly requested.
+- Use "neighborhood_name" for other geographc question as a default field.
+- Use "borough", "county" only when explicitly requested.
 - For proximity queries:
   - Use placeholders `{{user_latitude}}` and `{{user_longitude}}`.
   - Example: `st_distance_sphere(st_point2d({{user_latitude}}, {{user_longitude}}), location) <= 1000`.
