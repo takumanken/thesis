@@ -318,18 +318,7 @@ function getDimensionTypeIcon(dataType) {
 
 /** Gets the Material Icon name based on measure data type */
 function getMeasureTypeIcon(dataType) {
-  const type = (dataType || "number").toLowerCase();
-  switch (type) {
-    case "integer":
-      return "tag";
-    case "float":
-    case "number":
-      return "functions";
-    case "percentage":
-      return "percent";
-    default:
-      return "functions";
-  }
+  return "functions";
 }
 
 /**
