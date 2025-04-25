@@ -620,6 +620,22 @@
                 "resolved ratio"
             ],
             "data_source_id": 1
+        },
+        {
+            "physical_name": "requests_per_day",
+            "display_name": "# of Requests per Day",
+            "expression": "round(count(1) / count(distinct created_date), 2)",
+            "data_type": "float",
+            "description": "Average number of requests per day.",
+            "description_to_user": "The average number of service requests submitted each day.",
+            "synonym": [
+                "daily requests",
+                "requests per day",
+                "daily average",
+                "average daily requests",
+                "requests per day average"
+            ],
+            "data_source_id": 1
         }
     ]
 }
