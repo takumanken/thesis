@@ -284,12 +284,14 @@ function addTooltipFunctionality(map, points, measure) {
  * Create tooltip content with enhanced location information
  */
 function createTooltipContent(lat, lng, value, measure, borough, neighborhood) {
-  return `
-    <strong>${chartUtils.getDisplayName("borough")}:</strong> ${borough}<br>
-    <strong>${chartUtils.getDisplayName("neighborhood_name")}:</strong> ${neighborhood}<br>
-    <strong>Location:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}<br>
-    <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(value, measure)}
-  `;
+  return chartUtils.createStandardTooltip({
+    dimensions: [
+      { name: "borough", value: borough },
+      { name: "neighborhood_name", value: neighborhood },
+      { name: "Location", value: `${lat.toFixed(4)}, ${lng.toFixed(4)}` },
+    ],
+    measures: [{ name: measure, value: value, field: measure }],
+  });
 }
 
 export default renderHeatMap;

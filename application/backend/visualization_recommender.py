@@ -96,6 +96,9 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
     is_not_location = dimensions[0] != "location" if dimensions else True
     
     # Add chart types based on data characteristics
+    if dim_count > 2 or measure_count == 0:
+        return available, ideal # Just return table
+    
     if cat_count == 1 and measure_count == 1 and time_count == 0 and is_not_location:
         available.append("single_bar_chart")
         ideal = "single_bar_chart"

@@ -343,6 +343,7 @@ function drawData(svg, data, dimensions, measures, config, tooltip) {
 function drawBar(svg, bar, tooltip) {
   const barGroup = svg.append("g").datum(bar);
 
+  // Create bar rectangle
   const rect = barGroup
     .append("rect")
     .attr("x", (d) => d.x)
@@ -370,12 +371,28 @@ function drawBar(svg, bar, tooltip) {
       }
     });
 
-  chartUtils.attachMouseTooltip(
-    rect,
-    tooltip,
-    (d) => `<strong>${d.category}${d.segment ? " → " + d.segment : ""}</strong><br>
-      <strong>${chartUtils.getDisplayName(d.measure)}:</strong> ${chartUtils.formatFullNumber(d.value, d.measure)}`
-  );
+  chartUtils.attachMouseTooltip(rect, tooltip, (d) => {
+    const dimensions = [];
+
+    // Add primary dimension
+    dimensions.push({ name: "Category", value: d.category });
+
+    // Add secondary dimension if present
+    if (d.segment) {
+      dimensions.push({ name: "Segment", value: d.segment });
+    }
+
+    return chartUtils.createStandardTooltip({
+      dimensions: dimensions,
+      measures: [
+        {
+          name: d.measure,
+          value: d.value,
+          field: d.measure,
+        },
+      ],
+    });
+  });
 }
 
 function drawDimensionText(svg, text, x, y, config) {

@@ -243,21 +243,31 @@ function createTooltipContent(feature, geoDimension, measure) {
   // Get appropriate borough name
   let boroughName = p.dataItem?.reference_borough || p.boroname || "Unknown";
 
-  // Build tooltip based on dimension type
+  // Build dimensions and measures arrays for standardized tooltip
+  const dimensions = [];
+  const measures = [];
+
+  // Add dimensions (top section)
   if (geoDimension === "neighborhood_name") {
-    return `<strong>${chartUtils.getDisplayName("neighborhood_name")}:</strong> ${p.ntaname}<br>
-            <strong>${chartUtils.getDisplayName("borough")}:</strong> ${boroughName}<br>
-            <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(p.value, measure)}`;
+    dimensions.push({ name: "neighborhood_name", value: p.ntaname }, { name: "borough", value: boroughName });
+  } else if (geoDimension === "incident_zip") {
+    dimensions.push({ name: "ZIP Code", value: p.displayName }, { name: "borough", value: boroughName });
+  } else {
+    dimensions.push({ name: geoDimension, value: p.displayName });
   }
 
-  if (geoDimension === "incident_zip") {
-    return `<strong>ZIP Code:</strong> ${p.displayName}<br>
-            <strong>${chartUtils.getDisplayName("borough")}:</strong> ${boroughName}<br>
-            <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(p.value, measure)}`;
-  }
+  // Add measures (bottom section)
+  measures.push({
+    name: measure,
+    value: p.value,
+    field: measure,
+  });
 
-  return `<strong>${p.displayName}</strong><br>
-          <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(p.value, measure)}`;
+  // Create standardized tooltip
+  return chartUtils.createStandardTooltip({
+    dimensions: dimensions,
+    measures: measures,
+  });
 }
 
 /**

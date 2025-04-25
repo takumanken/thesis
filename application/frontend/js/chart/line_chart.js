@@ -272,10 +272,10 @@ function drawSingleLine(svg, data, scales, lineGenerator, tooltip, timeDimension
         chartStyles.tooltip.show(
           tooltip,
           event,
-          `
-            <strong>${timeDimension}:</strong> ${timeValue}<br>
-            <strong>${measure}:</strong> ${chartUtils.formatFullNumber(closestPoint.data[measure], measure)}
-          `
+          chartUtils.createStandardTooltip({
+            dimensions: [{ name: timeDimension, value: timeValue }],
+            measures: [{ name: measure, value: closestPoint.data[measure], field: measure }],
+          })
         );
       } else {
         // Hide if no point is close
@@ -456,18 +456,17 @@ function showPointHighlight(
   // Format time value based on type
   const timeValue = chartUtils.formatTimeValue(point.data.parsedTime, isNumericTime);
 
-  // Show tooltip with translated field names
+  // Show tooltip with standardized format
   chartStyles.tooltip.show(
     tooltip,
     event,
-    `
-      <strong>${chartUtils.getDisplayName(categoricalDimension)}:</strong> ${point.group}<br>
-      <strong>${chartUtils.getDisplayName(timeDimension)}:</strong> ${timeValue}<br>
-      <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(
-      point.data[measure],
-      measure
-    )}
-    `
+    chartUtils.createStandardTooltip({
+      dimensions: [
+        { name: categoricalDimension, value: point.group },
+        { name: timeDimension, value: timeValue },
+      ],
+      measures: [{ name: measure, value: point.data[measure], field: measure }],
+    })
   );
 }
 
