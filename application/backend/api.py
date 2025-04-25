@@ -186,6 +186,8 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         for field in fields:
             for field_description in all_field_description:
                 if field_description["physical_name"] == field:
+                    field_description = field_description.copy()
+                    field_description.pop("synonym", None)
                     field_metadata.append(field_description)
         
         # Add datasource metadata
