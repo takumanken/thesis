@@ -17,7 +17,7 @@ import * as legendUtil from "./utils/legendUtil.js";
 const CHART_DESIGN = {
   barHeight: 15, // Height of each bar in pixels
   rowSpacing: 2, // Space between subgroup bars
-  groupPadding: 8, // Space between groups
+  groupPadding: 10, // Space between groups
   cornerRadius: 0, // Rounded corner radius
   maxChartHeight: 650, // Maximum overall chart height
   minChartHeight: 500, // Minimum overall chart height
@@ -284,6 +284,9 @@ function drawYAxis(svg, sortedGroups, groupPositions, config) {
     className: "y-axis-line",
   });
 
+  console.log(chartStyles.fontSize.axisLabel);
+  const fontSizeInteger = parseInt(chartStyles.fontSize.axisLabel, 10);
+
   // Add labels for each group
   yAxisGroup
     .selectAll(".group-label")
@@ -292,8 +295,7 @@ function drawYAxis(svg, sortedGroups, groupPositions, config) {
     .attr("class", "group-label")
     .attr("x", -CHART_DESIGN.labelGap)
     .attr("y", (d) => {
-      const effectiveBarsHeight = config.groupHeights[d] - config.groupPadding;
-      return groupPositions[d] + effectiveBarsHeight / 2;
+      return groupPositions[d] + (config.groupHeights[d] - config.groupPadding) / 2 - fontSizeInteger * 0.8;
     })
     .attr("text-anchor", "end")
     .attr("dominant-baseline", "middle")
