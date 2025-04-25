@@ -260,26 +260,63 @@ function getCellColor(d, dimensions, colorScale) {
  */
 function getTooltipContent(d, dimensions, measure, totalValue) {
   const shareOfTotal = ((d.value / totalValue) * 100).toFixed(1);
+  const tooltipDimensions = [];
+  const tooltipMeasures = [];
 
-  // Child node in multi-level treemap
+  // Add appropriate dimensions
   if (dimensions.length > 1 && d.depth === 2) {
+    // Child node in multi-level treemap
+    tooltipDimensions.push({
+      name: "Parent",
+      value: d.parent.data.name,
+    });
+    tooltipDimensions.push({
+      name: "Child",
+      value: d.data.name,
+    });
+
+    // Add measures
     const parentValue = d.parent.value;
     const shareOfParent = ((d.value / parentValue) * 100).toFixed(1);
 
-    return `
-      <strong>${d.parent.data.name} › ${d.data.name}</strong><br>
-      ${chartUtils.getDisplayName(measure)}: ${chartUtils.formatFullNumber(d.value, measure)}<br>
-      Share of total: ${shareOfTotal}%<br>
-      Share of ${d.parent.data.name}: ${shareOfParent}%
-    `;
+    tooltipMeasures.push({
+      name: measure,
+      value: d.value,
+      field: measure,
+    });
+    tooltipMeasures.push({
+      name: "Share of total",
+      value: `${shareOfTotal}%`,
+      field: "percentage",
+    });
+    tooltipMeasures.push({
+      name: `Share of ${d.parent.data.name}`,
+      value: `${shareOfParent}%`,
+      field: "percentage",
+    });
+  } else {
+    // Parent node or single-dimension cell
+    tooltipDimensions.push({
+      name: dimensions.length > 1 && d.depth === 1 ? "Category" : "Name",
+      value: d.data.name,
+    });
+
+    tooltipMeasures.push({
+      name: measure,
+      value: d.value,
+      field: measure,
+    });
+    tooltipMeasures.push({
+      name: "Share of total",
+      value: `${shareOfTotal}%`,
+      field: "percentage",
+    });
   }
 
-  // Parent node or single-dimension cell
-  return `
-    <strong>${d.data.name}</strong><br>
-    ${chartUtils.getDisplayName(measure)}: ${chartUtils.formatFullNumber(d.value, measure)}<br>
-    Share of total: ${shareOfTotal}%
-  `;
+  return chartUtils.createStandardTooltip({
+    dimensions: tooltipDimensions,
+    measures: tooltipMeasures,
+  });
 }
 
 // ===== LABEL RENDERING =====

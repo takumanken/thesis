@@ -376,12 +376,17 @@ function createTooltipContent({
   // Format time
   const timeStr = chartUtils.formatTimeValue(timePoint.time, isNumericTime);
 
-  return `
-    <strong>${chartUtils.getDisplayName(categoricalDimension)}:</strong> ${category}<br>
-    <strong>${chartUtils.getDisplayName(timeDimension)}:</strong> ${timeStr}<br>
-    <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(value, measure)}<br>
-    <strong>Percentage:</strong> ${pct.toFixed(1)}%
-  `;
+  // Use standardized tooltip format
+  return chartUtils.createStandardTooltip({
+    dimensions: [
+      { name: categoricalDimension, value: category },
+      { name: timeDimension, value: timeStr },
+    ],
+    measures: [
+      { name: measure, value: value, field: measure },
+      { name: "Percentage", value: `${pct.toFixed(1)}%`, field: "percentage" },
+    ],
+  });
 }
 
 /**

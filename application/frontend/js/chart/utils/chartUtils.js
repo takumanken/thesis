@@ -38,6 +38,11 @@ export function formatFullNumber(value, field) {
     return "";
   }
 
+  // Handle special field (percentage)
+  if (field === "percentage") {
+    return value;
+  }
+
   // Get field metadata from state if available
   const fieldMetadata = state.aggregationDefinition?.fieldMetadata || [];
   const metadata = fieldMetadata.find((f) => f.physical_name === field);
@@ -411,4 +416,82 @@ export function getDisplayName(physicalName) {
 
   // If no match found, return the physical name
   return physicalName;
+}
+
+/**
+ * Creates consistently formatted tooltip HTML
+ * @param {Object} config - Configuration object with dimensions and measures
+ * @param {Array} config.dimensions - Array of {name, value} pairs for dimensions
+ * @param {Array} config.measures - Array of {name, value, field} pairs for measures
+ * @returns {string} Formatted tooltip HTML
+ */
+export function createStandardTooltip(config) {
+  const { dimensions = [], measures = [] } = config;
+
+  const tooltipStyle = `
+    <style>
+      .tooltip-table { 
+        border-collapse: collapse; 
+        font-size: 11px;
+        margin: 0;
+        border-spacing: 0;
+      }
+      .tooltip-label { 
+        color: #666; 
+        text-align: left; 
+        padding-right: 6px; 
+        white-space: nowrap; 
+        vertical-align: top;
+      }
+      .tooltip-value { 
+        text-align: left; 
+        white-space: nowrap;
+        font-weight: bold;
+      }
+      .tooltip-divider {
+        height: 4px;
+      }
+    </style>
+  `;
+
+  // Create rows for all items (dimensions first, then measures)
+  const rows = [];
+
+  // Add dimension rows
+  dimensions.forEach((d) => {
+    rows.push(`
+      <tr>
+        <td class="tooltip-label">${getDisplayName(d.name)}:</td>
+        <td class="tooltip-value">${d.value}</td>
+      </tr>
+    `);
+  });
+
+  // Add a divider if we have both dimensions and measures
+  if (dimensions.length > 0 && measures.length > 0) {
+    rows.push(`
+      <tr class="tooltip-divider">
+        <td colspan="2"></td>
+      </tr>
+    `);
+  }
+
+  // Add measure rows
+  measures.forEach((m) => {
+    rows.push(`
+      <tr>
+        <td class="tooltip-label">${getDisplayName(m.name)}:</td>
+        <td class="tooltip-value">${formatFullNumber(m.value, m.field)}</td>
+      </tr>
+    `);
+  });
+
+  // Build the final unified table
+  const tableHTML = `
+    <table class="tooltip-table">
+      ${rows.join("")}
+    </table>
+  `;
+
+  return tooltipStyle + tableHTML;
 }

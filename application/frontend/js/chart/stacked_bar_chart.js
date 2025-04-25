@@ -243,7 +243,7 @@ function renderBars(
   sortedStacks,
   scales,
   groupKey,
-  stackKey,
+  subGroupKey,
   measure,
   isPercentage,
   color,
@@ -263,20 +263,24 @@ function renderBars(
     .attr("height", config.barHeight)
     .attr("fill", (d, i, nodes) => color(d3.select(nodes[i].parentNode).datum().key));
 
+  // Update tooltip to use standardized format
   chartUtils.attachMouseTooltip(rects, tooltip, (d, el) => {
     const stackVal = d3.select(el.parentNode).datum().key;
     const grp = d.data[groupKey];
     const raw = isPercentage ? d.data[`${stackVal}_original`] : d.data[stackVal];
-
     const total = d.data._total;
     const pct = total > 0 ? (raw / total) * 100 : 0;
 
-    return `
-        <strong>${chartUtils.getDisplayName(groupKey)}:</strong> ${grp}<br>
-        <strong>${chartUtils.getDisplayName(stackKey)}:</strong> ${stackVal}<br>
-        <strong>${chartUtils.getDisplayName(measure)}:</strong> ${chartUtils.formatFullNumber(raw, measure)}<br>
-        <strong>Pct:</strong> ${pct.toFixed(CHART_DESIGN.percentagePrecision)}%
-      `;
+    return chartUtils.createStandardTooltip({
+      dimensions: [
+        { name: groupKey, value: grp },
+        { name: subGroupKey, value: stackVal },
+      ],
+      measures: [
+        { name: measure, value: raw, field: measure },
+        { name: "Percentage", value: `${pct.toFixed(CHART_DESIGN.percentagePrecision)}%`, field: "percentage" },
+      ],
+    });
   });
 }
 
