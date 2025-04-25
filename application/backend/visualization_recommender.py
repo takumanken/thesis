@@ -127,7 +127,7 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
     if 1 <= dim_count <= 2 and measure_count == 1 and time_count == 0 and all_additive_measures and is_not_location and not is_topn:
         available.append("treemap")
         
-    if geo_count == 1 and len(dimensions) == 1 and measure_count == 1 and all_additive_measures:
+    if geo_count == 1 and len(dimensions) == 1 and measure_count == 1:
         geo_name = geo_dim[0].lower()
         if geo_name == "location":
             available.append("heatmap")
