@@ -161,13 +161,26 @@ function setupLeafletMap(mapContainer) {
 function fitMapToPoints(map, points) {
   if (!points?.length) return;
 
-  // Create bounds containing all points
+  // Calculate bounds from points
   const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]));
 
-  // Fit map to these bounds with padding
-  map.fitBounds(bounds, {
-    padding: [50, 50],
-    maxZoom: 15, // Limit zoom level for better context
+  // Calculate the center with offset in one step
+  const northBound = bounds.getNorth();
+  const southBound = bounds.getSouth();
+  const centerLng = bounds.getCenter().lng;
+
+  // Calculate vertical center
+  const latitudeHeight = northBound - southBound;
+  const offsetLatitude = southBound + latitudeHeight * 0.4; // offset (10% lower)
+
+  // Calculate appropriate zoom level that would show all points
+  const paddingTL = [50, 50];
+  const paddingBR = [50, 50];
+
+  // Set the view directly to the calculated position
+  const zoom = map.getBoundsZoom(bounds, false, paddingTL, paddingBR);
+  map.setView([offsetLatitude, centerLng], Math.min(zoom, 17), {
+    animate: false, // Prevent animation
   });
 }
 
