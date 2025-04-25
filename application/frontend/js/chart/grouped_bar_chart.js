@@ -113,7 +113,9 @@ function processData(dataset, groupKey, subGroupKey, measure) {
  * Create chart configuration with sizing and layout parameters
  */
 function createConfig(sortedGroups, dataset, groupKey, subGroupKey) {
-  const margin = chartStyles.getChartMargins("grouped_bar_chart");
+  // Create a copy of the margin object to avoid modifying the shared reference
+  const margin = { ...chartStyles.getChartMargins("grouped_bar_chart") };
+
   const barHeight = CHART_DESIGN.barHeight;
   const groupPadding = CHART_DESIGN.groupPadding;
 

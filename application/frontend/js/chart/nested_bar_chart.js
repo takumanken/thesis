@@ -52,7 +52,9 @@ function renderNestedBarChart(container) {
  */
 function createChartConfig(container, data, dimensions, measures) {
   const textMeasurements = measureTextWidths(container, data);
-  const margin = chartStyles.getChartMargins("nested_bar_chart");
+  // Create a copy of the margin object to avoid modifying the shared reference
+  const margin = { ...chartStyles.getChartMargins("nested_bar_chart") };
+
   const width = container.clientWidth || 1440;
 
   // Make consistent with stacked bar chart

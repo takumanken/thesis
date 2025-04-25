@@ -66,7 +66,8 @@ function extractChartData() {
  * @returns {Object} Chart configuration object
  */
 function setupChartConfiguration(container, dataset) {
-  const margin = chartStyles.getChartMargins("horizontal_bar_chart");
+  // Create a copy of the margin object to avoid modifying the shared reference
+  const margin = { ...chartStyles.getChartMargins("horizontal_bar_chart") };
   margin.top = 15;
 
   // Use CHART_DESIGN parameters for consistent bar heights
