@@ -427,11 +427,11 @@
                 "data_source_id": 1
             },
             {
-                "physical_name": "descriptor",
-                "display_name": "Descriptor",
+                "physical_name": "complaint_description",
+                "display_name": "Complaint Description",
                 "data_type": "string",
                 "description": "Additional complaint details.",
-                "description_to_user": "The details about the specific nature of the complaint or issue reported.",
+                "description_to_user": "The details about the specific nature of the complaint or issue reported. Original Column Name: Descriptor.",
                 "synonym": [
                     "description",
                     "details",

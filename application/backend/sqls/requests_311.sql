@@ -145,7 +145,7 @@ SELECT
         ELSE 'Others'
     END AS complaint_type_large,
     IFNULL("Complaint Type", 'Unspecified') AS complaint_type_middle,
-    IFNULL("Descriptor", 'Unspecified') AS complaint_type_detailed,
+    IFNULL("Descriptor", 'Unspecified') AS complaint_description,
     IFNULL("Borough", 'Unspecified') AS borough,
     CASE
         WHEN IFNULL("Borough", 'Unspecified') = 'MANHATTAN' THEN 'NEW YORK'
