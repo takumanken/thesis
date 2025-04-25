@@ -605,23 +605,6 @@
             "data_source_id": 3
         },
         {
-            "physical_name": "rate_of_resolution",
-            "display_name": "Rate of Resolution",
-            "expression": "round(sum(if(status = 'Closed', 1, 0)) / count(1), 2)",
-            "data_type": "float",
-            "description": "Rate of resolution.",
-            "description_to_user": "The percentage of service requests that have been resolved or closed.",
-            "synonym": [
-                "resolution rate",
-                "closure rate",
-                "completion rate",
-                "resolved percentage",
-                "closed percentage",
-                "resolved ratio"
-            ],
-            "data_source_id": 1
-        },
-        {
             "physical_name": "requests_per_day",
             "display_name": "# of Requests per Day",
             "expression": "round(count(1) / count(distinct created_date), 2)",
@@ -634,6 +617,79 @@
                 "daily average",
                 "average daily requests",
                 "requests per day average"
+            ],
+            "data_source_id": 1
+        },
+        {
+            "physical_name": "requests_per_capita",
+            "display_name": "Requests per Capita",
+            "expression": "round(count(1) / list_sum(list_transform(list(distinct json_array(neighborhood_code, population_2020)), x -> cast(x[1] as integer))), 2)",
+            "data_type": "float",
+            "description": "Requests per one person in the area.",
+            "description_to_user": "The average number of service requests per person in the area.",
+            "synonym": [
+                "requests per capita",
+                "normalized requests",
+                "population adjusted requests",
+                "request rate per capita"
+            ],
+            "data_source_id": 1
+        },
+        {
+            "physical_name": "pct_open_requests",
+            "display_name": "% Open Requests",
+            "expression": "round(sum(if(status = 'Open', 1, 0)) * 100.0 / count(1), 1)",
+            "data_type": "float",
+            "description": "Percentage of service requests currently in 'Open' status.",
+            "description_to_user": "The percentage of requests that are still active and haven't been closed.",
+            "synonym": [
+                "open rate",
+                "percent open",
+                "backlog percentage",
+                "unresolved percentage"
+            ],
+            "data_source_id": 1
+        },
+        {
+            "physical_name": "pct_closed_requests",
+            "display_name": "% Closed Requests",
+            "expression": "round(sum(if(status = 'Closed', 1, 0)) * 100.0 / count(1), 1)",
+            "data_type": "float",
+            "description": "Percentage of service requests currently in 'Closed' status.",
+            "description_to_user": "The percentage of requests that have been resolved or closed.",
+            "synonym": [
+                "closed rate",
+                "percent closed",
+                "resolved percentage",
+                "completed percentage"
+            ],
+            "data_source_id": 1
+        },
+        {
+            "physical_name": "min_days_to_resolve",
+            "display_name": "Min Days to Resolve",
+            "expression": "round(min(time_to_resolve_sec/60/60/24), 1)",
+            "data_type": "float",
+            "description": "Minimum resolution time in days for closed requests.",
+            "description_to_user": "The fastest time a request was resolved, in days.",
+            "synonym": [
+                "fastest resolution",
+                "minimum resolution time",
+                "quickest fix time"
+            ],
+            "data_source_id": 1
+        },
+        {
+            "physical_name": "max_days_to_resolve",
+            "display_name": "Max Days to Resolve",
+            "expression": "round(max(time_to_resolve_sec/60/60/24), 1)",
+            "data_type": "float",
+            "description": "Maximum resolution time in days for closed requests.",
+            "description_to_user": "The longest time a request took to be resolved, in days.",
+            "synonym": [
+                "slowest resolution",
+                "maximum resolution time",
+                "longest fix time"
             ],
             "data_source_id": 1
         }
