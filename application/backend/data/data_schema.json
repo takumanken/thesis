@@ -538,7 +538,7 @@
     "measures": [
         {
             "physical_name": "num_of_requests",
-            "display_name": "Number of Requests",
+            "display_name": "# of Requests",
             "expression": "count(1)",
             "data_type": "integer",
             "description": "Number of service requests.",
