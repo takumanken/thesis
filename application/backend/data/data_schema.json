@@ -603,6 +603,23 @@
                 "local population"
             ],
             "data_source_id": 3
+        },
+        {
+            "physical_name": "rate_of_resolution",
+            "display_name": "Rate of Resolution",
+            "expression": "round(sum(if(status = 'Closed', 1, 0)) / count(1), 2)",
+            "data_type": "float",
+            "description": "Rate of resolution.",
+            "description_to_user": "The percentage of service requests that have been resolved or closed.",
+            "synonym": [
+                "resolution rate",
+                "closure rate",
+                "completion rate",
+                "resolved percentage",
+                "closed percentage",
+                "resolved ratio"
+            ],
+            "data_source_id": 1
         }
     ]
 }
