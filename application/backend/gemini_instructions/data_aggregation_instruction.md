@@ -357,7 +357,6 @@ Would you like to explore one of these options?
 }
 ```
 
-
 ## COMMON MISTAKES — DO NOT COMMIT ANY OF THESE
 
 - Never use a measure name directly (e.g., avg_days_to_resolve).
@@ -367,6 +366,5 @@ Correct: { "expression": "round(avg(time_to_resolve_sec/60/60/24), 1)", "alias":
 - For 5-year ranges, avoid created_year >= DATE_PART('year', CURRENT_DATE) - 5; use YEAR(created_year) >= ….
 - DO not use postAggregationFilters with measures not defined in the measures field.
 - Do not use topN unless the user specifies a numeric limit.
-
 
 Failure to respect any item above is considered a critical error.
