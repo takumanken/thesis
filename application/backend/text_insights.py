@@ -75,11 +75,7 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
         for key, default_value in defaults.items():
             if key not in result:
                 result[key] = default_value
-                
-        # Filter out created_date related filters to avoid redundancy with period pill
-        if "filter_description" in result and isinstance(result["filter_description"], list):
-            result["filter_description"] = remove_date_filters(result["filter_description"])
-            
+                            
         return result
             
     except Exception as e:

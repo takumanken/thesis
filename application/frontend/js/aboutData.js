@@ -32,10 +32,35 @@ const MONTHS_LONG = [
 export async function updateAboutData() {
   // Find all containers
   const containers = {
+    period: document.querySelector(".viz-period .period-tags"),
     attributes: document.querySelector(".viz-dimensions .dimension-tags"),
     measures: document.querySelector(".viz-metrics .metrics-tags"),
     filters: document.querySelector(".viz-filters .filter-tags"),
   };
+
+  // Create period section if it doesn't exist
+  if (!containers.period) {
+    const periodSection = document.createElement("div");
+    periodSection.className = "viz-period";
+
+    const periodTitle = document.createElement("h4");
+    periodTitle.className = "control-section-title";
+    periodTitle.textContent = "Period";
+
+    const periodTags = document.createElement("div");
+    periodTags.className = "period-tags";
+
+    periodSection.appendChild(periodTitle);
+    periodSection.appendChild(periodTags);
+
+    // Insert at the beginning of the viz-definition section
+    const vizDefinition = document.querySelector(".viz-definition");
+    const attributesSection = document.querySelector(".viz-dimensions");
+    if (vizDefinition && attributesSection) {
+      vizDefinition.insertBefore(periodSection, attributesSection);
+      containers.period = periodTags;
+    }
+  }
 
   if (!Object.values(containers).every(Boolean)) {
     console.error("About Data UI containers not found.");
@@ -54,7 +79,10 @@ export async function updateAboutData() {
   // Update data source pills
   updateDataSourcePills();
 
-  // Update sections using field metadata
+  // Add date range to period section (not to filters anymore)
+  addDateRangeToPeriodSection(containers.period, tooltip, fieldMetadata);
+
+  // Update other sections using field metadata
   updatePillSection(
     containers.attributes,
     tooltip,
@@ -73,8 +101,8 @@ export async function updateAboutData() {
     "No measures in this visualization"
   );
 
-  // Filters section has more specific logic
-  updateFiltersSection(containers.filters, tooltip, fieldMetadata);
+  // Filters section (now without date range)
+  updateFiltersWithoutDateRange(containers.filters, tooltip, fieldMetadata);
 }
 
 // --- Section Update Logic ---
@@ -104,13 +132,34 @@ function updatePillSection(container, tooltip, items, fieldMetadata, getIconFn, 
 }
 
 /**
- * Updates the Filters section
+ * Adds the date range pill to the period section if applicable
+ * @returns {boolean} True if a date pill was added, false otherwise
  */
-function updateFiltersSection(container, tooltip, fieldMetadata) {
-  const hasDatePill = addDateRangePill(container, tooltip, fieldMetadata);
-  const filters = state.dataInsights?.filter_description || [];
+function addDateRangeToPeriodSection(container, tooltip, fieldMetadata) {
+  const dateRange = state.aggregationDefinition?.createdDateRange;
+  if (!dateRange?.length || dateRange.length < 2 || !dateRange[0] || !dateRange[1]) {
+    container.innerHTML = `<span class='empty-message'>No time period specified</span>`;
+    return false;
+  }
 
-  let hasOtherFilters = false;
+  const [minDate, maxDate] = dateRange;
+  const formattedRange = `${formatDate(minDate, true)} - ${formatDate(maxDate, true)}`;
+  const tooltipText = `Data covers requests created between ${formatDate(minDate)} and ${formatDate(maxDate)}`;
+  const dateFieldInfo = findFieldMetadata("created_date", fieldMetadata);
+
+  // Create date pill with special "date-period" class for custom styling
+  container.appendChild(
+    createPill("date_range", formattedRange, tooltipText, tooltip, dateFieldInfo, "date-period", "Date Range")
+  );
+  return true;
+}
+
+/**
+ * Updates the Filters section without date range pill
+ */
+function updateFiltersWithoutDateRange(container, tooltip, fieldMetadata) {
+  const filters = state.dataInsights?.filter_description || [];
+  let hasFilters = false;
 
   if (Array.isArray(filters) && filters.length > 0) {
     filters.forEach((filter) => {
@@ -119,38 +168,17 @@ function updateFiltersSection(container, tooltip, fieldMetadata) {
       const label = fieldInfo?.display_name || fieldName;
       const description = filter.description || "Applied filter";
       container.appendChild(createPill("filter_alt", label, description, tooltip, fieldInfo));
-      hasOtherFilters = true;
+      hasFilters = true;
     });
   } else if (typeof filters === "string" && filters) {
     // Handle simple string filter description
     container.appendChild(createPill("filter_alt", "Filter", filters, tooltip, null));
-    hasOtherFilters = true;
+    hasFilters = true;
   }
 
-  if (!hasDatePill && !hasOtherFilters) {
+  if (!hasFilters) {
     showEmptyMessage(container, "No filters applied");
   }
-}
-
-/**
- * Adds the date range pill if applicable
- * @returns {boolean} True if a date pill was added, false otherwise
- */
-function addDateRangePill(container, tooltip, fieldMetadata) {
-  const dateRange = state.aggregationDefinition?.createdDateRange;
-  if (!dateRange?.length || dateRange.length < 2 || !dateRange[0] || !dateRange[1]) {
-    return false;
-  }
-
-  const [minDate, maxDate] = dateRange;
-  const formattedRange = `${formatDate(minDate, true)} - ${formatDate(maxDate, true)}`;
-  const tooltipText = `Limited to requests created between ${formatDate(minDate)} and ${formatDate(maxDate)}`;
-  const dateFieldInfo = findFieldMetadata("created_date", fieldMetadata);
-
-  container.appendChild(
-    createPill("date_range", formattedRange, tooltipText, tooltip, dateFieldInfo, "period", "Date Range")
-  );
-  return true;
 }
 
 // --- Pill & Tooltip Creation ---
