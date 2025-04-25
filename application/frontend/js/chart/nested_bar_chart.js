@@ -284,14 +284,16 @@ function drawGridLines(svg, data, dimensions, measures, config) {
 }
 
 function drawCategorySeparators(svg, data, config, width) {
-  let y = config.margin.top;
+  let y = config.margin.top - 40;
 
   data.forEach((category, i) => {
     const categoryHeight = category.segments.length * config.rowHeight;
     y += categoryHeight;
 
+    const categoryY = y;
+
     if (i < data.length - 1) {
-      chartStyles.drawGridLine(svg, 0, width, y - CHART_DESIGN.rowSpacing / 2, y - CHART_DESIGN.rowSpacing / 2);
+      chartStyles.drawGridLine(svg, 0, width, categoryY, categoryY);
     }
   });
 }
