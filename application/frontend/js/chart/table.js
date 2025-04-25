@@ -53,7 +53,8 @@ function renderTable(container, rowsPerPage = 15) {
 function createColumnConfig() {
   if (!state.dataset?.length) return [];
 
-  const fields = state.fields;
+  // Filter out fields that start with "reference_"
+  const fields = state.fields.filter((field) => !field.startsWith("reference_"));
   const measures = getMeasures();
 
   return fields.map((field) => {
