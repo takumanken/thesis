@@ -66,7 +66,7 @@ function createColumnConfig() {
 
     // Add measure-specific formatting if applicable
     if (isMeasure(field, measures)) {
-      column.formatter = (cell) => formatFullNumber(cell, 2);
+      column.formatter = (cell) => formatFullNumber(cell, field);
 
       column.attributes = (cell, row) => ({
         style: {

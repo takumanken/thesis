@@ -27,24 +27,36 @@ export function formatValue(value) {
 }
 
 /**
- * Formats numeric values with thousands separators without abbreviation
- * @param {number|string} value - Number to format
- * @param {number} [decimals=0] - Number of decimal places
- * @returns {string} Formatted value with thousands separators
+ * Formats a number based on the field's data type from metadata
+ * @param {number|string} value - Value to format
+ * @param {string} field - Field name to check metadata for
+ * @returns {string} Formatted value
  */
-export function formatFullNumber(value, decimals = 0) {
-  // Handle null, undefined and non-numeric values
-  if (value === null || value === undefined || value === "") return "";
+export function formatFullNumber(value, field) {
+  // Check if value is undefined, null, or empty string
+  if (value === undefined || value === null || value === "") {
+    return "";
+  }
 
-  // Parse the value to a number
-  const num = typeof value === "number" ? value : parseFloat(value);
-  if (isNaN(num)) return value;
+  // Get field metadata from state if available
+  const fieldMetadata = state.aggregationDefinition?.fieldMetadata || [];
+  const metadata = fieldMetadata.find((f) => f.physical_name === field);
+  const dataType = metadata.data_type.toLowerCase();
 
-  // Format with thousands separators and specified decimals
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: decimals,
-  }).format(num);
+  if (dataType === "integer") {
+    return new Intl.NumberFormat("en-US", {
+      maximumFractionDigits: 0,
+      useGrouping: true,
+    }).format(value);
+  } else if (dataType === "float") {
+    return new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+      useGrouping: true,
+    }).format(value);
+  } else {
+    return value;
+  }
 }
 
 /**
