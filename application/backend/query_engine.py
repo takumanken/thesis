@@ -124,18 +124,25 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
     if definition.postAggregationFilters:
         sql += f"\nHAVING {definition.postAggregationFilters}"
     
-    # Add ordering
-    if len(dims) == 1 and dims[0] in ['created_weekday_datepart', 'closed_weekday_datepart']:
-        if dims[0] == 'created_weekday_datepart':
-            sql += f"\nORDER BY MIN(created_weekday_order) ASC"
-        elif dims[0] == 'closed_weekday_datepart':
-            sql += f"\nORDER BY MIN(closed_weekday_order) ASC"
-    elif definition.timeDimension:
-        sql += f"\nORDER BY {definition.timeDimension[0]} ASC"
-    elif definition.measures:
-        sql += f"\nORDER BY {definition.measures[0]['alias']} DESC"
-    
-    sql += "\nLIMIT 5000;"
+    # Add ordering - prioritize topN if available
+    if hasattr(definition, 'topN') and definition.topN:
+        order_by_keys = ', '.join(definition.topN.orderByKey)
+        sql += f"\nORDER BY {order_by_keys}"
+        sql += f"\nLIMIT {definition.topN.topN};"
+    else:
+        # Use standard ordering rules
+        if len(dims) == 1 and dims[0] in ['created_weekday_datepart', 'closed_weekday_datepart']:
+            if dims[0] == 'created_weekday_datepart':
+                sql += f"\nORDER BY MIN(created_weekday_order) ASC"
+            elif dims[0] == 'closed_weekday_datepart':
+                sql += f"\nORDER BY MIN(closed_weekday_order) ASC"
+        elif definition.timeDimension:
+            sql += f"\nORDER BY {definition.timeDimension[0]} ASC"
+        elif definition.measures:
+            sql += f"\nORDER BY {definition.measures[0]['alias']} DESC"
+        
+        # Add default limit
+        sql += "\nLIMIT 5000;"
     
     logger.info(f"SQL generation completed in {time.time() - start_time:.2f}s")
     logger.info(f"Generated SQL:\n{sql}")

@@ -52,6 +52,12 @@ def all_dimensions_exceed_cardinality(dimensions: list[str], dimension_stats: Di
             
     return True
 
+def is_topn_query(agg_def: AggregationDefinition) -> bool:
+    """
+    Determines if a query is a TOP N type query.
+    """
+    return hasattr(agg_def, 'topN') and agg_def.topN is not None
+
 def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]] = None) -> tuple[list[str], str]:
     """
     Determines available and ideal chart types based on the aggregation definition.
@@ -71,6 +77,11 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
     measure_count = len(measures)
     
     additive_measure_count = sum(is_measure_additive(m["alias"]) for m in measures) if measures else 0
+    
+    # Check if this is a TOP N query
+    is_topn = is_topn_query(agg_def)
+    if is_topn:
+        logger.info(f"Query identified as TOP N query with N={agg_def.topN.topN}")
     
     # Check for text response type first
     if hasattr(agg_def, 'response_type') and agg_def.response_type == "text":
@@ -92,7 +103,7 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
     if time_count == 1 and measure_count == 1 and not high_cardinality:
         available.append("line_chart")
         ideal = "line_chart"
-        if  cat_count == 1 and additive_measure_count == measure_count:
+        if cat_count == 1 and additive_measure_count == measure_count:
             available.append("stacked_area_chart")
             available.append("stacked_area_chart_100")
     
@@ -109,7 +120,8 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
             available.append("stacked_bar_chart_100")
             ideal = "stacked_bar_chart"
     
-    if 1 <= dim_count <= 2 and measure_count == 1 and time_count == 0 and all_additive_measures and is_not_location:
+    # Only add treemap if not a TOP N query
+    if 1 <= dim_count <= 2 and measure_count == 1 and time_count == 0 and all_additive_measures and is_not_location and not is_topn:
         available.append("treemap")
         
     if geo_count == 1 and len(dimensions) == 1 and measure_count == 1 and all_additive_measures:
@@ -121,8 +133,6 @@ def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str,
         elif geo_name in ["borough", "county", "neighborhood_name", "incident_zip"]:
             available.append("choropleth_map")
             ideal = "choropleth_map"
-        
-    # Ensure unique chart types
-    available = list(dict.fromkeys(available))
+    
     logger.info(f"Chart options: {available}, ideal: {ideal}")
     return available, ideal

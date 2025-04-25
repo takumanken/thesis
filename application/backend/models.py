@@ -1,6 +1,14 @@
 from typing import List, Dict, Optional
 from pydantic import BaseModel
 
+class TopNDefinition(BaseModel):
+    """
+    Defines the structure for TOP N queries.
+    Contains ordering keys and number of records to return.
+    """
+    orderByKey: List[str]
+    topN: int
+
 class PromptRequest(BaseModel):
     """
     Request model for the /process endpoint.
@@ -22,6 +30,7 @@ class AggregationDefinition(BaseModel):
     geoDimension: List[str] = []
     categoricalDimension: List[str] = []
     response_type: str = "data"
-    createdDateRange: Optional[List[str]] = None,
-    datasourceMetadata: Optional[List[dict]] = None,
+    createdDateRange: Optional[List[str]] = None
+    datasourceMetadata: Optional[List[dict]] = None
     fieldMetadata: Optional[List[dict]] = None
+    topN: Optional[TopNDefinition] = None

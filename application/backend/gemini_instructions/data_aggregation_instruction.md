@@ -84,7 +84,9 @@ Use exact values from the provided JSON:
 
 1. **Trend Analysis**: "How has X changed over time?" → Use time dimensions and `count(1)`.
 2. **Comparison Queries**: "Compare X and Y" → Include comparative dimensions.
-3. **Top/Bottom Queries**: "Which X has the most/least Y?" → Use relevant dimensions and `count(1)`.
+3. **Top/Bottom Queries**: "Which X has the most/least Y?" → Use dimensions, measures, and topN property.
+   - Example: "Top 5 neighborhoods with most noise complaints"
+   - Use proper format: `topN: { "orderByKey": ["num_of_requests DESC"], "topN": 5 }`
 4. **Location-Specific**: "Show me X in Y location" → Apply location filters.
 5. **Time-Specific**: "Show me X during Y period" → Apply time filters.
 6. **Status Queries**: "Show me X with status Y" → Filter by status.
@@ -107,7 +109,11 @@ Return valid JSON in the following structure:
         { "expression": "<measure1>", "alias": "<alias1>" }
     ],
     "preAggregationFilters": "<some_pre_aggregation_filter>",
-    "postAggregationFilters": "<some_post_aggregation_filter>"
+    "postAggregationFilters": "<some_post_aggregation_filter>",
+    "topN": {
+        "orderByKey": ["<field_name> DESC|ASC", ...],
+        "topN": <number>
+    }
 }
 ```
 
@@ -187,6 +193,24 @@ I can create queries for any of these approaches using the 311 dataset."
     ],
     "preAggregationFilters": "complaint_type_middle IN ('Noise', 'Noise - Commercial', 'Noise - Residential', ...)",
     "postAggregationFilters": ""
+}
+```
+
+### Example 4: Top 10 Most Common Complaint Types
+**Query**: "What are the top 10 most frequent complaint types?"  
+**Output**:
+```json
+{
+    "dimensions": ["complaint_type_large"],
+    "measures": [
+        { "expression": "count(1)", "alias": "num_of_requests" }
+    ],
+    "preAggregationFilters": "",
+    "postAggregationFilters": "",
+    "topN": {
+        "orderByKey": ["num_of_requests DESC"],
+        "topN": 10
+    }
 }
 ```
 
