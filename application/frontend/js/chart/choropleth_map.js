@@ -69,6 +69,15 @@ function renderChoroplethMap(container) {
     return;
   }
 
+  // Add appropriate geospatial data source to state
+  if (geoDimension === "incident_zip") {
+    // Add ZIP Code boundaries data source
+    state.addDataSource(4);
+  } else if (["neighborhood_name", "borough", "county"].includes(geoDimension)) {
+    // Add NTA boundaries data source
+    state.addDataSource(2);
+  }
+
   // Prepare data - since it's already aggregated, just index it for lookups
   const { dataIndex, maxValue } = prepareData(state.dataset, geoDimension, measure);
   if (maxValue <= 0) {

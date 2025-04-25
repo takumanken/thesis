@@ -199,6 +199,8 @@ function cleanupVisualization(container) {
     container.removeChild(state.currentChart);
   }
 
+  state.resetDataSources();
+
   state.currentChart = null;
   cleanupOrphanedTooltips();
   container.innerHTML = "";
