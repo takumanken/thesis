@@ -113,7 +113,7 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
             
             logger.info(f"Filters after substitution: {filters}")
         
-        sql += f"\n  WHERE {filters}"
+        sql += f"\nWHERE {filters}"
     
     # Add grouping if dimensions exist
     if dims:
