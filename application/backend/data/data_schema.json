@@ -412,8 +412,8 @@
                 "data_source_id": 1
             },
             {
-                "physical_name": "complaint_type_detailed",
-                "display_name": "Detailed Complaint Type",
+                "physical_name": "complaint_description",
+                "display_name": "Complaint Type Description",
                 "data_type": "string",
                 "description": "The most detailed complaint type.",
                 "description_to_user": "The most specific classification of the reported problem, with detailed issue types. Descriptor is a free text field that provides additional details.",
@@ -561,7 +561,7 @@
             "expression": "round(avg(time_to_resolve_sec/60/60/24), 1)",
             "data_type": "float",
             "description": "Average resolution time in days.",
-            "description_to_user": "Shows how many days it typically takes to resolve these types of requests, from submission to completion.",
+            "description_to_user": "(Average) Shows how many days it typically takes to resolve these types of requests, from submission to completion.",
             "synonym": [
                 "resolution time",
                 "average time",
@@ -570,6 +570,20 @@
                 "time to fix",
                 "days to complete",
                 "resolution duration"
+            ],
+            "data_source_id": 1
+        },
+        {
+            "physical_name": "median_days_to_resolve",
+            "display_name": "Median Days to Resolve",
+            "expression": "round(median(time_to_resolve_sec/60/60/24), 1)",
+            "data_type": "float",
+            "description": "Median resolution time in days.",
+            "description_to_user": "(Median) Shows how many days it typically takes to resolve these types of requests, from submission to completion.",
+            "synonym": [
+                "resolution time median",
+                "median time",
+                "median days"
             ],
             "data_source_id": 1
         },
