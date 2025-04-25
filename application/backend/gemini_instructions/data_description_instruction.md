@@ -51,11 +51,13 @@ Based on the input, generate the following JSON response:
 - Focus on clarity, not jargon.
 
 ### dataDescription
-- **Acknowledge Discrepancy (If Applicable):** If the `Aggregation Definition` uses significantly different categories or scope than the user's specific query (e.g., broader category, related term), start with a brief, helpful preface. Examples:
-    - "Focusing on the related category of '[Actual Aggregated Category]', here's..."
-    - "Looking at the broader category of '[Actual Aggregated Category]' which includes [User Topic], here's..."
-    - "The data shows counts for '[Actual Aggregated Category]', which relates to your query about [User Topic]. Here's..."
-- **Explain Data:** Following the preface (if any) or starting directly, begin with “Here’s…”
+- **Acknowledge Discrepancy (Mandatory):** **It is crucial to manage user expectations.** If the `Aggregation Definition` uses significantly different categories, scope, or **metric type** than the user's specific query, **you must** start the description with a brief, helpful preface acknowledging this difference. This ensures transparency about how the query was interpreted and executed. Examples:
+    - *Category Mismatch:* "Focusing on the related category of '[Actual Aggregated Category]', here's..."
+    - *Broader Scope:* "Looking at the broader category of '[Actual Aggregated Category]' which includes [User Topic], here's..."
+    - *Metric Type Mismatch (e.g., user asked % got count):* "While this data shows the *[Actual Metric, e.g., count]* of requests by *[Dimension]*, which relates to your question about *[User's Metric Request, e.g., percentage]*, here's what it reveals..."
+    - *Metric Type Mismatch (Less Direct):* "The data provides the *[Actual Metric, e.g., total count]* for *[Dimension]*. Based on this, here's..."
+    - *Nuance Mismatch (e.g., user asked 'closed without resolution', got 'Closed' status):* "This data shows the *[Actual Metric, e.g., count]* by status. It doesn't specify *how* requests were closed (e.g., 'without resolution'), but here's the overall status breakdown..."
+- **Explain Data:** Following the mandatory preface (if required) or starting directly, begin with “Here’s…”
 - In 1–2 sentences total, explain:
   - What the data shows and **how it was aggregated, using the specific terms from the `Aggregation Definition`**.
   - **A brief, simple insight derived from the `Dataset Sample`** (e.g., highest value, main trend, comparison result).
@@ -75,7 +77,7 @@ Good Examples:
 - “Here’s how noise complaints varied across NYC during summer 2023. Queens reported the highest count, followed by Brooklyn.”
 - (If user asked for "rat complaints" but aggregation used "Rodent") "Focusing on the related category of 'Rodent' complaints, here's the count across NYC boroughs from early 2024 to mid-2025. Manhattan saw the highest number of reports."
 - (If user asked for "illegal apartment conversion" but aggregation used "Building/Use") "Looking at the broader category of 'Building/Use' complaints, here’s the weekly trend across NYC from early 2022 to spring 2025. This data, which includes reports related to illegal conversions, shows peaks in the spring."
-
+- (If user asked for "percentage of requests closed without resolution" but aggregation used "Closed" status) "This data shows the *count* of requests by status, which relates to your question. It doesn't specify *how* requests were closed (e.g., 'without resolution'), but shows the overall status breakdown across NYC from early 2022 to spring 2025."
 
 ### filter_description
 - Include one entry for every field that has a filter applied, based on `preAggregationFilters` and `postAggregationFilters`.
@@ -314,5 +316,22 @@ Dataset Sample: [{"created_week": "2022-01-03", "num_of_requests": 300}, {"creat
   "filter_description": [
     {"filtered_field_name": "complaint_type_middle", "description": "Shows only Complaint Type = Building/Use"}
   ]
+}
+```
+
+### Example 12: Metric Type Mismatch & Nuance (User asks %, gets Count; specific closure type not available)
+**Input**:
+```
+User Query: "What percentage of requests are closed without a reported resolution?"
+Chart Type: bar_chart
+Aggregation Definition: {"dimensions": ["status"], "measures": [{"expression": "count(1)", "alias": "num_of_requests"}], "preAggregationFilters": "", "postAggregationFilters": ""}
+Dataset Sample: [{"status": "Closed", "num_of_requests": 1500000}, {"status": "Open", "num_of_requests": 50000}, {"status": "Pending", "num_of_requests": 10000}, {"status": "Assigned", "num_of_requests": 5000}]
+```
+**Output**:
+```json
+{
+  "title": "Request Counts by Status",
+  "dataDescription": "This data shows the *count* of requests by status, which relates to your question. It doesn't specify *how* requests were closed (e.g., 'without resolution'), but shows the overall status breakdown across NYC from early 2022 to spring 2025.",
+  "filter_description": []
 }
 ```
