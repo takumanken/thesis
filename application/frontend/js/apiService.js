@@ -67,6 +67,7 @@ export async function apiService() {
         dataDescription: dataInsights.dataDescription || null,
         filter_description: dataInsights.filter_description || [],
       },
+      dataMetadataAll: result.dataMetadataAll || {},
     });
 
     updateChartTypeDropdown();

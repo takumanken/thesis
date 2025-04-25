@@ -12,7 +12,7 @@ export const state = {
     dataDescription: null,
     filter_description: [],
   },
-
+  dataMetadataAll: {},
   // Update method
   update(newData) {
     this.userQuery = newData.userQuery || this.userQuery;
@@ -23,6 +23,7 @@ export const state = {
     this.chartType = newData.chartType || "table";
     this.availableChartTypes = newData.availableChartTypes || ["table"];
     this.textResponse = newData.textResponse || null;
+    this.dataMetadataAll = newData.dataMetadataAll || {};
 
     // Handle dataInsights property
     if (newData.dataInsights) {
