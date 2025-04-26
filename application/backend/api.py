@@ -3,6 +3,7 @@ import os
 import time
 import uuid
 import json
+import re
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -16,7 +17,7 @@ from typing import Dict
 
 # Import modules
 from models import PromptRequest, AggregationDefinition
-from visualization_recommender import classify_dimensions, get_chart_options
+from visualization_recommender import classify_dimensions, get_chart_options, is_topn_query
 from query_engine import (
     extract_json_from_text, 
     create_text_response,
@@ -56,6 +57,7 @@ app.add_middleware(
 SYSTEM_INSTRUCTION_FILE = "gemini_instructions/data_aggregation_instruction.md"
 FILTER_VALUES_FILE = "gemini_instructions/references/all_filters.json"
 DATA_SCHEMA_FILE = "data/data_schema.json"
+DUCKDB_FILE = "data/nyc_open_data_explorer.duckdb"
 
 # Load data schema
 with open(DATA_SCHEMA_FILE, "r") as f:
@@ -113,13 +115,6 @@ logger.info("Environment setup completed")
 async def process_prompt(request_data: PromptRequest, request: Request):
     """
     Main endpoint for processing natural language prompts.
-    
-    Args:
-        request_data: The prompt request containing text and optional location
-        request: The FastAPI request object
-        
-    Returns:
-        JSONResponse containing either data results or text response
     """
     request_id = str(uuid.uuid4())[:8]
     logger.info(f"[{request_id}] Processing: '{request_data.prompt[:50]}...'")
@@ -170,11 +165,39 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         
         # Generate and execute SQL query
         sql = generate_sql(agg_def, "requests_311", user_location)
-        dataset, query_metadata = execute_sql_in_duckDB(sql, "data/nyc_open_data_explorer.duckdb")
+        dataset, query_metadata = execute_sql_in_duckDB(sql, DUCKDB_FILE)
         
-        # Add date range to aggregation definition as an array
+        # Add date range to aggregation definition
         if 'createdDateRange' in query_metadata:
             agg_def.createdDateRange = query_metadata['createdDateRange']
+        
+        # Check for single dimension optimization condition
+        if (
+            not is_topn_query(agg_def) and                   # Not TopN Query
+            len(agg_def.dimensions) == 1 and                 # Only one dimension
+            agg_def.preAggregationFilters and                # Has preAggregation filters
+            len(dataset) == 1                                # Result is only one row
+        ):
+            dimension = agg_def.dimensions[0]
+            
+            # Skip complex filters with logical operators
+            if " AND " in agg_def.preAggregationFilters.upper() or " OR " in agg_def.preAggregationFilters.upper():
+                logger.info(f"[{request_id}] Skipping dimension optimization - complex filter detected")
+            else:
+                # Simple dimension = 'value' pattern
+                pattern = rf"\b{re.escape(dimension)}\s*=\s*'[^']*'"
+                
+                if re.search(pattern, agg_def.preAggregationFilters, re.IGNORECASE):
+                    logger.info(f"[{request_id}] Detected redundant dimension filter: {dimension}")
+                    
+                    # Simply remove the entire filter since it's the only one
+                    modified_filters = ""
+                    agg_def = agg_def.copy(update={"preAggregationFilters": modified_filters})
+                    sql = generate_sql(agg_def, "requests_311", user_location)
+                    dataset, query_metadata = execute_sql_in_duckDB(sql, DUCKDB_FILE)
+                    
+                    if 'createdDateRange' in query_metadata:
+                        agg_def.createdDateRange = query_metadata['createdDateRange']
         
         # Process results and optimize dimensions
         dimension_stats = {}
