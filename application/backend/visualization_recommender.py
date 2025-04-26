@@ -58,10 +58,23 @@ def is_topn_query(agg_def: AggregationDefinition) -> bool:
     """
     return hasattr(agg_def, 'topN') and agg_def.topN is not None
 
-def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]] = None) -> tuple[list[str], str]:
+def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]] = None, dataset_length: int = None) -> tuple[list[str], str]:
     """
     Determines available and ideal chart types based on the aggregation definition.
+    
+    Args:
+        agg_def: The aggregation definition containing dimensions and measures
+        dimension_stats: Statistics about dimensions (cardinality, etc.)
+        dataset_length: The number of rows in the result dataset
+        
+    Returns:
+        Tuple of (available_charts, ideal_chart)
     """
+
+    if dataset_length == 1:
+        logger.info("Single-row result detected: defaulting to table visualization")
+        return ["table"], "table"
+    
     available = ["table"]
     ideal = "table"
     

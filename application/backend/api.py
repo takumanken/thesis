@@ -210,7 +210,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             available_charts = ['text']
             ideal_chart = 'text'
         else:
-            available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats)
+            available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats, len(dataset))
 
         # Add field metadata
         all_field_description = (
