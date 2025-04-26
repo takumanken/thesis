@@ -109,6 +109,89 @@ Include the relevant guidance when these patterns appear:
    - Only apply this rule for single-value equality filters, not for IN, LIKE, or range conditions.
    - This optimization prevents redundant dimensions that would show identical values for all results.
 
+8. **Explanatory "Why" Questions**
+   - When the user asks "why" about patterns in the data they're seeing:
+     - Add: "- This is an explanatory query seeking insight about patterns in the data."
+     - Add: "- The data aggregation AI should generate a visualization that illuminates potential factors."
+   
+   Then suggest 2-3 specific visualization alternatives with structured bullet points, you can be creative at this point but consider what data potentially gives the insight to user while considering what the user has already seen.
+   
+   - If visualization lacks complaint type breakdown:
+     - Add: "- Consider a breakdown by complaint categories:
+       * Dimensions: complaint_type_large
+       * Measures: count(1) as num_of_requests
+       * Filters: [specify exact filters by name and value]
+       * Purpose: Reveals which categories of issues are most prevalent"
+   
+   - If time patterns might be relevant:
+     - Add: "- Examine temporal patterns:
+       * Dimensions: created_month
+       * Measures: count(1) as num_of_requests
+       * Filters: [specify exact filters by name and value]
+       * Purpose: Identifies seasonal trends in complaints"
+   
+   - If geographic drill-down might help:
+     - Add: "- Break down by neighborhood:
+       * Dimensions: neighborhood_name
+       * Measures: count(1) as num_of_requests
+       * Filters: [specify exact filters by name and value]
+       * Purpose: Identifies specific hotspots driving the pattern"
+   
+   Example: For "Why does Queens have so many noise complaints?":
+   - Add: "- Analyze noise complaint subtypes:
+     * Dimensions: complaint_type_middle
+     * Filters: borough = 'QUEENS'
+     * Measures: count(1) as num_of_requests
+     * Purpose: Identifies which specific noise categories are most common"
+     
+   - Add: "- Examine seasonal patterns in noise complaints:
+     * Dimensions: created_month, complaint_type_middle
+     * Measures: count(1) as num_of_requests
+     * Filters: borough = 'QUEENS'
+     * Purpose: Reveals whether certain seasons show higher noise complaint rates"
+   
+   - Add: "- Identify neighborhood hotspots:
+     * Dimensions: neighborhood_name
+     * Measures: count(1) as num_of_requests
+     * Filters: borough = 'QUEENS', complaint_type_large = 'Noise'
+     * Purpose: Pinpoints specific areas with high noise complaint density"
+
+9. **Text Response Triggers**
+   - When the query requires explanation rather than visualization:
+     - Add: "- This query requires a TEXT RESPONSE rather than data visualization."
+     - Add: "- The downstream AI should provide a conversational explanation about [specific topic]."
+   
+   Common text response triggers:
+   - Questions about methodology: "How is this calculated?" "What does this measure mean?"
+   - Questions about data limitations: "Why don't I see X?" "Is this data complete?"
+   - Requests for interpretation: "What does this tell us?" "What's the significance of this pattern?"
+   - Questions outside dataset scope: "How does this compare to national averages?"
+   
+   Example: For "Why might people report more noise complaints in summer?":
+   - Add: "- This query requires a TEXT RESPONSE about seasonal patterns in noise complaints."
+   - Add: "- The downstream AI should explain factors like open windows, outdoor activities, and longer daylight hours."
+
+10. **General Knowledge Questions**
+   - When the query asks about general facts not related to the visualization:
+     - Add: "- This is a general knowledge question that requires a TEXT RESPONSE."
+     - Add: "- The data aggregation AI should provide factual information to the best of its knowledge."
+   
+   Common general knowledge triggers:
+   - "What is [place/term]?" (e.g., "What is Greenridge Village?")
+   - "Where is [location]?" (e.g., "Where is Hunts Point located?")
+   - "Who handles [service]?" (e.g., "Who is responsible for street cleaning?")
+   - "Why does [general phenomenon occur]?" (asking about real-world reasons, not data patterns)
+   
+   Guidance on knowledge boundaries:
+   - For NYC neighborhoods, landmarks, agencies: Add specific guidance about what information to provide
+   - For 311-related processes: Indicate whether to explain the process or limitations
+   
+   Example: For "What is Greenridge Village?":
+   - Add: "- This is a general knowledge question about a geographic location."
+   - Add: "- The downstream AI should provide factual information about Greenridge Village neighborhood in Staten Island."
+   - Add: "- The response should include location, general characteristics, and relevance to 311 data if known."
+   - Add: "- The AI should acknowledge uncertainty about any details it's not confident about."
+
 ## DATA MODEL
 Use the provided data schema:
 
