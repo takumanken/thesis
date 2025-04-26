@@ -49,14 +49,15 @@ def _initialize():
 
 def translate_query(user_query, current_context=None):
     """
-    Translate a natural language query into structured guidance for data aggregation.
+    Translate a natural language query into structured guidance for data aggregation,
+    or provide a direct response for non-aggregation questions.
     
     Args:
         user_query: The natural language question from the user
         current_context: Optional context about what the user is currently viewing
         
     Returns:
-        String containing structured guidance for the data aggregation system
+        Tuple containing (response_text, is_direct_response)
     """
     # Ensure resources are initialized
     _initialize()
@@ -98,8 +99,15 @@ def translate_query(user_query, current_context=None):
         translation = response.candidates[0].content.parts[0].text
         logger.info(f"Query translation generated: {translation[:100]}...")
         
-        return translation
+        # Check if this is a direct response
+        if translation.strip().startswith("DIRECT_RESPONSE:"):
+            direct_response = translation[len("DIRECT_RESPONSE:"):].strip()
+            logger.info("Query translator provided direct response")
+            return direct_response, True
+        
+        # Normal caveats case
+        return translation, False
         
     except Exception as e:
         logger.error(f"Error translating query: {str(e)}")
-        return f"Error: {str(e)}"
+        return f"Error: {str(e)}", False

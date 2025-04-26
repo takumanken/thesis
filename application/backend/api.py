@@ -130,15 +130,19 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             logger.info(f"[{request_id}] Location: lat={user_location.get('latitude'):.6f}, lng={user_location.get('longitude'):.6f}")
             content = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
 
-        # Use the translator function to get query caveats
-        # Pass the context if available, otherwise pass None
+        # Use the translator function to get query caveats or direct response
         context = request_data.context.dict() if request_data.context else None
         logger.info(f"[{request_id}] Context available: {bool(context)}")
         
-        caveats = translate_query(content, context)
+        response_text, is_direct_response = translate_query(content, context)
         
-        # Add caveats to the prompt for the second AI (data aggregation)
-        # Note: Only pass user query + caveats to this AI, not the context
+        # If translator provided a direct response, return it immediately
+        if is_direct_response:
+            logger.info(f"[{request_id}] Returning direct response from query translator")
+            return JSONResponse(content=create_text_response(response_text))
+        
+        # Otherwise continue with normal flow - pass caveats to data aggregation
+        caveats = response_text
         gemini_model = "gemini-2.0-flash"
         prompt = content + "\n\n\nCAVEATS TO THIS QUERY:\n" + caveats
         logger.info(f"[{request_id}] Prompt with caveats: {prompt}")
