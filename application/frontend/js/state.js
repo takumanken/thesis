@@ -17,6 +17,8 @@ export const state = {
   dataMetadataAll: {},
   // Track original data sources from API
   originalDataSources: null,
+  conversationHistory: [],
+
   // Update method
   update(newData) {
     this.userQuery = newData.userQuery || this.userQuery;
@@ -95,5 +97,44 @@ export const state = {
       return true;
     }
     return false;
+  },
+
+  /**
+   * Updates conversation history with current message and visualization state
+   * @param {string} userMessage - The message from the user
+   * @param {string} aiResponse - The response from the AI
+   * @returns {Array} The updated conversation history
+   */
+  updateConversationHistory(userMessage, aiResponse) {
+    // Create a new conversation entry
+    const conversationEntry = {
+      timestamp: new Date().toISOString(),
+      userMessage,
+      aiResponse,
+      visualizationState: {
+        chartType: this.chartType,
+        dataset: {
+          length: this.dataset?.length || 0,
+          sample: this.dataset?.slice(0, 10) || [],
+        },
+        dimensions: this.aggregationDefinition?.dimensions?.slice() || [],
+        measures: JSON.parse(JSON.stringify(this.aggregationDefinition?.measures || [])),
+        preAggregationFilters: this.aggregationDefinition?.preAggregationFilters || "",
+        postAggregationFilters: this.aggregationDefinition?.postAggregationFilters || "",
+        topNFilters: this.aggregationDefinition?.topN || {},
+      },
+    };
+
+    // Add the new entry to the beginning of the array
+    this.conversationHistory.unshift(conversationEntry);
+
+    // Keep only the 3 most recent conversations
+    if (this.conversationHistory.length > 3) {
+      this.conversationHistory = this.conversationHistory.slice(0, 3);
+    }
+
+    // Log for debugging
+    console.log("Conversation history updated:", this.conversationHistory);
+    return this.conversationHistory;
   },
 };

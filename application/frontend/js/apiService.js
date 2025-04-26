@@ -74,6 +74,9 @@ export async function apiService() {
       dataMetadataAll: result.dataMetadataAll || {},
     });
 
+    // Store conversation history after state is updated
+    state.updateConversationHistory(userQuery, result.dataInsights?.dataDescription || "Visualization generated");
+
     updateChartTypeDropdown();
   } catch (error) {
     console.error("Error in apiService:", error);
