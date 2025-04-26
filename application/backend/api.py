@@ -172,8 +172,30 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             "categoricalDimension": cat_dim
         })
         
-        # Generate and execute SQL query
+        # Generate SQL query
         sql = generate_sql(agg_def, "requests_311", user_location)
+
+        # Check if the location is available
+        location_enabled = bool(user_location)
+        if ('user_latitude' in sql or 'user_longitude' in sql) and not location_enabled:
+                logger.info(f"[{request_id}] Query requires location services but they are disabled")
+                    # Return text response instructing user to enable location
+                
+                return JSONResponse(content={
+                    "chartType": "text",
+                    "availableChartTypes": ["text"],
+                    "textResponse": "",
+                    "dataset": [],
+                    "fields": [],
+                    "sql": sql,
+                    "dataInsights": {
+                        "title": "Location Services Required",
+                        "dataDescription": "This query requires location services to be enabled. Please check 'Use my NYC location'.",
+                    }
+                })
+
+
+
         dataset, query_metadata = execute_sql_in_duckDB(sql, DUCKDB_FILE)
         
         # Add date range to aggregation definition

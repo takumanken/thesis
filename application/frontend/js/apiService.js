@@ -43,6 +43,7 @@ export async function apiService() {
       topN: state.aggregationDefinition?.topN || null,
     },
     conversationHistory: state.conversationHistory || [],
+    locationEnabled: useLocation,
   };
 
   // Create the request body with prompt, context, and optional location
