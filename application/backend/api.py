@@ -26,6 +26,7 @@ from query_engine import (
     reorder_dimensions_by_cardinality
 )
 from text_insights import generate_data_description
+from query_translator import translate_query  # Use the dedicated module
 
 # Setup logging
 logging.basicConfig(
@@ -68,8 +69,6 @@ def setup_environment():
     Returns:
         Tuple containing the formatted system instruction and initialized API client.
     """
-    global frontend_schema
-    
     with open(SYSTEM_INSTRUCTION_FILE, "r") as f:
         system_instruction = f.read()
 
@@ -90,7 +89,6 @@ def setup_environment():
 
     # Process measures
     for measure in data_schema["measures"]:
-        # For AI
         measure_copy = {k: v for k, v in measure.items() if k != "description_to_user"}
         simplified_schema["measures"].append(measure_copy)
                 
@@ -105,6 +103,7 @@ def setup_environment():
         
     return system_instruction, genai.Client(api_key=api_key)
 
+# Initialize environment
 system_instruction, client = setup_environment()
 logger.info("Environment setup completed")
 
@@ -136,11 +135,19 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             logger.info(f"[{request_id}] Location: lat={user_location.get('latitude'):.6f}, lng={user_location.get('longitude'):.6f}")
             content = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
 
+        # Use the translator function to get query caveats
+        caveats = translate_query(content)
+        
+        # Add caveats to the prompt
+        gemini_model = "gemini-2.0-flash"
+        prompt = content + "\n\n\nCAVEATS TO THIS QUERY:\n" + caveats
+        logger.info(f"[{request_id}] Prompt with caveats: {prompt}")
+
         # Call Gemini API to process the prompt
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=gemini_model,
             config=types.GenerateContentConfig(system_instruction=system_instruction, temperature=0),
-            contents=[content],
+            contents=[prompt],
         )
         
         # Parse the AI response
@@ -179,15 +186,19 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         if len(dataset) == 0:
             available_charts = ['text']
             ideal_chart = 'text'
-            
         else:
             available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats)
 
         # Add field metadata
-        all_field_description = data_schema["dimensions"]["time_dimension"] + data_schema["dimensions"]["geo_dimension"] + data_schema["dimensions"]["categorical_dimension"] + data_schema["measures"]
+        all_field_description = (
+            data_schema["dimensions"]["time_dimension"] + 
+            data_schema["dimensions"]["geo_dimension"] + 
+            data_schema["dimensions"]["categorical_dimension"] + 
+            data_schema["measures"]
+        )
 
         field_metadata = []
-        fields = agg_def.dimensions + [ field["alias"] for field in agg_def.measures ]
+        fields = agg_def.dimensions + [field["alias"] for field in agg_def.measures]
 
         for field in fields:
             for field_description in all_field_description:
