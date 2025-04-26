@@ -37,11 +37,20 @@ When you detect any of the following patterns, include the corresponding guidanc
   - Add: "- Important: Do not include time dimensions in filters when calculating percentages or ratios, as this will break the calculation."
 
 ### 4. Composition Queries
-- If the query asks about proportions, distributions, or percentages:
+- If the query explicitly asks about proportions of a certain item::
   - If a direct measure exists in the data model:
-    - Add: "- This is a composition query. Use the existing measure '{measure name}' to directly show the proportion data."
+    - Add: "- This is a composition query. Use the existing measure {measure name} to directly present the proportion data."
   - If no direct measure exists:
-    - Add: "- This is a composition query. Use {dimension} as the dimension and count as the measure to show the distribution. Do not filter by {dimension} as this would prevent percentage analysis."
+    - Add: "- This is a composition query. Use {dimension} as the dimension and count as the measure to show the distribution. Do not filter by {dimension}, as doing so would prevent accurate percentage analysis."
+
+### 5. Use of requests_per_day
+- If you recommend the use of the date part dimension (such as created_weekday_datepart or created_month) instead of a standard date dimension (such as created_date or created_week):
+  - Add: "Use {dimension} as the dimension and requests_per_day as the measure to make the analysis more meaningful."
+
+### 6. Out of Capacity Query
+- If you believe the question pertains to information not available within this dataset:
+  - Add: "This query appears difficult to answer directly. A potential alternative available within this dataset includes: {list of suggestions}."
+
 
 ## DATA MODEL
 Your answer should be based on the following data model:
