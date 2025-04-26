@@ -131,9 +131,14 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             content = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
 
         # Use the translator function to get query caveats
-        caveats = translate_query(content)
+        # Pass the context if available, otherwise pass None
+        context = request_data.context.dict() if request_data.context else None
+        logger.info(f"[{request_id}] Context available: {bool(context)}")
         
-        # Add caveats to the prompt
+        caveats = translate_query(content, context)
+        
+        # Add caveats to the prompt for the second AI (data aggregation)
+        # Note: Only pass user query + caveats to this AI, not the context
         gemini_model = "gemini-2.0-flash"
         prompt = content + "\n\n\nCAVEATS TO THIS QUERY:\n" + caveats
         logger.info(f"[{request_id}] Prompt with caveats: {prompt}")

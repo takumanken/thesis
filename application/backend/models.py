@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from pydantic import BaseModel
 
 class TopNDefinition(BaseModel):
@@ -9,12 +9,31 @@ class TopNDefinition(BaseModel):
     orderByKey: List[str]
     topN: int
 
+class CurrentVisualization(BaseModel):
+    """
+    Represents the current visualization state
+    """
+    chartType: str
+    dimensions: List[str] = []
+    measures: List[Dict[str, str]] = []
+    preAggregationFilters: str = ""
+    postAggregationFilters: str = ""
+    topN: Optional[TopNDefinition] = None
+
+class ConversationContext(BaseModel):
+    """
+    Contains the current visualization context and conversation history
+    """
+    currentVisualization: CurrentVisualization
+    conversationHistory: List[Dict[str, Any]] = []
+
 class PromptRequest(BaseModel):
     """
     Request model for the /process endpoint.
-    Contains the user's prompt text and optional location data.
+    Contains the user's prompt text, optional context, and optional location data.
     """
     prompt: str
+    context: Optional[ConversationContext] = None
     location: Optional[Dict[str, float]] = None
 
 class AggregationDefinition(BaseModel):

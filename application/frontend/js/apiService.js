@@ -32,9 +32,23 @@ export async function apiService() {
 
   console.log("Using server endpoint:", serverEndpoint);
 
-  // Create the request body with optional location data
+  // Create the current context object
+  const currentContext = {
+    currentVisualization: {
+      chartType: state.chartType,
+      dimensions: state.aggregationDefinition?.dimensions || [],
+      measures: state.aggregationDefinition?.measures || [],
+      preAggregationFilters: state.aggregationDefinition?.preAggregationFilters || "",
+      postAggregationFilters: state.aggregationDefinition?.postAggregationFilters || "",
+      topN: state.aggregationDefinition?.topN || null,
+    },
+    conversationHistory: state.conversationHistory || [],
+  };
+
+  // Create the request body with prompt, context, and optional location
   const requestBody = {
     prompt: userQuery,
+    context: currentContext,
   };
 
   // Add location data if available

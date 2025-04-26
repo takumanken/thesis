@@ -69,18 +69,19 @@ def translate_query(user_query, current_context=None):
             "{data_schema}", json.dumps(_data_schema)
         )
         
-        # Create the prompt
-        context_text = "No specific context available."
+        # Create the prompt with better formatting
         if current_context:
-            context_text = f"User is viewing: {json.dumps(current_context)}"
+            context_json = json.dumps(current_context, indent=2)
+            context_section = f"# CURRENT CONTEXT\n```json\n{context_json}\n```"
+        else:
+            context_section = "# CURRENT CONTEXT\nNo specific context available."
             
         prompt = f"""
-        # CURRENT CONTEXT
-        {context_text}
-        
-        # USER QUERY
-        "{user_query}"
-        """
+{context_section}
+
+# USER QUERY
+"{user_query}"
+"""
         
         # Call Gemini API with the prepared instruction
         gemini_model = "gemini-2.0-flash"
