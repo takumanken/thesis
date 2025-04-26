@@ -176,12 +176,18 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             agg_def = reorder_dimensions_by_cardinality(agg_def, dimension_stats)
         
         # Determine best visualization
-        available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats)
+        if len(dataset) == 0:
+            available_charts = ['text']
+            ideal_chart = 'text'
+            
+        else:
+            available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats)
 
         # Add field metadata
-        field_metadata = []
-        fields = list(dataset[0].keys()) if dataset and len(dataset) > 0 else []
         all_field_description = data_schema["dimensions"]["time_dimension"] + data_schema["dimensions"]["geo_dimension"] + data_schema["dimensions"]["categorical_dimension"] + data_schema["measures"]
+
+        field_metadata = []
+        fields = agg_def.dimensions + [ field["alias"] for field in agg_def.measures ]
 
         for field in fields:
             for field_description in all_field_description:
@@ -218,18 +224,18 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         }
 
         # Add data description
-        if dataset:
-            data_description = generate_data_description(
-                original_query=request_data.prompt, 
-                dataset=dataset,
-                aggregation_definition=agg_def.dict(),
-                chart_type=ideal_chart
-            )
-            response_payload["dataInsights"] = {
-                "title": data_description.get("title"),
-                "dataDescription": data_description.get("dataDescription"),
-                "filter_description": data_description.get("filter_description")
-            }
+        data_description = generate_data_description(
+            original_query=request_data.prompt, 
+            dataset=dataset,
+            aggregation_definition=agg_def.dict(),
+            chart_type=ideal_chart
+        )
+
+        response_payload["dataInsights"] = {
+            "title": data_description.get("title"),
+            "dataDescription": data_description.get("dataDescription"),
+            "filter_description": data_description.get("filter_description")
+        }
         
         logger.info(f"[{request_id}] Completed in {time.time() - start_time:.2f}s")
         return JSONResponse(content=response_payload)

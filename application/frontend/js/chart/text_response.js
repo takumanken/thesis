@@ -1,5 +1,4 @@
 import { state } from "../state.js";
-import * as chartUtils from "./utils/chartUtils.js";
 
 function renderTextResponse(container) {
   // Clear container
@@ -13,7 +12,7 @@ function renderTextResponse(container) {
   textContainer.style.overflowWrap = "break-word";
 
   // Add the text response or a fallback message
-  textContainer.innerText = state.textResponse || "No response text available";
+  textContainer.innerText = state.textResponse || "";
 
   // Append to the main container
   container.appendChild(textContainer);

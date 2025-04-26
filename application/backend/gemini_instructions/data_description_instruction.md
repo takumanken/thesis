@@ -90,6 +90,30 @@ Good Examples:
   - Date Filters: Use phrases like “from mid‑2022 to early 2024”, “over the past year”, "during summer months" (avoid exact dates unless explicitly specified).
   - Post-Aggregation Filter: "Limited to [Measure Alias] > Y"
 
+### Handling No Data Results
+If the `Dataset Sample` is empty or contains no rows, provide a helpful explanation using the standard JSON format:
+
+1. **Use the regular JSON structure** but with content that acknowledges and explains the lack of data:
+```json
+{
+  "title": "No Results Found",
+  "dataDescription": "Clear, concise explanation about why no data was found and suggested alternatives.",
+  "filter_description": [
+    {"filtered_field_name": "Name of filtered field", "description": "Plain English explanation of filter"}
+  ]
+}
+```
+
+2. For the **title** field: Use a clear title like "No Data Found" or "No Results for [Query Topic]".
+
+3. For the **dataDescription** field:
+   - Briefly state that no data was found matching the query
+   - Concisely explain key filters that were applied
+   - Suggest 1-2 alternative searches the user might try
+   - Keep it to 1-3 concise sentences
+
+4. For **filter_description**: Include all filters from `preAggregationFilters` and `postAggregationFilters` as you would for a normal response.
+
 ## Stylistic & Language Constraints
 - Use “NYC” (not “New York City”)
 - Use plain English and everyday terms
@@ -333,5 +357,26 @@ Dataset Sample: [{"status": "Closed", "num_of_requests": 1500000}, {"status": "O
   "title": "Request Counts by Status",
   "dataDescription": "This data shows the *count* of requests by status, which relates to your question. It doesn't specify *how* requests were closed (e.g., 'without resolution'), but shows the overall status breakdown across NYC from early 2022 to spring 2025.",
   "filter_description": []
+}
+```
+
+### Example 13: No Data Found
+**Input**:
+```
+User Query: "Show me noise complaints in Staten Island on Christmas Day 2024"
+Chart Type: bar_chart
+Aggregation Definition: {"dimensions": ["complaint_type_middle"], "measures": [{"expression": "count(1)", "alias": "num_of_requests"}], "preAggregationFilters": "borough = 'STATEN ISLAND' AND complaint_type_middle LIKE '%Noise%' AND created_date = '2024-12-25'", "postAggregationFilters": ""}
+Dataset Sample: []
+```
+**Output**:
+```json
+{
+  "title": "No Noise Complaints Found",
+  "dataDescription": "No noise complaints were reported in Staten Island on December 25, 2024. Try broadening the date range to December 2024 or searching across all boroughs to see if there's a pattern of reduced reporting during holidays.",
+  "filter_description": [
+    {"filtered_field_name": "borough", "description": "Shows only Borough = STATEN ISLAND"},
+    {"filtered_field_name": "complaint_type_middle", "description": "Includes only Complaint Type containing Noise"},
+    {"filtered_field_name": "created_date", "description": "Shows only Created Date = December 25, 2024"}
+  ]
 }
 ```

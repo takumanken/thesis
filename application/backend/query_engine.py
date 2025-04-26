@@ -167,18 +167,21 @@ def execute_sql_in_duckDB(sql: str, db_filename: str) -> tuple[list, dict]:
             df = con.execute(sql).fetchdf()
             row_count = len(df)
             logger.info(f"Query executed successfully: {row_count} rows returned")
-            
-            # Extract metadata from the first row
-            metadata['createdDateRange'] = [
-                df['metadata_min_created_date'].iloc[0],
-                df['metadata_max_created_date'].iloc[0]
-            ]
-                
-            # Remove all metadata columns from result set
-            metadata_cols = [col for col in df.columns if col.startswith('metadata_')]
-            if metadata_cols:
-                df = df.drop(columns=metadata_cols)
 
+            if row_count > 0:
+            
+                # Extract metadata from the first row
+                metadata['createdDateRange'] = [
+                    df['metadata_min_created_date'].iloc[0],
+                    df['metadata_max_created_date'].iloc[0]
+                ]
+                    
+                # Remove all metadata columns from result set
+                metadata_cols = [col for col in df.columns if col.startswith('metadata_')]
+                if metadata_cols:
+                    df = df.drop(columns=metadata_cols)
+            else:
+                logger.info("Query returned no results")
     
     except Exception as e:
         logger.error(f"Database query failed: {str(e)}")
