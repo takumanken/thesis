@@ -130,7 +130,7 @@ export const state = {
 
     // Keep only the 3 most recent conversations
     if (this.conversationHistory.length > 3) {
-      this.conversationHistory = this.conversationHistory.slice(0, 3);
+      this.conversationHistory = this.conversationHistory.slice(0, 5);
     }
 
     // Log for debugging
