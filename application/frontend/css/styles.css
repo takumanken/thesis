@@ -8,6 +8,7 @@
    5. Chart Components
    6. Sidebar & Controls
    7. Media Queries
+   8. Loading Spinner
    =============================================== */
 
 /* 1. VARIABLES & RESET
@@ -161,6 +162,7 @@ body {
     max-height: calc(100vh - 180px);
     padding: 25px;
     display: flex;
+    position: relative;
 }
 
 .visualization-area {
@@ -494,4 +496,62 @@ body {
     .viz-type-selector {
         grid-template-columns: repeat(2, 1fr);
     }
+}
+
+/* 8. LOADING SPINNER
+   =============================================== */
+.loader-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+  border-radius: 25px; /* Match the dashboard-panel border radius */
+}
+
+.loader-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.loader-text {
+  margin-top: 12px;
+  font-family: 'Noto Sans', sans-serif;
+  color: var(--color-primary);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.loader-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.loader {
+  width: 48px;
+  height: 48px;
+  border: 5px solid var(--color-primary-light);
+  border-bottom-color: var(--color-primary);
+  border-radius: 50%;
+  display: inline-block;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }

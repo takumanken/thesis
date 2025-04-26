@@ -3,6 +3,10 @@ import { updateChartTypeDropdown } from "./eventHandlers.js";
 import { getCurrentPosition } from "./locationService.js";
 
 export async function apiService() {
+  // Show loading spinner
+  const loader = document.getElementById("loader");
+  loader.classList.add("visible");
+
   const userQuery = document.getElementById("promptInput").value;
   state.userQuery = userQuery;
 
@@ -73,6 +77,9 @@ export async function apiService() {
     updateChartTypeDropdown();
   } catch (error) {
     console.error("Error in apiService:", error);
+  } finally {
+    // Hide loading spinner when done (whether successful or not)
+    loader.classList.remove("visible");
   }
 }
 
