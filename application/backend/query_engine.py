@@ -70,6 +70,16 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
     Generates a SQL query from an aggregation definition.
     """
     start_time = time.time()
+    
+    # Load data schema to check dimension data types
+    with open("data/data_schema.json", "r") as f:
+        data_schema = json.load(f)
+    
+    # Create a lookup for dimension data types
+    dimension_types = {}
+    for category in ["time_dimension", "geo_dimension", "categorical_dimension"]:
+        for dim in data_schema["dimensions"].get(category, []):
+            dimension_types[dim["physical_name"]] = dim["data_type"]
 
     # Build SELECT clause
     dims = definition.dimensions
@@ -93,9 +103,21 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
     # Combine all metadata
     select_clause += date_metadata + location_reference
     
+    # Add this after the SQL FROM clause, before adding other filters
     sql = f"SELECT\n  {select_clause}\nFROM {table_name}"
-    
-    # Add filters with location placeholders if needed
+
+    # Create quality filters based on dimensions
+    quality_filters = []
+    for dim in dims:
+        if dim in dimension_types:
+            data_type = dimension_types[dim]
+            if data_type == "string":
+                quality_filters.append(f"{dim} != 'Unspecified'")
+            else:
+                quality_filters.append(f"{dim} IS NOT NULL")
+
+    # Add pre-aggregation filters first if they exist
+    where_clause_exists = False
     if definition.preAggregationFilters:
         filters = definition.preAggregationFilters
         
@@ -114,6 +136,15 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
             logger.info(f"Filters after substitution: {filters}")
         
         sql += f"\nWHERE {filters}"
+        where_clause_exists = True
+
+    # Add quality filters
+    if quality_filters:
+        quality_condition = " AND ".join(quality_filters)
+        if where_clause_exists:
+            sql += f" AND ({quality_condition})"
+        else:
+            sql += f"\nWHERE {quality_condition}"
     
     # Add grouping if dimensions exist
     if dims:
