@@ -90,7 +90,12 @@ export async function apiService() {
     });
 
     // Store conversation history after state is updated
-    state.updateConversationHistory(userQuery, result.dataInsights?.dataDescription || "Visualization generated");
+    state.updateConversationHistory(
+      userQuery,
+      result.dataInsights?.dataDescription ||
+        document.querySelector("#vizContainer > div")?.textContent ||
+        "Chart created"
+    );
 
     updateChartTypeDropdown();
   } catch (error) {
