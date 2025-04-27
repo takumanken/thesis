@@ -86,10 +86,10 @@ First, figure out which of these types the user's question fits into:
 - **TopN Query**
    - WHEN
       - The user explicitly specifies the exact number of data points they are interested in, such as "Show me the 3 most noisy areas" or "The top 5 neighborhoods with the most complaints."
-      - You must not classify it as a TopN Query just because the user uses a superlative form. If no exact number is mentioned, it should not be treated as a TopN Query.
+      - You must not classify it as a TopN Query just because the user uses a superlative form. If no exact number is mentioned in the user's query, it should never be treated as a TopN Query.
    - DO:
       - Fill out the dimensions, measures, and conditions based on the user's request.
-      - Clearly state that this is a TopN Query, and specify the exact number (N), the measure used for ordering, and whether the order is ascending or descending.
+      - Clearly state that this is a TopN Query, and specify the exact number (N) which user explicitly specified, the measure used for ordering, and whether the order is ascending or descending.
       - Make sure the measure used for sorting in TopN is also included in the list of measures.
 
 - **Why-Type Question**  
@@ -121,7 +121,7 @@ Second, check the following condition and create a list of caveat.
 
 - **Top N without exact number in prompt**
    - WHEN
-      - Question includes superlative form but user doesn't specify the exact number.
+      - The question contains a superlative form, but the user has not specified a specific number, including the question like “Which region has the most complaints?”.
    - DO
       - Add "This is NOT a TopN Query. Don't Use TopN Field." to the caveat list.
 
@@ -135,7 +135,7 @@ Once you determine a data aggregation is needed, create a definition that includ
 - **Measures:** A list of predefined physical field names to generate the requested result.
 - **PreAggregationFilters:** Conditions to apply before aggregation (similar to SQL `WHERE`).
 - **PostAggregationFilters:** Conditions to apply after aggregation (similar to SQL `HAVING`).
-- **TopN (Optional):** Include only if the user explicitly requests a "Top N" ranking.
+- **TopN (Optional):** Include only if the user explicitly requests a "Top N" ranking with the exact number. Just asking the highest item doesn't regard as topN.
 
 **Important:** 
 - Don't tell the context to the subsequent system. Just pass the above list.
@@ -171,9 +171,6 @@ Before finalizing your output, review the following rules. If any of these are v
 
 – **The paired use of dimensions within the same hierarchy**
    – DO NOT use `complaint_type_large` and `complaint_type_middle` as a pre-aggregated filter at the same time. This leads to critical error.
-
-- **Top N without exact number in prompt**
-   - Never estimate the query is topN because it contains superlative forms (such as "the most complaints", "highest"). Top N is only considered if the user specifies the exact number in the query.
 
 ---
 
