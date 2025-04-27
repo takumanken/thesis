@@ -86,7 +86,8 @@ First, figure out which of these types the user's question fits into:
 - **TopN Query**
    - WHEN
       - The user explicitly specifies the exact number of data points they are interested in, such as "Show me the 3 most noisy areas" or "The top 5 neighborhoods with the most complaints."
-      - You must not classify it as a TopN Query just because the user uses a superlative form. If no exact number is mentioned in the user's query, it should never be treated as a TopN Query.
+      - You must not classify it as a TopN Query just because the user uses a superlative form. Be aware of the word like "the most" or "the highest" without specifying number, this is not top N.
+
    - DO:
       - Fill out the dimensions, measures, and conditions based on the user's request.
       - Clearly state that this is a TopN Query, and specify the exact number (N) which user explicitly specified, the measure used for ordering, and whether the order is ascending or descending.
