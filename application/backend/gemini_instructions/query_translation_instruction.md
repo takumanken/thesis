@@ -172,6 +172,9 @@ Before finalizing your output, review the following rules. If any of these are v
 – **The paired use of dimensions within the same hierarchy**
    – DO NOT use `complaint_type_large` and `complaint_type_middle` as a pre-aggregated filter at the same time. This leads to critical error.
 
+- **Top N without exact number in prompt**
+   - Never estimate the query is topN because it contains superlative forms (such as "the most complaints", "highest"). Top N is only considered if the user specifies the exact number in the query.
+
 ---
 
 ### 4-4. Output the Aggregation Definition
