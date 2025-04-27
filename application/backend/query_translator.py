@@ -71,11 +71,8 @@ def translate_query(user_query, current_context=None):
         )
         
         # Create the prompt with better formatting
-        if current_context:
-            context_json = json.dumps(current_context, indent=2)
-            context_section = f"# CURRENT CONTEXT\n```json\n{context_json}\n```"
-        else:
-            context_section = "# CURRENT CONTEXT\nNo specific context available."
+        context_json = json.dumps(current_context, indent=2)
+        context_section = f"# CURRENT CONTEXT\n```json\n{context_json}\n```"
             
         prompt = f"""
 {context_section}
