@@ -34,7 +34,7 @@ def generate_data_description(
             system_instruction = f.read()
             
         # Sample dataset to reduce tokens
-        sample_size = min(50, len(dataset))
+        sample_size = min(100, len(dataset))
         sample_data = dataset[:sample_size]
             
         # Build simple prompt with required information

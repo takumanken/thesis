@@ -68,6 +68,14 @@ First, figure out which of these types the user's question fits into:
       - Specifiy the field containing the item as dimension, select the measure which is appropriate for calculating the composition (usually its num_of_request)
       - Do not use the dimension as a preaggregation filter, this will prevent the following system from calculating share.
 
+- **Trend Analysis**
+   - WHEN:
+      - The question asks about the trend of certain measures, possibly broken down by a dimension.
+   - DO
+      - Choose week as the time grain unless a different time grain is explicitly specified.
+      - Use a categorical dimension if one is specified.
+      - Apply the appropriate filters as needed.
+
 - **Follow-Up Query**
    - WHEN
       - Questions about NYC 311 data that build on previous context (e.g., "What about in Brooklyn?", "What about by month?", "How does this compare to last year?").
