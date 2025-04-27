@@ -141,8 +141,9 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         # Otherwise continue with normal flow - pass caveats to data aggregation
         caveats = response_text
         gemini_model = "gemini-2.0-flash"
-        prompt = raw_query + "\n\n\nCAVEATS TO THIS QUERY:\n" + caveats
-        logger.info(f"[{request_id}] Prompt with caveats: {prompt}")
+        prompt = caveats
+        # prompt = 'Original Query (Reference):' + raw_query + "\n\n!!IMPORTANT!!\nCAVEATS TO THIS QUERY:\n" + caveats
+        logger.info(f"[{request_id}] Prompt: {prompt}")
 
         # Call Gemini API to process the prompt
         response = client.models.generate_content(

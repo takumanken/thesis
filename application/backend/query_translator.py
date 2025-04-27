@@ -94,7 +94,7 @@ def translate_query(user_query, current_context=None):
         
         # Get the response text
         translation = response.candidates[0].content.parts[0].text
-        logger.info(f"Query translation generated: {translation[:100]}...")
+        logger.info(f"Query translation generated: {translation}...")
         
         # Check if this is a direct response
         if translation.strip().startswith("DIRECT_RESPONSE:"):
