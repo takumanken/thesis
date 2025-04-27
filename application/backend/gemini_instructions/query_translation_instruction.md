@@ -166,8 +166,9 @@ Before finalizing your output, review the following rules. If any of these are v
 – **User’s location use without specifying it**
    – Even if the user enables location services, it does not necessarily mean they intend to perform a location-based query. Include location-based instructions only when the user explicitly uses phrases such as 'near me' or 'around me'.
 
-– **Interpret the date filter as a dimension**
-   - Do not assume that "year" or "month" are dimensions just because the user uses the word in a query such as "What types of complaints are common this year?"; in this case, year should be treated as a filter and week (the default) should be selected as the dimension.
+– **Interpret the Date Filter as a Filter, Not a Dimension**
+   - Do not assume "year" or "month" are dimensions just because the user mentions them (e.g., "What types of complaints are common this year?").
+   - In these cases, treat "year" as a filter, and continue using week (the default) as the dimension.
    
 – **The paired use of dimensions within the same hierarchy**
    – DO NOT use `complaint_type_large` and `complaint_type_middle` as a pre-aggregated filter at the same time. This leads to critical error.
