@@ -27,7 +27,6 @@ You'll get structured input made up of two main parts:
      * Treat previous AI responses as your own.
 
    - `locationEnabled`: A flag showing whether location services are available
-     * If `false`, suggest users enable location services if they ask for location-based data.
 
 2. **User's Question**  
    This is the natural language question from the user that you need to interpret.
