@@ -123,18 +123,15 @@ async def process_prompt(request_data: PromptRequest, request: Request):
     try:
         # Extract and process location data if available
         user_location = None
-        content = request_data.prompt
+        raw_query = request_data.prompt
+        context = request_data.context.dict() if request_data.context else None
         
         if hasattr(request_data, 'location') and request_data.location:
             user_location = request_data.location
             logger.info(f"[{request_id}] Location: lat={user_location.get('latitude'):.6f}, lng={user_location.get('longitude'):.6f}")
-            content = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
+            raw_query = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
 
-        # Use the translator function to get query caveats or direct response
-        context = request_data.context.dict() if request_data.context else None
-        logger.info(f"[{request_id}] Context available: {bool(context)}")
-        
-        response_text, is_direct_response = translate_query(content, context)
+        response_text, is_direct_response = translate_query(raw_query, context)
         
         # If translator provided a direct response, return it immediately
         if is_direct_response:
@@ -144,7 +141,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         # Otherwise continue with normal flow - pass caveats to data aggregation
         caveats = response_text
         gemini_model = "gemini-2.0-flash"
-        prompt = content + "\n\n\nCAVEATS TO THIS QUERY:\n" + caveats
+        prompt = raw_query + "\n\n\nCAVEATS TO THIS QUERY:\n" + caveats
         logger.info(f"[{request_id}] Prompt with caveats: {prompt}")
 
         # Call Gemini API to process the prompt
@@ -210,25 +207,6 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             len(dataset) == 1                                # Result is only one row
         ):
             dimension = agg_def.dimensions[0]
-            
-            # Skip complex filters with logical operators
-            if " AND " in agg_def.preAggregationFilters.upper() or " OR " in agg_def.preAggregationFilters.upper():
-                logger.info(f"[{request_id}] Skipping dimension optimization - complex filter detected")
-            else:
-                # Simple dimension = 'value' pattern
-                pattern = rf"\b{re.escape(dimension)}\s*=\s*'[^']*'"
-                
-                if re.search(pattern, agg_def.preAggregationFilters, re.IGNORECASE):
-                    logger.info(f"[{request_id}] Detected redundant dimension filter: {dimension}")
-                    
-                    # Simply remove the entire filter since it's the only one
-                    modified_filters = ""
-                    agg_def = agg_def.copy(update={"preAggregationFilters": modified_filters})
-                    sql = generate_sql(agg_def, "requests_311", user_location)
-                    dataset, query_metadata = execute_sql_in_duckDB(sql, DUCKDB_FILE)
-                    
-                    if 'createdDateRange' in query_metadata:
-                        agg_def.createdDateRange = query_metadata['createdDateRange']
         
         # Process results and optimize dimensions
         dimension_stats = {}
