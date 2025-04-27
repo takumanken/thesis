@@ -83,11 +83,16 @@ First, figure out which of these types the user's question fits into:
       - Apply a filter on the coarser dimension to show detailed values within the specific category.
       - Create the data aggregation definition following the standard format.
 
-- **TopN Query**
+- **TopN Query** (Rare)
    - WHEN
-      - The user explicitly specifies the exact number of data points they are interested in, such as "Show me the 3 most noisy areas" or "The top 5 neighborhoods with the most complaints."
-      - You must not classify it as a TopN Query just because the user uses a superlative form. Be aware of the word like "the most" or "the highest" without specifying number, this is not top N.
-
+      - When the user explicitly specifies an exact number of data points, e.g.,
+         - "Show me the 3 most noisy areas"
+         - "The top 5 neighborhoods with the most complaints."
+      - Exception (NOT Top N):
+         - If the user uses words like "highest" or "most" without specifying a number, e.g.,
+            - "Which days of the week have the highest volume of 311 calls?"
+            - "Which NYC zip codes have the most rodent complaints?"
+         - In these cases, do not treat it as a Top N query. Just specify the dimension and count — no Top N behavior.
    - DO:
       - Fill out the dimensions, measures, and conditions based on the user's request.
       - Clearly state that this is a TopN Query, and specify the exact number (N) which user explicitly specified, the measure used for ordering, and whether the order is ascending or descending.
@@ -166,6 +171,10 @@ Before finalizing your output, review the following rules. If any of these are v
    
 – **The paired use of dimensions within the same hierarchy**
    – DO NOT use `complaint_type_large` and `complaint_type_middle` as a pre-aggregated filter at the same time. This leads to critical error.
+
+- **Top N Misinterpretation**
+   - Do not assume a query is a Top N query just because the user says things like "Area with the most complaints" or "highest volume of...".
+   - Unless the user specifies an exact number (e.g., "Top 1", "Top 3", "Top 5"), do not treat it as a Top N query.
 
 ---
 
