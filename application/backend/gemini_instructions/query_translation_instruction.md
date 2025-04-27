@@ -120,12 +120,6 @@ Second, check the following condition and create a list of caveat.
       - Add "Follow FILTERING BASED ON USER'S LOCATION in the instruction" to the caveat list.
       - Specify location as the ONLY dimension, this is only the way to bring heatmap to users.
 
-- **Top N without exact number in prompt**
-   - WHEN
-      - The question contains a superlative form, but the user has not specified a specific number, including the question like “Which region has the most complaints?”.
-   - DO
-      - Add "This is NOT a TopN Query. Don't Use TopN Field." to the caveat list.
-
 ---
 
 ### 4-2. Create a Data Aggregation Definition
@@ -168,8 +162,8 @@ Before finalizing your output, review the following rules. If any of these are v
    – Even if the user enables location services, it does not necessarily mean they intend to perform a location-based query. Include location-based instructions only when the user explicitly uses phrases such as 'near me' or 'around me'.
 
 – **Interpret the date filter as a dimension**
-   – Do not assume that 'year' or 'month' are dimensions merely because the user says something like 'What types of complaints are common this year?'; in this case, it should be treated as a filter rather than a dimension.
-
+   - Do not assume that "year" or "month" are dimensions just because the user uses the word in a query such as "What types of complaints are common this year?"; in this case, year should be treated as a filter and week (the default) should be selected as the dimension.
+   
 – **The paired use of dimensions within the same hierarchy**
    – DO NOT use `complaint_type_large` and `complaint_type_middle` as a pre-aggregated filter at the same time. This leads to critical error.
 
