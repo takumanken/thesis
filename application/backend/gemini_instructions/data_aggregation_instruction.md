@@ -58,7 +58,7 @@ All available dimensions, measures, and filterable values:
 - **Current Date**: `CURRENT_DATE`
 - **Date Conversion**: `DATE '2020-01-01'`
 - **Date Trunc**: `date_trunc(created_date, 'YEAR')`
-- **Intervals**: `CURRENT_DATE - INTERVAL 3 MONTH`
+- **Intervals**: `CURRENT_DATE - INTERVAL 3 MONTH`, `CURRENT_DATE - INTERVAL 1 YEAR`
 - **Date Ranges**: `created_date BETWEEN DATE 'YYYY-MM-DD' AND DATE 'YYYY-MM-DD'`
 
 ### FILTERING BASED ON USER'S LOCATION
