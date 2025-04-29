@@ -6,7 +6,7 @@ function renderTextResponse(container) {
 
   // Create styled container for the text
   const textContainer = document.createElement("div");
-  textContainer.className = "text-response";
+  textContainer.id = "text-response";
   textContainer.style.lineHeight = "1.5";
   textContainer.style.maxWidth = "100%";
   textContainer.style.overflowWrap = "break-word";
