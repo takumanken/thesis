@@ -89,6 +89,7 @@ All available dimensions, measures, and filterable values:
 ```
 
 #### 5.3.2 Date Filters (DuckDB Syntax)
+MUST NOT USE THE SYNTAX OR FUNCTION NOT LISTED THE BELOW.
 - **Current Date**: `CURRENT_DATE`
 - **Date Conversion**: `DATE '2020-01-01'`
 - **Date Truncation**: `date_trunc('YEAR', created_date)`, `date_trunc('MONTH', created_date)`

@@ -162,11 +162,17 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
         sql += f"\nLIMIT {definition.topN.topN};"
     else:
         # Use standard ordering rules
-        if len(dims) == 1 and dims[0] in ['created_weekday_datepart', 'closed_weekday_datepart']:
-            if dims[0] == 'created_weekday_datepart':
+        if len(dims) == 1:
+            if dims[0] == 'time_to_resolve_day_bin':
+                sql += f"\nORDER BY time_to_resolve_day_bin ASC"
+            elif dims[0] == 'created_weekday_datepart':
                 sql += f"\nORDER BY MIN(created_weekday_order) ASC"
             elif dims[0] == 'closed_weekday_datepart':
                 sql += f"\nORDER BY MIN(closed_weekday_order) ASC"
+            elif dims[0] in TIME_DIMENSIONS:
+                sql += f"\nORDER BY {dims[0]} ASC"
+            elif definition.measures:
+                sql += f"\nORDER BY {definition.measures[0]['alias']} DESC"
         elif definition.timeDimension:
             sql += f"\nORDER BY {definition.timeDimension[0]} ASC"
         elif definition.measures:

@@ -28,19 +28,19 @@ SELECT
     CASE
         WHEN time_to_resolve_day IS NULL 
             OR time_to_resolve_day < 0               THEN NULL
-        WHEN time_to_resolve_day = 0                  THEN '0'
-        WHEN time_to_resolve_day = 1                  THEN '1'
-        WHEN time_to_resolve_day = 2                  THEN '2'
-        WHEN time_to_resolve_day = 3                  THEN '3'
-        WHEN time_to_resolve_day BETWEEN 4  AND 5     THEN '4-5'
-        WHEN time_to_resolve_day BETWEEN 6  AND 10    THEN '6-10'
-        WHEN time_to_resolve_day BETWEEN 11 AND 20    THEN '11-20'
-        WHEN time_to_resolve_day BETWEEN 21 AND 30    THEN '21-30'
-        WHEN time_to_resolve_day BETWEEN 31 AND 60    THEN '31-60'
-        WHEN time_to_resolve_day BETWEEN 61 AND 120   THEN '61-120'
-        WHEN time_to_resolve_day BETWEEN 121 AND 180  THEN '121-180'
-        WHEN time_to_resolve_day BETWEEN 181 AND 365  THEN '181-365'
-        ELSE '366+'
+        WHEN time_to_resolve_day = 0                  THEN 'a. 0 days'
+        WHEN time_to_resolve_day = 1                  THEN 'b. 1 day'
+        WHEN time_to_resolve_day = 2                  THEN 'c. 2 days'
+        WHEN time_to_resolve_day = 3                  THEN 'd. 3 days'
+        WHEN time_to_resolve_day BETWEEN 4  AND 5     THEN 'e. 4-5 days'
+        WHEN time_to_resolve_day BETWEEN 6  AND 10    THEN 'f. 6-10 days'
+        WHEN time_to_resolve_day BETWEEN 11 AND 20    THEN 'g. 11-20 days'
+        WHEN time_to_resolve_day BETWEEN 21 AND 30    THEN 'h. 21-30 days'
+        WHEN time_to_resolve_day BETWEEN 31 AND 60    THEN 'i. 31-60 days'
+        WHEN time_to_resolve_day BETWEEN 61 AND 120   THEN 'j. 61-120 days'
+        WHEN time_to_resolve_day BETWEEN 121 AND 180  THEN 'k. 121-180 days'
+        WHEN time_to_resolve_day BETWEEN 181 AND 365  THEN 'l. 181-365 days'
+        ELSE 'm. 366+ days'
     END AS time_to_resolve_day_bin,
     IFNULL("Agency Name", 'Unspecified') AS agency_name,
     CASE
