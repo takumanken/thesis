@@ -91,9 +91,18 @@ All available dimensions, measures, and filterable values:
 #### 5.3.2 Date Filters (DuckDB Syntax)
 - **Current Date**: `CURRENT_DATE`
 - **Date Conversion**: `DATE '2020-01-01'`
-- **Date Trunc**: `date_trunc('YEAR', created_date)`
-- **Intervals**: `CURRENT_DATE - INTERVAL 3 MONTH`, `CURRENT_DATE - INTERVAL 1 YEAR`
-- **Date Ranges**: `created_date BETWEEN DATE 'YYYY-MM-DD' AND DATE 'YYYY-MM-DD'`
+- **Date Truncation**: `date_trunc('YEAR', created_date)`, `date_trunc('MONTH', created_date)`
+- **Filtering After a Specific Date**:
+    - After 2020: `created_date >= DATE '2020-01-01'`
+    - After June 2022: `created_date >= DATE '2022-06-01'`
+- **Filtering Before a Specific Date**:
+    - Before 2023: `created_date < DATE '2023-01-01'`
+    - Before June 2022: `created_date < DATE '2022-06-01'`
+- **Date Range Filtering**:
+    - `created_date BETWEEN DATE 'YYYY-MM-DD' AND DATE 'YYYY-MM-DD'`
+- **Intervals**:
+    - Three months ago: `CURRENT_DATE - INTERVAL 3 MONTH`
+    - One year ago: `CURRENT_DATE - INTERVAL 1 YEAR`
 
 #### 5.3.3 Location-Based Filters
 - Use `st_distance_sphere(st_point2d({{user_latitude}}, {{user_longitude}}), location) <= 1000` (1 km default) unless another radius is given.
