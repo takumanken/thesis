@@ -14,7 +14,7 @@ Return valid JSON in the following structure:
 {
     "dimensions": ["<dimension1>", "<dimension2>", ...],
     "measures": [
-        { "expression": "<measure1>", "alias": "<alias1>" }
+        { "expression": "<measure1>", "alias": "<physical_name>" }
     ],
     "preAggregationFilters": "<some_pre_aggregation_filter>",
     "postAggregationFilters": "<some_post_aggregation_filter>",
@@ -26,7 +26,7 @@ Return valid JSON in the following structure:
 ```
 
 - dimensions — List of relevant physical_name values (they become GROUP BY columns).
-- measures — Each object pairs an expression with an alias (aggregate functions).
+- measures — Each object pairs an expression with an alias (physical name).
 - preAggregationFilters — Dimension-only filters (SQL WHERE).
 - postAggregationFilters — Measure-based filters (SQL HAVING).
 - topN — Include only if the user explicitly requests “Top N”.
@@ -41,7 +41,7 @@ All available dimensions, measures, and filterable values:
 - Compare the instruction and the data model and pick the accurate physical_name fields.
 
 ## MEASURE GUIDLINE
-- Rely on description and synonym to find appropriate measures.
+- Use the exact same expression for expression field and physical name for alias field.
 - Default measure: count(1) as num_of_requests.
 - Never alter predefined expressions or invent new measures.
 
