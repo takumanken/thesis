@@ -420,7 +420,7 @@ function drawHeader(svg, text, x, y, anchor = "start") {
     .attr("y", y)
     .attr("font-family", chartStyles.fontFamily)
     .attr("font-size", chartStyles.fontSize.axisLabel)
-    .attr("font-weight", "bold")
+    .attr("font-weight", "regular")
     .attr("text-anchor", anchor)
     .attr("fill", chartStyles.colors.text)
     .text(text);
