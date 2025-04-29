@@ -379,7 +379,7 @@
                 "physical_name": "complaint_type_large",
                 "display_name": "Complaint Type",
                 "data_type": "string",
-                "description": "Default complaint type (broad categories).",
+                "description": "Default complaint type (broad categories). Do not use this field for filter.",
                 "description_to_user": "The general category of the reported issue. Complaint Type Middle is a more specific subcategory.",
                 "synonym": [
                     "issue type",
@@ -399,7 +399,7 @@
                 "physical_name": "complaint_type_middle",
                 "display_name": "Complaint Subcategory",
                 "data_type": "string",
-                "description": "The second detailed complaint type.",
+                "description": "The second detailed complaint type. Always use this field for making filter about complaint type.",
                 "description_to_user": "A more specific category of the issue. Detailed Complaint Type is the most specific classification.",
                 "synonym": [
                     "subcategory",

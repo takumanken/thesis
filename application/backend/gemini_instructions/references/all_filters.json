@@ -250,19 +250,6 @@
     "X-Ray Machine/Equipment",
     "ZTESTINT"
   ],
-  "complaint_type_large": [
-    "Commercial & Consumer Issues",
-    "Environmental & Green Space",
-    "Housing & Building",
-    "Noise Issues",
-    "Others",
-    "Parking & Street Access",
-    "Public Assistance",
-    "Public Safety & Order",
-    "Sanitation Issues",
-    "Street & Infrastructure",
-    "Vehicle Concerns"
-  ],
   "status": [
     "Assigned",
     "Closed",
@@ -868,18 +855,18 @@
     "Rikers Island"
   ],
   "time_to_resolve_day_bin": [
-    "0",
-    "1",
-    "11-20",
-    "121-180",
-    "181-365",
-    "2",
-    "21-30",
-    "3",
-    "31-60",
-    "366+",
-    "4-5",
-    "6-10",
-    "61-120"
+    "a. 0 days",
+    "b. 1 day",
+    "c. 2 days",
+    "d. 3 days",
+    "e. 4-5 days",
+    "f. 6-10 days",
+    "g. 11-20 days",
+    "h. 21-30 days",
+    "i. 31-60 days",
+    "j. 61-120 days",
+    "k. 121-180 days",
+    "l. 181-365 days",
+    "m. 366+ days"
   ]
 }

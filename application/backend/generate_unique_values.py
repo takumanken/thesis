@@ -16,7 +16,6 @@ TARGET_COLUMNS = [
     'borough',
     'county',
     'complaint_type_middle',
-    'complaint_type_large',
     'status',
     'agency_name',
     'agency_category',
