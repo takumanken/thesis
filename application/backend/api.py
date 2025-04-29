@@ -309,8 +309,6 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                         'datasourceMetadata': datasource_metadata,
                         'fieldMetadata': field_metadata
                     }
-
-                    print("Descriptor Aggregation Definition:", descriptor_agg_def)
                     
                     # Include topN if it exists
                     if hasattr(agg_def, 'topN') and agg_def.topN:
