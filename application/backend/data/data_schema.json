@@ -519,6 +519,18 @@
                 "data_source_id": 1
             },
             {
+                "physical_name": "time_to_resolve_day_bin",
+                "display_name": "Time to Resolve (Days) Bin",
+                "data_type": "string",
+                "description": "Time taken to resolve the service request in days, binned into ranges.",
+                "description_to_user": "The number of days it took to resolve the service request, categorized into ranges.",
+                "synonym": [
+                    "resolution time group",
+                    "time taken in days bin"
+                ],
+                "data_source_id": 1
+            },
+            {
                 "physical_name": "neighborhood_type",
                 "display_name": "Neighborhood Type",
                 "data_type": "string",

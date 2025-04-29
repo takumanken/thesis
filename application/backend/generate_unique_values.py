@@ -26,6 +26,7 @@ TARGET_COLUMNS = [
     'address_type',
     'open_data_channel_type',
     'neighborhood_type',
+    'time_to_resolve_day_bin',
 ]
 
 def generate_unique_values(output_dir='../backend/gemini_instructions/references/'):
@@ -40,21 +41,13 @@ def generate_unique_values(output_dir='../backend/gemini_instructions/references
     
     try:
         # Create in-memory DuckDB connection
-        con = duckdb.connect(":memory:")
+        con = duckdb.connect("data/nyc_open_data_explorer.duckdb")
         
         # Setup spatial extensions (same as query_engine.py)
         logger.info("Setting up DuckDB with spatial extensions...")
         con.execute("INSTALL spatial;")
         con.execute("LOAD spatial;")
         con.execute("set default_collation='nocase';")
-        
-        # Create view from SQL file (same approach as query_engine.py)
-        logger.info("Creating requests_311 view from SQL file...")
-        with open("../backend/sqls/requests_311.sql", "r") as f:
-            view_sql = f.read()
-        
-        view_sql = view_sql.format(object_name="requests_311")
-        con.execute(view_sql)
         
         # Build aggregate expressions for all columns
         logger.info(f"Generating unique values for {len(TARGET_COLUMNS)} columns...")

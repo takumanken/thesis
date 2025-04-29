@@ -25,6 +25,23 @@ SELECT
     dayofweek(closed_timestamp) AS closed_weekday_order,
     datesub('second', created_timestamp, closed_timestamp) AS time_to_resolve_sec,
     round(time_to_resolve_sec/60/60/24) AS time_to_resolve_day,
+    CASE
+        WHEN time_to_resolve_day IS NULL 
+            OR time_to_resolve_day < 0               THEN NULL
+        WHEN time_to_resolve_day = 0                  THEN '0'
+        WHEN time_to_resolve_day = 1                  THEN '1'
+        WHEN time_to_resolve_day = 2                  THEN '2'
+        WHEN time_to_resolve_day = 3                  THEN '3'
+        WHEN time_to_resolve_day BETWEEN 4  AND 5     THEN '4-5'
+        WHEN time_to_resolve_day BETWEEN 6  AND 10    THEN '6-10'
+        WHEN time_to_resolve_day BETWEEN 11 AND 20    THEN '11-20'
+        WHEN time_to_resolve_day BETWEEN 21 AND 30    THEN '21-30'
+        WHEN time_to_resolve_day BETWEEN 31 AND 60    THEN '31-60'
+        WHEN time_to_resolve_day BETWEEN 61 AND 120   THEN '61-120'
+        WHEN time_to_resolve_day BETWEEN 121 AND 180  THEN '121-180'
+        WHEN time_to_resolve_day BETWEEN 181 AND 365  THEN '181-365'
+        ELSE '366+'
+    END AS time_to_resolve_day_bin,
     IFNULL("Agency Name", 'Unspecified') AS agency_name,
     CASE
         WHEN agency_name = 'Department of Housing Preservation and Development' THEN 'Housing'
