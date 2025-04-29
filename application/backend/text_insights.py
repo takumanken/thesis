@@ -68,7 +68,7 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
         defaults = {
             "title": "Data Overview",
             "dataDescription": "Here is a summary of the requested data.",
-            "filter_description": []
+            "filterDescription": []
         }
         
         # Apply defaults for any missing fields
@@ -83,19 +83,19 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
         return {
             "title": "Data Overview",
             "dataDescription": "Here is a summary of the requested data.",
-            "filter_description": []
+            "filterDescription": []
         }
 
-def remove_date_filters(filter_descriptions):
+def remove_date_filters(filterDescriptions):
     """Remove filter descriptions related to created_date fields"""
-    if not isinstance(filter_descriptions, list):
-        return filter_descriptions
+    if not isinstance(filterDescriptions, list):
+        return filterDescriptions
     
     # Filter out both created_date and createdDateRange items
     return [
-        item for item in filter_descriptions
+        item for item in filterDescriptions
         if isinstance(item, str) or
-        not any(date_term in (item.get('filtered_field_name', '') + item.get('field', '')).lower() 
+        not any(date_term in (item.get('filteredFieldName', '') + item.get('field', '')).lower() 
                 for date_term in ['created_date', 'createddaterange'])
     ]
 

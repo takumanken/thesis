@@ -84,7 +84,7 @@ export async function apiService() {
       dataInsights: {
         title: dataInsights.title || null,
         dataDescription: dataInsights.dataDescription || null,
-        filter_description: dataInsights.filter_description || [],
+        filterDescription: dataInsights.filterDescription || [],
       },
       dataMetadataAll: result.dataMetadataAll || {},
     });

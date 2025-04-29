@@ -158,12 +158,12 @@ function addDateRangeToPeriodSection(container, tooltip, fieldMetadata) {
  * Updates the Filters section without date range pill
  */
 function updateFiltersWithoutDateRange(container, tooltip, fieldMetadata) {
-  const filters = state.dataInsights?.filter_description || [];
+  const filters = state.dataInsights?.filterDescription || [];
   let hasFilters = false;
 
   if (Array.isArray(filters) && filters.length > 0) {
     filters.forEach((filter) => {
-      const fieldName = filter.filtered_field_name || filter.field || "Filter";
+      const fieldName = filter.filteredFieldName || filter.field || "Filter";
       const fieldInfo = findFieldMetadata(fieldName, fieldMetadata);
       const label = fieldInfo?.display_name || fieldName;
       const description = filter.description || "Applied filter";

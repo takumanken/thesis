@@ -111,10 +111,10 @@ def setup_environment() -> Tuple[str, genai.Client]:
 def extract_filter_fields(data_description: Dict[str, Any]) -> list:
     """Extract field names from filter descriptions"""
     filter_fields = []
-    if data_description.get("filter_description"):
-        for filter_desc in data_description.get("filter_description", []):
-            if isinstance(filter_desc, dict) and "filtered_field_name" in filter_desc:
-                filter_fields.append(filter_desc["filtered_field_name"])
+    if data_description.get("filterDescription"):
+        for filter_desc in data_description.get("filterDescription", []):
+            if isinstance(filter_desc, dict) and "filteredFieldName" in filter_desc:
+                filter_fields.append(filter_desc["filteredFieldName"])
     return filter_fields
 
 
@@ -159,7 +159,7 @@ def get_location_required_response() -> Dict[str, Any]:
         "dataInsights": {
             "title": "Location Services Required",
             "dataDescription": "This query requires location services to be enabled. Please check 'Use my NYC location'.",
-            "filter_description": []
+            "filterDescription": []
         }
     }
 
@@ -178,7 +178,7 @@ def initialize_response() -> Dict[str, Any]:
         "dataInsights": {
             "title": None,
             "dataDescription": None,
-            "filter_description": []
+            "filterDescription": []
         },
         "dataMetadataAll": None
     }
@@ -291,32 +291,61 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                     response_payload["chartType"] = ideal_chart
                     response_payload["availableChartTypes"] = available_charts
 
-                    # Generate data description
+                    # First define the initial fields (dimensions and measures)
+                    initial_fields = agg_def.dimensions + [field["alias"] for field in agg_def.measures]
+                    
+                    # Collect metadata for these initial fields
+                    field_metadata, used_datasources = collect_field_metadata(initial_fields)
+                    datasource_metadata = collect_datasource_metadata(used_datasources)
+
+                    # Create a streamlined aggregation definition for the descriptor
+                    descriptor_agg_def = {
+                        'dimensions': agg_def.dimensions,
+                        'measures': agg_def.measures,
+                        'preAggregationFilters': agg_def.preAggregationFilters,
+                        'postAggregationFilters': agg_def.postAggregationFilters,
+                        'topN': agg_def.topN,
+                        'createdDateRange': query_metadata.get('createdDateRange', []),
+                        'datasourceMetadata': datasource_metadata,
+                        'fieldMetadata': field_metadata
+                    }
+
+                    print("Descriptor Aggregation Definition:", descriptor_agg_def)
+                    
+                    # Include topN if it exists
+                    if hasattr(agg_def, 'topN') and agg_def.topN:
+                        descriptor_agg_def['topN'] = {
+                            'orderByKey': agg_def.topN.orderByKey,
+                            'topN': agg_def.topN.topN
+                        }
+
+                    # Generate data description with the streamlined definition
                     data_description = generate_data_description(
                         original_query=request_data.prompt, 
                         dataset=dataset,
-                        aggregation_definition=agg_def.dict(),
+                        aggregation_definition=descriptor_agg_def,
                         chart_type=ideal_chart
                     )
 
-                    # Extract fields from data
+                    # Now extract additional filter fields from the description
                     filter_fields = extract_filter_fields(data_description)
                     
-                    # Combine all fields (dimensions, measures, and filter fields)
-                    fields = agg_def.dimensions + [field["alias"] for field in agg_def.measures]
+                    # Create the complete fields list including filter fields
+                    fields = initial_fields.copy()
                     
                     # Add filter fields, avoiding duplicates
                     for field in filter_fields:
                         if field not in fields:
                             fields.append(field)
                     
+                    # Update field metadata if we added new fields
+                    if len(fields) > len(initial_fields):
+                        field_metadata, used_datasources = collect_field_metadata(fields)
+                        datasource_metadata = collect_datasource_metadata(used_datasources)
+                    
                     response_payload["fields"] = fields
                     
-                    # Collect field and datasource metadata
-                    field_metadata, used_datasources = collect_field_metadata(fields)
-                    datasource_metadata = collect_datasource_metadata(used_datasources)
-
-                    # Update aggregation definition with metadata
+                    # Update aggregation definition with metadata for the response
                     agg_def = agg_def.copy(update={
                         "datasourceMetadata": datasource_metadata,
                         "fieldMetadata": field_metadata
@@ -328,7 +357,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                     response_payload["dataInsights"] = {
                         "title": data_description.get("title"),
                         "dataDescription": data_description.get("dataDescription"),
-                        "filter_description": data_description.get("filter_description", [])
+                        "filterDescription": data_description.get("filterDescription", [])
                     }
         
         logger.info(f"[{request_id}] Completed in {time.time() - start_time:.2f}s")
