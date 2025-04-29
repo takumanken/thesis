@@ -56,7 +56,7 @@ Based on the input, generate the following JSON response:
 ```json
 {
   "title": "Brief, clear title (5–7 words) about the result",
-  "dataDescription": "1–2 sentence explanation of the aggregated data and a brief insight. May include a preface if aggregation differs from query.",
+  "dataDescription": "1–2 sentence explanation of the aggregated data and a brief insight. May include a preface if aggregation differs from user's query.",
   "filterDescription": [
     {
       "filteredFieldName": "Name of filtered field",
@@ -67,16 +67,18 @@ Based on the input, generate the following JSON response:
 ```
 
 ### Title
-- Create a brief, clear title (5-7 words) that summarizes the main insight or data shown
+- Create a short, clear title (5-7 words) that summarizes the key insight or data being presented.
+- Follow the data definition to name this, not the user query.
 - Include key dimension(s) and topic (e.g., "Noise Complaints in Brooklyn" or "Top 5 Neighborhoods for Rat Complaints")
-- Format as a headline - capitalize first letter of major words, no period at the end
+- Format as a headline - capitalize first letter of key words, no period at end
 
 ### dataDescription
-- Briefly explain what data is shown to the user, using simple language without technical jargon.
-- If the aggregation differs from what the user asked, clearly explain the gap — this is very important.
-  - Example: If the user asks, "How many construction noise complaints are made on weekends?" but the result is about street/sidewalk noise, explain it like:
+- Briefly explain what data is being presented to the user, using plain language without jargon.
+- Precisely Use words derived from the data aggregation, not the user's query.
+- If the aggregation is different from what the user asked for, clearly explain the gap - this is very important. This is very important.
+  - For example: If the user asks, "How many construction noise complaints are made on weekends?" but the result is street/sidewalk noise, explain it like this:
     - "This is actually street/sidewalk noise rather than construction, but..."
-- Include a short insight that highlights something interesting about the data, based on the sample dataset.
+- Include a short insight that highlights something interesting about the data based on the sample data set.
 
 ### filterDescription
 The filter description explains data limitations to users in plain language. Return an array of objects, each with:

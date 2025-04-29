@@ -291,11 +291,11 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                     response_payload["chartType"] = ideal_chart
                     response_payload["availableChartTypes"] = available_charts
 
-                    # First define the initial fields (dimensions and measures)
-                    initial_fields = agg_def.dimensions + [field["alias"] for field in agg_def.measures]
+                    # First define fields that will be displayed in table (only dimensions and measures)
+                    visible_fields = agg_def.dimensions + [field["alias"] for field in agg_def.measures]
                     
-                    # Collect metadata for these initial fields
-                    field_metadata, used_datasources = collect_field_metadata(initial_fields)
+                    # Collect initial metadata
+                    field_metadata, used_datasources = collect_field_metadata(visible_fields)
                     datasource_metadata = collect_datasource_metadata(used_datasources)
 
                     # Create a streamlined aggregation definition for the descriptor
@@ -325,25 +325,24 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                         chart_type=ideal_chart
                     )
 
-                    # Now extract additional filter fields from the description
+                    # Now extract filter fields from the description
                     filter_fields = extract_filter_fields(data_description)
                     
-                    # Create the complete fields list including filter fields
-                    fields = initial_fields.copy()
+                    # Set fields in response payload (ONLY dimensions and measures, NO filter fields)
+                    response_payload["fields"] = visible_fields
                     
-                    # Add filter fields, avoiding duplicates
+                    # Create metadata list that includes ALL fields including filters
+                    all_metadata_fields = visible_fields.copy()
                     for field in filter_fields:
-                        if field not in fields:
-                            fields.append(field)
+                        if field not in all_metadata_fields:
+                            all_metadata_fields.append(field)
                     
-                    # Update field metadata if we added new fields
-                    if len(fields) > len(initial_fields):
-                        field_metadata, used_datasources = collect_field_metadata(fields)
+                    # Only update metadata if we need to include additional filter fields
+                    if len(all_metadata_fields) > len(visible_fields):
+                        field_metadata, used_datasources = collect_field_metadata(all_metadata_fields)
                         datasource_metadata = collect_datasource_metadata(used_datasources)
                     
-                    response_payload["fields"] = fields
-                    
-                    # Update aggregation definition with metadata for the response
+                    # Update aggregation definition with complete metadata
                     agg_def = agg_def.copy(update={
                         "datasourceMetadata": datasource_metadata,
                         "fieldMetadata": field_metadata
