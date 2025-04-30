@@ -2,7 +2,7 @@
  * Unified scale creation utilities for all chart types
  */
 import { chartColors } from "./chartColors.js";
-
+import { determineTimeGrain } from "./chartUtils.js";
 /**
  * Creates a linear scale for measure values with appropriate padding
  * @param {Array} data - Dataset
@@ -86,18 +86,37 @@ export function createStackScale(stackedData, isPercentage, range) {
  * @param {boolean} isNumericTime - Whether time is numeric
  * @param {number} width - Width for scale range
  * @param {string} timeField - Name of the time field (default: 'time')
+ * @param {string} timeGrain - Granularity of time (e.g., 'year', 'month', 'week', 'day')
  * @returns {d3.Scale} Appropriate time scale
  */
-export function createTimeScale(data, isNumericTime, width, timeField = "time") {
-  return isNumericTime
-    ? d3
-        .scaleLinear()
-        .domain(d3.extent(data, (d) => d[timeField]))
-        .range([0, width])
-        .nice()
-    : d3
-        .scaleTime()
-        .domain(d3.extent(data, (d) => d[timeField]))
-        .range([0, width])
-        .nice();
+export function createTimeScale(data, isNumericTime, width, timeField = "time", timeGrain) {
+  // Get data extent
+  const extent = d3.extent(data, (d) => d[timeField]);
+
+  // Determine time grain if not provided
+  if (!timeGrain) {
+    // Import is at the top of file, so this should work
+    timeGrain = determineTimeGrain(timeField);
+  }
+
+  // Apply appropriate padding based on time grain
+  if (!isNumericTime && extent[0] && extent[1]) {
+    const padding = {
+      year: 30 * 24 * 60 * 60 * 1000, // ~1 month padding for yearly data
+      month: 15 * 24 * 60 * 60 * 1000, // 15 days padding for monthly data (half month)
+      week: 3 * 24 * 60 * 60 * 1000, // 3 days padding for weekly data
+      day: 12 * 60 * 60 * 1000, // 12 hours padding for daily data
+    };
+
+    const paddingAmount = padding[timeGrain] || padding.day;
+    extent[0] = new Date(extent[0].getTime() - paddingAmount);
+    extent[1] = new Date(extent[1].getTime() + paddingAmount);
+  }
+
+  // Create the appropriate scale
+  const scale = isNumericTime
+    ? d3.scaleLinear().domain(extent).range([0, width])
+    : d3.scaleTime().domain(extent).range([0, width]);
+
+  return scale;
 }
