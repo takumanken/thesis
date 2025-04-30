@@ -196,7 +196,7 @@ body {
 
 /* Bar Chart Components */
 .viz-bar-scroll {
-    height: 100%;
+    height: calc(100% - 40px);
 }
 
 .viz-bar-canvas {
