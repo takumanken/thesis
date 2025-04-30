@@ -175,6 +175,7 @@ export function createColorLegend(container, items, colorAccessor, options = {},
     Object.assign(label.style, {
       fontSize: "12px",
       fontFamily: chartStyles.fontFamily,
+      color: "#333",
       overflow: "hidden",
       textOverflow: "ellipsis",
       whiteSpace: "nowrap",
