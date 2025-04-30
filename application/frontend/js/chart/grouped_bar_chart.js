@@ -185,7 +185,6 @@ function setupContainer(container, config) {
   Object.assign(container.style, {
     position: "relative",
     width: "100%",
-    height: `${config.displayHeight}px`,
   });
 }
 
