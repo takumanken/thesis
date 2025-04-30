@@ -36,7 +36,6 @@ def generate_data_description(
         # Sample dataset to reduce tokens
         sample_size = min(100, len(dataset))
         sample_data = dataset[:sample_size]
-            
         # Build simple prompt with required information
         prompt = f"""
 User Query: "{original_query}"
@@ -48,6 +47,7 @@ Aggregation Definition:
 Dataset Sample ({sample_size} of {len(dataset)} rows):
 {json.dumps(sample_data, indent=2)}
 """
+        print(prompt)
 
         # Call Gemini API
         client = get_gemini_client()

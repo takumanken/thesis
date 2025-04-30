@@ -49,6 +49,34 @@ The aggregation definition contains detailed information about the data query an
 | `datasourceMetadata` | Information about the data sources, including: <br>- `data_source_id` <br>- `data_source_short_name` <br>- `data_source_name` <br>- `data_source_url` <br>- `description_to_user` | See example below |
 | `fieldMetadata` | Detailed information about each field, including: <br>- `physical_name`: Internal field ID <br>- `display_name`: User-friendly field name <br>- `data_type`: Data type (string, integer, etc.) <br>- `description`: Short technical description <br>- `description_to_user`: User-friendly explanation <br>- `data_source_id`: Source ID <br>- `expression`: For measures, the calculation | See example below |
 
+### STATISTICS DATA
+
+The `statistics` field in the aggregation definition contains rich analytical insights about each measure:
+
+| Statistic | Description | How to Explain It |
+|-----------|-------------|------------------|
+| `avg_<measure>` | Average value | "The average number of complaints is 150 per neighborhood" |
+| `median_<measure>` | Middle value | "Half of neighborhoods have fewer than 85 complaints" |
+| `stddev_<measure>` | Measure of data spread | Use phrases like "wide variation between areas" or "most values cluster close to the average" |
+| `top_3_<measure>` | Top 3 values with dimensions | "Upper East Side (750), Williamsburg (720), and Chelsea (690) have the most complaints" |
+| `bottom_3_<measure>` | Bottom 3 values with dimensions | "Roosevelt Island (12), City Island (18), and Battery Park (23) have the fewest issues" |
+
+Avoid technical statistical terms like "standard deviation" when crafting descriptions. Instead, describe the variation in more accessible ways:
+
+✅ GOOD: "There's a wide range between neighborhoods - some have hundreds of complaints while others have just a few."
+✅ GOOD: "Most neighborhoods have between 100-200 complaints, with only a few outliers much higher or lower."
+❌ AVOID: "The standard deviation of 300 indicates significant statistical dispersion in the dataset."
+
+Example of a good data description using statistics:
+
+```json
+{
+  "title": "Noise Complaints Across NYC Neighborhoods",
+  "dataDescription": "The data shows noise complaints by neighborhood, with the Upper East Side having the highest count (750). The average is 150 complaints per neighborhood, with a wide variation - some areas have very few while others have hundreds.",
+  "filter_description": [...]
+}
+```
+
 ## Output Format
 
 ### Structure

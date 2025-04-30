@@ -307,7 +307,8 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                         'topN': agg_def.topN,
                         'createdDateRange': query_metadata.get('createdDateRange', []),
                         'datasourceMetadata': datasource_metadata,
-                        'fieldMetadata': field_metadata
+                        'fieldMetadata': field_metadata,
+                        'statistics': query_metadata.get('statistics', {})
                     }
                     
                     # Include topN if it exists
