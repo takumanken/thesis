@@ -47,7 +47,6 @@ Aggregation Definition:
 Dataset Sample ({sample_size} of {len(dataset)} rows):
 {json.dumps(sample_data, indent=2)}
 """
-        print(prompt)
 
         # Call Gemini API
         client = get_gemini_client()
