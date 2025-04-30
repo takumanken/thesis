@@ -298,11 +298,15 @@ function renderValueLabels(svg, stackData, sortedStacks, scales, groupKey, isPer
 
   // For each group and stack, create a label
   sortedStacks.forEach((stack, stackIndex) => {
+    // Create a safe ID for the selector by replacing special characters
+    const safeStackId = CSS.escape(stack);
+
     svg
-      .selectAll(`.label-stack-${stack}`)
+      .selectAll(`[data-label-stack="${safeStackId}"]`) // Use attribute selector instead of class
       .data(stackData)
       .join("text")
-      .attr("class", `label-stackedBar label-stack-${stack}`)
+      .attr("class", "label-stackedBar")
+      .attr("data-label-stack", safeStackId) // Store stack ID in data attribute
       .attr("data-group", stack)
       .attr("x", (d) => {
         // Find the rightmost edge for this stack in this group
