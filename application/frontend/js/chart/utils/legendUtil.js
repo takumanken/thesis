@@ -229,7 +229,6 @@ export function createColorLegend(container, items, colorAccessor, options = {},
         label.style.opacity = "0";
       });
     });
-
     // Append circle container instead of circle directly
     row.appendChild(circleContainer);
     row.appendChild(label);
