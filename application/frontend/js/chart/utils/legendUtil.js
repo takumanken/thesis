@@ -42,7 +42,8 @@ export function createLegend(container, items, colorScale) {
     colorBox.style.width = "15px";
     colorBox.style.height = "15px";
     colorBox.style.backgroundColor = colorScale(item);
-    colorBox.style.border = "1px solid #000";
+    colorBox.style.borderRadius = "50%"; // Make it circular
+    colorBox.style.border = "none"; // Remove border
     colorBox.style.marginRight = "8px";
 
     // Label
@@ -160,11 +161,12 @@ export function createColorLegend(container, items, colorAccessor, options = {},
     const colorBox = document.createElement("span");
     Object.assign(colorBox.style, {
       display: "inline-block",
-      width: `${config.itemHeight}px`,
-      height: `${config.itemHeight}px`,
+      width: `${config.itemHeight - 2}px`,
+      height: `${config.itemHeight - 2}px`,
       backgroundColor: colorAccessor(item),
       marginRight: "5px",
-      border: "1px solid #ccc",
+      borderRadius: "50%",
+      border: "none",
     });
 
     // Text label
