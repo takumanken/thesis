@@ -154,22 +154,39 @@ export function createColorLegend(container, items, colorAccessor, options = {},
       transition: "background-color 0.2s ease",
     });
 
-    // Color circle
-    const circle = document.createElement("span");
-    Object.assign(circle.style, {
-      display: "inline-block",
+    // Circle container - prevents flex shrinking
+    const circleContainer = document.createElement("div");
+    Object.assign(circleContainer.style, {
+      position: "relative",
+      flexShrink: "0", // Prevents shrinking
       width: `${config.itemHeight}px`,
       height: `${config.itemHeight}px`,
-      backgroundColor: colorAccessor(item),
       marginRight: "8px",
+    });
+
+    // Circle element inside container
+    const circle = document.createElement("div");
+    Object.assign(circle.style, {
+      position: "absolute",
+      top: "0",
+      left: "0",
+      width: "100%",
+      height: "100%",
+      backgroundColor: colorAccessor(item),
       borderRadius: "50%",
       border: "none",
+      boxSizing: "border-box", // Ensures consistent box model
     });
+
+    circleContainer.appendChild(circle);
 
     // Text label
     const label = document.createElement("span");
     label.textContent = item;
     label.style.fontSize = "12px";
+    label.style.textOverflow = "ellipsis";
+    label.style.overflow = "hidden";
+    label.style.whiteSpace = "nowrap";
 
     // Universal highlighting logic for all chart types
     row.addEventListener("mouseenter", () => {
@@ -213,7 +230,8 @@ export function createColorLegend(container, items, colorAccessor, options = {},
       });
     });
 
-    row.appendChild(circle);
+    // Append circle container instead of circle directly
+    row.appendChild(circleContainer);
     row.appendChild(label);
     container.appendChild(row);
   });
