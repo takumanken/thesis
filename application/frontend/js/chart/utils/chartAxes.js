@@ -167,12 +167,18 @@ export function createReferenceLine(svg, options = {}) {
  */
 export function getTimeAxisSettings(xScale, isNumericTime, timeGrain) {
   let tickFormat;
-  let rotateLabels = false;
   let tickCount;
 
+  // Format based on time grain
   if (isNumericTime) {
     tickFormat = d3.format("d");
   } else {
+    // Check if data spans multiple years
+    const domain = xScale.domain();
+    const startYear = domain[0].getFullYear();
+    const endYear = domain[1].getFullYear();
+    const spansMultipleYears = startYear !== endYear;
+
     switch (timeGrain) {
       case "year":
         tickFormat = d3.timeFormat("%Y");
@@ -181,33 +187,40 @@ export function getTimeAxisSettings(xScale, isNumericTime, timeGrain) {
         tickFormat = d3.timeFormat("%b %Y");
         break;
       case "week":
-        tickFormat = d3.timeFormat("%b %d");
-        rotateLabels = true;
-        break;
       case "day":
       default:
-        tickFormat = d3.timeFormat("%Y-%m-%d");
-        rotateLabels = true;
+        // Include year in format if data spans multiple years
+        tickFormat = spansMultipleYears
+          ? d3.timeFormat("%b %y") // Jan 23 format
+          : d3.timeFormat("%b %y"); // Jan 23 format
         break;
     }
 
-    // Calculate appropriate tick count for date scales
-    const domain = xScale.domain();
-    const timeSpan = domain[1] - domain[0];
+    // Calculate appropriate tick count based on domain range
+    const daysDiff = (domain[1] - domain[0]) / (1000 * 60 * 60 * 24);
 
-    if (timeGrain === "year") {
-      tickCount = Math.min(10, Math.ceil(timeSpan / (365 * 24 * 60 * 60 * 1000)));
-    } else if (timeGrain === "month") {
-      tickCount = Math.min(12, Math.ceil(timeSpan / (30 * 24 * 60 * 60 * 1000)));
-    } else if (timeGrain === "week") {
-      tickCount = Math.min(15, Math.ceil(timeSpan / (7 * 24 * 60 * 60 * 1000)));
+    // Determine tick intervals based on date range
+    if (timeGrain === "year" || daysDiff > 1825) {
+      // > 5 years
+      tickCount = d3.timeYear.every(1);
+    } else if (daysDiff > 730) {
+      // > 2 years
+      tickCount = d3.timeMonth.every(3);
+    } else if (daysDiff > 180) {
+      // > 6 months
+      tickCount = d3.timeMonth.every(1);
+    } else if (daysDiff > 60) {
+      // > 2 months
+      tickCount = d3.timeMonth.every(1);
+    } else if (daysDiff > 14) {
+      // > 2 weeks
+      tickCount = d3.timeWeek.every(1);
     } else {
-      // For days, limit to reasonable number
-      tickCount = Math.min(15, Math.ceil(timeSpan / (24 * 60 * 60 * 1000)));
+      tickCount = d3.timeDay.every(Math.max(1, Math.floor(daysDiff / 7)));
     }
   }
 
-  return { tickFormat, rotateLabels, tickCount };
+  return { tickFormat, tickCount };
 }
 
 /**
@@ -220,20 +233,34 @@ export function getTimeAxisSettings(xScale, isNumericTime, timeGrain) {
  * @returns {d3.Selection} The created axis
  */
 export function renderTimeAxis(svg, xScale, height, isNumericTime, timeGrain) {
-  const { tickFormat, rotateLabels, tickCount } = getTimeAxisSettings(xScale, isNumericTime, timeGrain);
+  const { tickFormat, tickCount } = getTimeAxisSettings(xScale, isNumericTime, timeGrain);
 
-  // Create axis generator
+  // Create and append axis
   const axisGenerator = d3.axisBottom(xScale).tickFormat(tickFormat);
+  if (tickCount) axisGenerator.ticks(tickCount);
 
-  // Set tick count if provided
-  if (tickCount) {
-    axisGenerator.ticks(tickCount);
-  }
-
-  // Add and style axis
   const axis = svg.append("g").attr("class", "x-axis").attr("transform", `translate(0, ${height})`).call(axisGenerator);
 
-  // Style labels
+  // SMART APPROACH: Determine if labels need rotation based on available space
+  // Get total width and number of ticks
+  const axisWidth = xScale.range()[1] - xScale.range()[0];
+  const ticks = axis.selectAll(".tick").nodes();
+  const renderedTickCount = ticks.length; // Renamed to avoid redeclaration
+
+  // Check if labels would overlap (estimate average label width based on time grain)
+  const avgCharWidth = 8; // Approximate pixel width per character
+  let avgLabelWidth;
+
+  if (timeGrain === "year") avgLabelWidth = 4 * avgCharWidth; // "2023"
+  else if (timeGrain === "month") avgLabelWidth = 8 * avgCharWidth; // "Jan 2023"
+  else if (timeGrain === "week" || timeGrain === "day") avgLabelWidth = 6 * avgCharWidth; // "Jan 15"
+  else avgLabelWidth = 8 * avgCharWidth; // Default
+
+  // Calculate available width per tick
+  const widthPerTick = axisWidth / renderedTickCount; // Use renamed variable
+  const rotateLabels = widthPerTick < avgLabelWidth + 10; // Add padding
+
+  // Apply styling based on calculated rotation
   axis
     .selectAll("text")
     .attr("dx", rotateLabels ? "-.8em" : 0)
