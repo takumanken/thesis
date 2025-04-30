@@ -154,17 +154,31 @@ export function createColorLegend(container, items, colorAccessor, options = {},
       transition: "background-color 0.2s ease",
     });
 
-    // Color circle
-    const circle = document.createElement("span");
-    Object.assign(circle.style, {
-      display: "inline-block",
+    // Color circle container (guarantees shape)
+    const circleContainer = document.createElement("div");
+    Object.assign(circleContainer.style, {
+      flexShrink: "0", // Prevent flex shrinking
       width: `${config.itemHeight}px`,
       height: `${config.itemHeight}px`,
-      backgroundColor: colorAccessor(item),
       marginRight: "8px",
+      position: "relative", // For positioning the inner circle
+    });
+
+    // Actual circle
+    const circle = document.createElement("div");
+    Object.assign(circle.style, {
+      position: "absolute",
+      top: "0",
+      left: "0",
+      width: "100%",
+      height: "100%",
+      backgroundColor: colorAccessor(item),
       borderRadius: "50%",
       border: "none",
     });
+
+    circleContainer.appendChild(circle);
+    row.appendChild(circleContainer);
 
     // Text label
     const label = document.createElement("span");
@@ -213,7 +227,6 @@ export function createColorLegend(container, items, colorAccessor, options = {},
       });
     });
 
-    row.appendChild(circle);
     row.appendChild(label);
     container.appendChild(row);
   });
