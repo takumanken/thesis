@@ -62,7 +62,7 @@ function renderLineChart(container) {
   // Add legend if grouped data
   if (groupDimension && sortedGroups.length > 0) {
     const colorScale = d3.scaleOrdinal().domain(sortedGroups).range(chartColors.mainPalette);
-    legendUtil.createColorLegend(legendContainer, sortedGroups, colorScale, {}, groupDimension);
+    legendUtil.createColorLegend(legendContainer, sortedGroups, colorScale, {}, groupDimension); // Fixed - using sortedGroups
   }
 
   // Setup resize handler
@@ -226,7 +226,7 @@ function drawSingleLine(svg, data, scales, lineGenerator, tooltip, timeDimension
     .attr("stroke-width", 2)
     .attr("d", lineGenerator);
 
-  // Create visible points (smaller, just for visual reference)
+  // Create visible points
   svg
     .selectAll("circle.point")
     .data(data)
@@ -237,6 +237,14 @@ function drawSingleLine(svg, data, scales, lineGenerator, tooltip, timeDimension
     .attr("r", 2)
     .attr("fill", chartColors.mainPalette[0])
     .attr("opacity", 0.7);
+
+  // Add top and bottom value labels for single line (visible by default)
+  createTopValueLabels(svg, data, scales, measure, chartColors.mainPalette[0], {
+    isGrouped: false,
+    visibleByDefault: true,
+    topCount: 3,
+    bottomCount: 2,
+  });
 
   // Create interactive overlay and highlight circle
   const overlay = chartUtils.createInteractionOverlay(svg, {
@@ -314,16 +322,25 @@ function drawGroupedLines(props) {
   const groupedData = prepareGroupedData(data, groupDimension);
 
   // Draw lines - one per group
-  svg
+  const lines = svg
     .append("g")
-    .attr("class", "lines")
     .selectAll("path")
     .data(groupedData)
     .join("path")
+    .attr("class", "line")
     .attr("fill", "none")
     .attr("stroke", (d) => colorScale(d.key))
     .attr("stroke-width", 2)
-    .attr("d", (d) => lineGenerator(d.values));
+    .attr("d", (d) => lineGenerator(d.values))
+    .attr("data-group", (d) => d.key);
+
+  // Add top and bottom value labels (hidden by default, shown on hover)
+  createTopValueLabels(svg, groupedData, scales, measure, colorScale, {
+    isGrouped: true,
+    visibleByDefault: false,
+    topCount: 3,
+    bottomCount: 2,
+  });
 
   // Add interactive layer
   addInteractionLayer({
@@ -518,6 +535,129 @@ function prepareGroupedData(data, groupDimension) {
     key,
     values: [...values].sort((a, b) => a.parsedTime - b.parsedTime),
   }));
+}
+
+/**
+ * Create value labels for line charts (highest and lowest)
+ */
+function createTopValueLabels(svg, data, scales, measure, color, options = {}) {
+  // Default options
+  const {
+    isGrouped = false, // Whether data is grouped
+    visibleByDefault = false, // Whether labels are visible by default
+    topCount = 3, // Number of top points to show
+    bottomCount = 2, // Number of bottom points to show
+    labelOffset = 8, // Vertical offset for labels
+  } = options;
+
+  // Handle grouped or single data
+  if (isGrouped) {
+    // Process each group
+    data.forEach((group) => {
+      // Create high and low point labels for this group
+      createExtremePointLabels(svg, group.values, scales, measure, color, group.key, {
+        isGrouped,
+        visibleByDefault,
+        topCount,
+        bottomCount,
+        labelOffset,
+      });
+    });
+  } else {
+    // Process single dataset
+    createExtremePointLabels(svg, data, scales, measure, color, null, {
+      isGrouped,
+      visibleByDefault,
+      topCount,
+      bottomCount,
+      labelOffset,
+    });
+  }
+}
+
+/**
+ * Create extreme (highest/lowest) point labels for a dataset
+ */
+function createExtremePointLabels(svg, values, scales, measure, color, groupKey, options) {
+  const { isGrouped, visibleByDefault, topCount, bottomCount, labelOffset } = options;
+
+  // Skip if no data
+  if (!values || !values.length) return;
+
+  // Get the point color
+  const pointColor = typeof color === "function" ? color(groupKey) : color;
+
+  // Create highest value labels
+  const highestValues = [...values].sort((a, b) => (+b[measure] || 0) - (+a[measure] || 0));
+  const topPoints = highestValues.slice(0, topCount);
+
+  topPoints.forEach((point, i) => {
+    addPointLabel(svg, point, scales, measure, pointColor, {
+      isGrouped,
+      visibleByDefault,
+      labelOffset,
+      groupKey,
+      labelSuffix: isGrouped ? "" : `high-${i + 1}`,
+      position: "high",
+    });
+  });
+
+  // Create lowest value labels
+  const lowestValues = [...values].sort((a, b) => (+a[measure] || 0) - (+b[measure] || 0));
+  const bottomPoints = lowestValues.slice(0, bottomCount);
+
+  bottomPoints.forEach((point, i) => {
+    addPointLabel(svg, point, scales, measure, pointColor, {
+      isGrouped,
+      visibleByDefault,
+      labelOffset,
+      groupKey,
+      labelSuffix: isGrouped ? "" : `low-${i + 1}`,
+      position: "low",
+    });
+  });
+}
+
+/**
+ * Add a single point label with marker
+ */
+function addPointLabel(svg, point, scales, measure, color, options) {
+  const { isGrouped, visibleByDefault, labelOffset, groupKey, labelSuffix } = options;
+
+  // Determine class names based on chart type
+  const labelClass = isGrouped ? "label-line" : `top-value-label ${labelSuffix}`;
+  const markerClass = isGrouped ? "label-line" : `top-value-marker ${labelSuffix}`;
+
+  // Create text label
+  const label = svg
+    .append("text")
+    .attr("class", labelClass)
+    .attr("x", scales.x(point.parsedTime))
+    .attr("y", scales.y(+point[measure]) - labelOffset)
+    .attr("text-anchor", "middle")
+    .attr("font-size", "11px")
+    .style("opacity", visibleByDefault ? 1 : 0)
+    .text(chartUtils.formatValue(+point[measure]));
+
+  // Add data-group attribute for grouped charts
+  if (groupKey) label.attr("data-group", groupKey);
+
+  // Create marker circle
+  const marker = svg
+    .append("circle")
+    .attr("class", markerClass)
+    .attr("cx", scales.x(point.parsedTime))
+    .attr("cy", scales.y(+point[measure]))
+    .attr("r", 3)
+    .attr("fill", color)
+    .attr("stroke", "white")
+    .attr("stroke-width", 1)
+    .style("opacity", visibleByDefault ? 1 : 0);
+
+  // Add data-group attribute for grouped charts
+  if (groupKey) marker.attr("data-group", groupKey);
+
+  return { label, marker };
 }
 
 export default renderLineChart;

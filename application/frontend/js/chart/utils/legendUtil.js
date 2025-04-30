@@ -118,53 +118,50 @@ export function createHorizontalLayout(container, options = {}) {
 }
 
 /**
- * Creates color swatches for a legend
- * @param {HTMLElement} container - Legend container
- * @param {Array} items - Items to include in legend
- * @param {Function} colorAccessor - Function that returns color for an item
- * @param {Object} options - Additional options
- * @param {string} [dimensionName] - Name of the dimension used for coloring (will be translated to display name)
+ * Creates color swatches for a legend with universal chart highlighting
  */
-export function createColorLegend(container, items, colorAccessor, options = {}, dimensionName = null) {
+export function createColorLegend(container, items, colorAccessor, options = {}, dimensionName, chartType = "line") {
+  // Clear existing content
+  container.innerHTML = "";
+
   // Default options
   const config = {
-    title: dimensionName ? chartUtils.getDisplayName(dimensionName) : "Legend",
-    showTitle: items.length > 0,
     itemHeight: 12,
     itemSpacing: 6,
     ...options,
   };
 
-  // Create title if needed
-  if (config.showTitle) {
-    const heading = document.createElement("h3");
-    heading.textContent = config.title;
-    Object.assign(heading.style, {
-      fontSize: "12px",
-      margin: "0 0 8px 0",
-      fontWeight: "200",
-      fontFamily: chartStyles.fontFamily,
-    });
-    container.appendChild(heading);
+  // Create title if dimension name is provided
+  if (dimensionName) {
+    const title = document.createElement("div");
+    title.textContent = chartUtils.getDisplayName(dimensionName);
+    title.style.fontWeight = "regular";
+    title.style.marginBottom = "8px";
+    title.style.fontSize = "13px";
+    container.appendChild(title);
   }
 
-  // Create legend items
+  // Create legend items with highlighting capability
   items.forEach((item) => {
-    const itemContainer = document.createElement("div");
-    Object.assign(itemContainer.style, {
+    const row = document.createElement("div");
+    Object.assign(row.style, {
       display: "flex",
       alignItems: "center",
       marginBottom: `${config.itemSpacing}px`,
+      padding: "4px 6px",
+      borderRadius: "4px",
+      cursor: "pointer",
+      transition: "background-color 0.2s ease",
     });
 
-    // Color swatch
-    const colorBox = document.createElement("span");
-    Object.assign(colorBox.style, {
+    // Color circle
+    const circle = document.createElement("span");
+    Object.assign(circle.style, {
       display: "inline-block",
-      width: `${config.itemHeight - 2}px`,
-      height: `${config.itemHeight - 2}px`,
+      width: `${config.itemHeight}px`,
+      height: `${config.itemHeight}px`,
       backgroundColor: colorAccessor(item),
-      marginRight: "5px",
+      marginRight: "8px",
       borderRadius: "50%",
       border: "none",
     });
@@ -172,19 +169,114 @@ export function createColorLegend(container, items, colorAccessor, options = {},
     // Text label
     const label = document.createElement("span");
     label.textContent = item;
-    Object.assign(label.style, {
-      fontSize: "12px",
-      fontFamily: chartStyles.fontFamily,
-      color: "#333",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
+    label.style.fontSize = "12px";
+
+    // Universal highlighting logic for all chart types
+    row.addEventListener("mouseenter", () => {
+      // Highlight legend item
+      row.style.backgroundColor = "rgba(0,0,0,0.1)";
+
+      // Find all elements with the group attribute and dim them
+      const selector = getElementSelector(chartType);
+      document.querySelectorAll(selector).forEach((element) => {
+        const group = element.getAttribute("data-group");
+        if (group === item) {
+          // Highlight the matching element
+          highlightElement(element, chartType);
+          // Bring to front
+          if (element.parentNode) element.parentNode.appendChild(element);
+
+          // Show labels for the highlighted item
+          document.querySelectorAll(`.label-${chartType}[data-group="${item}"]`).forEach((label) => {
+            label.style.opacity = "1";
+          });
+        } else {
+          // Dim other elements
+          element.style.opacity = "0.25";
+        }
+      });
     });
 
-    itemContainer.appendChild(colorBox);
-    itemContainer.appendChild(label);
-    container.appendChild(itemContainer);
+    row.addEventListener("mouseleave", () => {
+      // Reset legend item
+      row.style.backgroundColor = "";
+
+      // Reset all elements
+      const selector = getElementSelector(chartType);
+      document.querySelectorAll(selector).forEach((element) => {
+        resetElement(element, chartType);
+      });
+
+      // Hide all labels
+      document.querySelectorAll(`.label-${chartType}`).forEach((label) => {
+        label.style.opacity = "0";
+      });
+    });
+
+    row.appendChild(circle);
+    row.appendChild(label);
+    container.appendChild(row);
   });
 
   return container;
+}
+
+/**
+ * Get appropriate element selector based on chart type
+ */
+function getElementSelector(chartType) {
+  switch (chartType) {
+    case "line":
+      return "path[data-group]";
+    case "area":
+      return "path.area[data-group]";
+    case "stackedBar":
+    case "groupedBar":
+      return "rect[data-group]";
+    default:
+      return "[data-group]"; // Generic fallback
+  }
+}
+
+/**
+ * Apply highlight styling to chart element
+ */
+function highlightElement(element, chartType) {
+  // Reset opacity for all chart types
+  element.style.opacity = "1";
+
+  // Chart-specific highlight styles
+  switch (chartType) {
+    case "line":
+      element.style.strokeWidth = "2px";
+      break;
+    case "area":
+    case "stackedBar":
+    case "groupedBar":
+      break;
+  }
+}
+
+/**
+ * Reset element to default styling
+ */
+function resetElement(element, chartType) {
+  // Reset opacity for all chart types
+  element.style.opacity = "1";
+
+  // Chart-specific reset styles
+  switch (chartType) {
+    case "line":
+      element.style.strokeWidth = "2px";
+      break;
+    case "area":
+      // Just reset opacity
+      break;
+    case "stackedBar":
+    case "groupedBar":
+      // Remove stroke
+      element.style.stroke = "none";
+      element.style.strokeWidth = "0";
+      break;
+  }
 }

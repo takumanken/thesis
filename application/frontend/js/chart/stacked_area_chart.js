@@ -62,7 +62,14 @@ function renderStackedAreaChart(container) {
 
   // Create legend - reverse order to match visual stacking
   const colorScale = d3.scaleOrdinal().domain(sortedCategories).range(chartColors.mainPalette);
-  legendUtil.createColorLegend(legendContainer, [...sortedCategories].reverse(), colorScale, {}, categoricalDimension);
+  legendUtil.createColorLegend(
+    legendContainer,
+    [...sortedCategories].reverse(),
+    colorScale,
+    {},
+    categoricalDimension,
+    "area" // Change from "stackedBar" to "area"
+  );
 
   // Setup resize handling
   chartUtils.setupResizeHandler(container, () => renderStackedAreaChart(container));
@@ -324,7 +331,8 @@ function renderAreaPaths(svg, stackedData, scales, colorScale) {
     .attr("class", "area")
     .attr("fill", (d) => colorScale(d.key))
     .attr("d", area)
-    .attr("opacity", 0.8);
+    .attr("opacity", 0.8)
+    .attr("data-group", (d) => d.key);
 }
 
 /**

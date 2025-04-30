@@ -66,7 +66,7 @@ function renderStackedBarChart(container) {
     config
   );
   renderAxes(elements.svg, elements.xAxisSvg, scales, config, isPercentage);
-  legendUtil.createColorLegend(legendContainer, sortedStacks, color, {}, stackKey);
+  legendUtil.createColorLegend(legendContainer, sortedStacks, color, {}, stackKey, "stackedBar");
   setupEventHandlers(container);
 }
 
@@ -261,7 +261,8 @@ function renderBars(
     .attr("x", (d) => scales.x(d[0]))
     .attr("width", (d) => Math.max(0, scales.x(d[1]) - scales.x(d[0]) - 1))
     .attr("height", config.barHeight)
-    .attr("fill", (d, i, nodes) => color(d3.select(nodes[i].parentNode).datum().key));
+    .attr("fill", (d, i, nodes) => color(d3.select(nodes[i].parentNode).datum().key))
+    .attr("data-group", (d, i, nodes) => d3.select(nodes[i].parentNode).datum().key); // Add this line
 
   // Update tooltip to use standardized format
   chartUtils.attachMouseTooltip(rects, tooltip, (d, el) => {
@@ -281,6 +282,45 @@ function renderBars(
         { name: "Percentage", value: `${pct.toFixed(CHART_DESIGN.percentagePrecision)}%`, field: "percentage" },
       ],
     });
+  });
+
+  // Add value labels that will show on highlight
+  renderValueLabels(svg, stackData, sortedStacks, scales, groupKey, isPercentage, color, config);
+}
+
+/**
+ * Render hidden value labels
+ */
+function renderValueLabels(svg, stackData, sortedStacks, scales, groupKey, isPercentage, color, config) {
+  // Get the rightmost stack data
+  const stackGen = d3.stack().keys(sortedStacks);
+  const stackedData = stackGen(stackData);
+
+  // For each group and stack, create a label
+  sortedStacks.forEach((stack, stackIndex) => {
+    svg
+      .selectAll(`.label-stack-${stack}`)
+      .data(stackData)
+      .join("text")
+      .attr("class", `label-stackedBar label-stack-${stack}`)
+      .attr("data-group", stack)
+      .attr("x", (d) => {
+        // Find the rightmost edge for this stack in this group
+        const layerData = stackedData[stackIndex].find((entry) => entry.data[groupKey] === d[groupKey]);
+        return scales.x(layerData ? layerData[1] : 0) + 5; // 5px padding
+      })
+      .attr("y", (d) => scales.y(d[groupKey]))
+      .attr("dy", "0.35em") // Vertical centering
+      .attr("text-anchor", "start")
+      .attr("font-size", "11px")
+      .style("opacity", 0) // Hidden by default
+      .text((d) => {
+        const val = d[stack];
+        if (isPercentage) {
+          return `${parseFloat(val).toFixed(1)}%`;
+        }
+        return chartUtils.formatValue(val);
+      });
   });
 }
 

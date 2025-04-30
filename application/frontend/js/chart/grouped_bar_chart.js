@@ -54,7 +54,7 @@ function renderGroupedBarChart(container) {
   drawXAxis(xAxisSvg, scales.x, config.margin);
 
   // Create legend and setup events
-  legendUtil.createColorLegend(legendContainer, sortedSubGroups, scales.color, {}, subGroupKey);
+  legendUtil.createColorLegend(legendContainer, sortedSubGroups, scales.color, {}, subGroupKey, "groupedBar");
   setupEventHandlers(container);
 }
 
@@ -255,7 +255,8 @@ function drawBars(svg, dataset, scales, config, groupKey, subGroupKey, measure, 
     .attr("width", (d) => Math.max(0, scales.x(d.val) - config.margin.left))
     .attr("height", scales.innerY.bandwidth())
     .attr("fill", (d) => scales.color(d.sub))
-    .attr("rx", CHART_DESIGN.cornerRadius);
+    .attr("rx", CHART_DESIGN.cornerRadius)
+    .attr("data-group", (d) => d.sub);
 
   // Attach tooltips with standardized format
   chartUtils.attachMouseTooltip(bars, tooltip, (d) =>
@@ -267,6 +268,52 @@ function drawBars(svg, dataset, scales, config, groupKey, subGroupKey, measure, 
       measures: [{ name: measure, value: d.val, field: measure }],
     })
   );
+
+  // Add value labels
+  renderValueLabels(svg, dataset, scales, config, groupKey, subGroupKey, measure);
+}
+
+/**
+ * Render hidden value labels
+ */
+function renderValueLabels(svg, dataset, scales, config, groupKey, subGroupKey, measure) {
+  // Group data by the main group and subgroup dimensions
+  const groupedData = d3.groups(
+    dataset,
+    (d) => d[groupKey],
+    (d) => d[subGroupKey]
+  );
+
+  // Flatten the data for easy label positioning
+  const labelData = [];
+  groupedData.forEach(([group, subgroups]) => {
+    subgroups.forEach(([subgroup, items]) => {
+      // Use the first item for each subgroup
+      const item = items[0];
+      labelData.push({
+        group,
+        subgroup,
+        value: +item[measure] || 0,
+        y: scales.groupPositions[group] + scales.innerY(subgroup),
+        x: scales.x(+item[measure] || 0) + 5, // 5px padding
+      });
+    });
+  });
+
+  // Create labels
+  svg
+    .selectAll(".value-label")
+    .data(labelData)
+    .join("text")
+    .attr("class", (d) => `label-groupedBar label-${d.subgroup}`)
+    .attr("data-group", (d) => d.subgroup)
+    .attr("x", (d) => d.x)
+    .attr("y", (d) => d.y - CHART_DESIGN.groupPadding - 2)
+    .attr("dy", scales.innerY.bandwidth())
+    .attr("text-anchor", "start")
+    .attr("font-size", "11px")
+    .style("opacity", 0)
+    .text((d) => chartUtils.formatValue(d.value));
 }
 
 /**

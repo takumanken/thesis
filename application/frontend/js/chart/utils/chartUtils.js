@@ -78,12 +78,40 @@ export function debounce(func, wait) {
   };
 }
 
+// Store cleanup callbacks
+const cleanupCallbacks = [];
+
+/**
+ * Register a callback to be called when chart is cleaned up
+ * @param {Function} callback - Cleanup function to call
+ */
+export function registerCleanupCallback(callback) {
+  cleanupCallbacks.push(callback);
+}
+
+/**
+ * Run all registered cleanup callbacks and clear the list
+ */
+export function runCleanupCallbacks() {
+  while (cleanupCallbacks.length) {
+    const callback = cleanupCallbacks.pop();
+    try {
+      callback();
+    } catch (e) {
+      console.error("Error in cleanup callback:", e);
+    }
+  }
+}
+
 /**
  * Creates resize observer for chart containers
  * @param {HTMLElement} container - Chart container element
  * @param {Function} redrawFunction - Function to call on resize
  */
 export function setupResizeHandler(container, redrawFunction) {
+  // Run cleanup before setting up new handler
+  runCleanupCallbacks();
+
   if (container._resizeObserver) {
     container._resizeObserver.disconnect();
   }
