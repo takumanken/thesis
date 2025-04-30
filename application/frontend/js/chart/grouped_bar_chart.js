@@ -347,7 +347,6 @@ function drawYAxis(svg, sortedGroups, groupPositions, config) {
     .text((d) => d)
     .style("font-family", chartStyles.fontFamily)
     .style("font-size", chartStyles.fontSize.axisLabel)
-    .style("font-weight", "500")
     .style("fill", chartStyles.colors.text);
 }
 
