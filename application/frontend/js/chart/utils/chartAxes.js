@@ -191,8 +191,8 @@ export function getTimeAxisSettings(xScale, isNumericTime, timeGrain) {
       default:
         // Include year in format if data spans multiple years
         tickFormat = spansMultipleYears
-          ? d3.timeFormat("%b %y") // Jan 23 format
-          : d3.timeFormat("%b %y"); // Jan 23 format
+          ? d3.timeFormat("%b %Y") // Jan 23 format
+          : d3.timeFormat("%b %Y"); // Jan 23 format
         break;
     }
 
