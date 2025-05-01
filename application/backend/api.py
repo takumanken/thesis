@@ -37,11 +37,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Constants
-SYSTEM_INSTRUCTION_FILE = "gemini_instructions/data_aggregation_instruction.md"
-FILTER_VALUES_FILE = "gemini_instructions/references/all_filters.json"
-DATA_SCHEMA_FILE = "data/data_schema.json"
-DUCKDB_FILE = "data/nyc_open_data_explorer.duckdb"
+# Define base directory
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Constants with absolute paths
+SYSTEM_INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/data_aggregation_instruction.md")
+FILTER_VALUES_FILE = os.path.join(BASE_DIR, "gemini_instructions/references/all_filters.json")
+DATA_SCHEMA_FILE = os.path.join(BASE_DIR, "data/data_schema.json")
+DUCKDB_FILE = os.path.join(BASE_DIR, "data/nyc_open_data_explorer.duckdb")
 
 # App initialization
 load_dotenv()
