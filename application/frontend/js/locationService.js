@@ -17,14 +17,11 @@ export function getCurrentPosition() {
     // Get current position
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        // Limit precision to 3 decimal places (approximately 110m precision)
         const location = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
+          latitude: parseFloat(position.coords.latitude.toFixed(3)),
+          longitude: parseFloat(position.coords.longitude.toFixed(3)),
         };
-
-        // Log the location data as requested
-        console.log("User location:", location);
-
         resolve(location);
       },
       (error) => {
@@ -32,7 +29,7 @@ export function getCurrentPosition() {
         reject(error);
       },
       {
-        enableHighAccuracy: true,
+        enableHighAccuracy: false,
         timeout: 15000,
         maximumAge: 0,
       }
