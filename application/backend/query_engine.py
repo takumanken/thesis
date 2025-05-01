@@ -65,9 +65,9 @@ def create_text_response(text: str) -> dict:
         "textResponse": text
     }
 
-def generate_sql(definition: AggregationDefinition, table_name: str, user_location: Optional[Dict[str, float]] = None) -> str:
+def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     """
-    Generates a SQL query from an aggregation definition.
+    Generates a SQL query from aggregation definition, keeping location placeholders intact.
     """
     start_time = time.time()
     
@@ -146,20 +146,6 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
     where_clause_exists = False
     if definition.preAggregationFilters:
         filters = definition.preAggregationFilters
-        
-        if user_location and ("{{user_latitude}}" in filters or "{user_latitude}" in filters):
-            logger.info(f"Location placeholders found in filters, substituting with user coordinates")
-            
-            for placeholder, replacement in [
-                ("{{user_latitude}}", str(user_location.get('latitude'))),
-                ("{{user_longitude}}", str(user_location.get('longitude'))),
-                ("{user_latitude}", str(user_location.get('latitude'))),
-                ("{user_longitude}", str(user_location.get('longitude')))
-            ]:
-                filters = filters.replace(placeholder, replacement)
-            
-            logger.info(f"Filters after substitution: [LOCATION DATA APPLIED]")
-        
         sql += f"\nWHERE {filters}"
         where_clause_exists = True
 
@@ -206,16 +192,28 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
         # Add default limit
         sql += "\nLIMIT 5000;"
     
-    logger.info(f"SQL generation completed in {time.time() - start_time:.2f}s")
-    logger.info(f"Generated SQL:\n{sql}")
+    logger.info(f"Generated SQL with placeholders:\n{sql}")
     return sql.strip()
 
-def execute_sql_in_duckDB(sql: str, db_filename: str) -> tuple[list, dict]:
+def execute_sql_in_duckDB(sql: str, db_filename: str, user_location: Optional[Dict[str, float]] = None) -> tuple[list, dict]:
     """
-    Executes a SQL query in DuckDB and returns both results and metadata.
+    Executes a SQL query in DuckDB, replacing location placeholders right before execution.
     """
     start_time = time.time()
     logger.info(f"Executing SQL query in DuckDB")
+    
+    # Replace location placeholders only at execution time
+    execution_sql = sql
+    if user_location and ("{{user_latitude}}" in sql or "{user_latitude}" in sql):
+        logger.info("Replacing location placeholders for execution only")
+        
+        for placeholder, replacement in [
+            ("{{user_latitude}}", str(user_location.get('latitude'))),
+            ("{{user_longitude}}", str(user_location.get('longitude'))),
+            ("{user_latitude}", str(user_location.get('latitude'))),
+            ("{user_longitude}", str(user_location.get('longitude')))
+        ]:
+            execution_sql = execution_sql.replace(placeholder, replacement)
     
     metadata = {}
     try:
@@ -225,8 +223,8 @@ def execute_sql_in_duckDB(sql: str, db_filename: str) -> tuple[list, dict]:
             con.execute("LOAD spatial;")
             con.execute("SET default_collation='nocase';")
             
-            # Execute the query directly
-            df = con.execute(sql).fetchdf()
+            # Execute the query with substituted values
+            df = con.execute(execution_sql).fetchdf()
             row_count = len(df)
             logger.info(f"Query executed successfully: {row_count} rows returned")
 

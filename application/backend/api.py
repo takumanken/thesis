@@ -208,7 +208,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         
         if hasattr(request_data, 'location') and request_data.location:
             user_location = request_data.location
-            logger.info(f"[{request_id}] Location data available and being used")
+            logger.info(f"[{request_id}] Location data available but masked for privacy")
             raw_query = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
 
         # Get translator response
@@ -253,8 +253,13 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                     "categoricalDimension": cat_dim
                 })
                 
-                # Generate SQL query
-                sql = generate_sql(agg_def, "requests_311", user_location)
+                # Generate SQL with placeholders intact
+                sql = generate_sql(agg_def, "requests_311")
+
+                # Execute SQL with location data only at execution time
+                results, metadata = execute_sql_in_duckDB(sql, DUCKDB_FILE, user_location)
+
+                # Return the placeholder version to frontend
                 response_payload["sql"] = sql
 
                 # CASE 2B-1: Location check
@@ -266,7 +271,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
                 # CASE 2B-2: Normal data execution
                 else:
                     # Execute the query
-                    dataset, query_metadata = execute_sql_in_duckDB(sql, DUCKDB_FILE)
+                    dataset, query_metadata = results, metadata
                     response_payload["dataset"] = dataset
                     
                     # Add date range to aggregation definition
