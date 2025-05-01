@@ -82,7 +82,7 @@ def translate_query(user_query, current_context=None):
 """
         
         # Call Gemini API with the prepared instruction
-        gemini_model = "gemini-2.0-flash"
+        gemini_model = "gemini-2.5-flash-preview-04-17"
         response = _client.models.generate_content(
             model=gemini_model,
             config=types.GenerateContentConfig(

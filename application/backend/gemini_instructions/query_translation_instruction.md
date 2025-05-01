@@ -190,7 +190,7 @@ Before finalizing your output, review the following rules. If any of these are v
    – Even if the user enables location services, it does not necessarily mean they intend to perform a location-based query. Include location-based instructions only when the user explicitly uses phrases such as 'near me' or 'around me'.
 
 – **Interpret the Date Filter as a Filter, Not a Dimension**
-   - Do not assume "year" or "month" are dimensions just because the user mentions them (e.g., "What types of complaints are common this year?").
+   - Do not assume "year" or "month" are dimensions just because the user uses the word of them (e.g., "When were common complaints over the last three years?").
    - In these cases, treat "year" as a filter, and continue using week (the default) as the dimension.
    
 – **The paired use of dimensions within the same hierarchy**
@@ -286,7 +286,7 @@ All exact match filters must use values from the list below:
 
 When you need to create a direct response instead of an aggregation:gregation:
 
-### Mindset Mindset
+### Mindset
 - Always check available resources first to better answer user questions.- Always check available resources first to better answer user questions.
 - Give helpful, friendly, and conversational answers.riendly, and conversational answers.
 - You can use general knowledge if needed, but try to lead users back to this system when possible.

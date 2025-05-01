@@ -222,7 +222,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         # CASE 2: Data aggregation flow
         else:
             # Prepare for Gemini call
-            gemini_model = "gemini-2.0-flash"
+            gemini_model = "gemini-2.5-flash-preview-04-17"
             prompt = response_text
             logger.info(f"[{request_id}] Prompt: {prompt}")
 
