@@ -208,7 +208,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         
         if hasattr(request_data, 'location') and request_data.location:
             user_location = request_data.location
-            logger.info(f"[{request_id}] Location: lat={user_location.get('latitude'):.6f}, lng={user_location.get('longitude'):.6f}")
+            logger.info(f"[{request_id}] Location data available and being used")
             raw_query = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
 
         # Get translator response

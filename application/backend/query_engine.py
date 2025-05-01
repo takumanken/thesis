@@ -148,8 +148,7 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
         filters = definition.preAggregationFilters
         
         if user_location and ("{{user_latitude}}" in filters or "{user_latitude}" in filters):
-            logger.info(f"Location placeholders found in filters, substituting with: lat={user_location.get('latitude'):.6f}, lng={user_location.get('longitude'):.6f}")
-            logger.info(f"Original filters: {filters}")
+            logger.info(f"Location placeholders found in filters, substituting with user coordinates")
             
             for placeholder, replacement in [
                 ("{{user_latitude}}", str(user_location.get('latitude'))),
@@ -159,7 +158,7 @@ def generate_sql(definition: AggregationDefinition, table_name: str, user_locati
             ]:
                 filters = filters.replace(placeholder, replacement)
             
-            logger.info(f"Filters after substitution: {filters}")
+            logger.info(f"Filters after substitution: [LOCATION DATA APPLIED]")
         
         sql += f"\nWHERE {filters}"
         where_clause_exists = True
