@@ -5,14 +5,18 @@ import duckdb
 import pandas as pd
 import polars as pl
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Optional, Any, Union
 
 from models import AggregationDefinition
 from visualization_recommender import TIME_DIMENSIONS, GEO_DIMENSIONS, classify_dimensions
 
 logger = logging.getLogger(__name__)
 
-def extract_json_from_text(json_text: str) -> tuple[dict, bool]:
+# =========================================================
+# RESPONSE HANDLING
+# =========================================================
+
+def extract_json_from_text(json_text: str) -> Tuple[Dict, bool]:
     """
     Extracts and parses JSON from text content, handling code blocks.
     
@@ -37,7 +41,7 @@ def extract_json_from_text(json_text: str) -> tuple[dict, bool]:
     except json.JSONDecodeError:
         return {}, False
 
-def create_text_response(text: str) -> dict:
+def create_text_response(text: str) -> Dict:
     """
     Creates a standardized text-only response payload.
     
@@ -65,30 +69,57 @@ def create_text_response(text: str) -> dict:
         "textResponse": text
     }
 
-def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
+# =========================================================
+# SQL GENERATION
+# =========================================================
+
+def _get_dimension_types() -> Dict[str, str]:
     """
-    Generates a SQL query from aggregation definition, keeping location placeholders intact.
-    """
-    start_time = time.time()
+    Gets dimension types from data schema.
     
-    # Load data schema to check dimension data types
+    Returns:
+        Dictionary mapping dimension names to their data types
+    """
     with open("data/data_schema.json", "r") as f:
         data_schema = json.load(f)
     
-    # Create a lookup for dimension data types
     dimension_types = {}
     for category in ["time_dimension", "geo_dimension", "categorical_dimension"]:
         for dim in data_schema["dimensions"].get(category, []):
             dimension_types[dim["physical_name"]] = dim["data_type"]
+            
+    return dimension_types
 
-    # Build SELECT clause
+def _build_select_clause(definition: AggregationDefinition) -> str:
+    """
+    Builds the SELECT clause for a SQL query.
+    
+    Args:
+        definition: The aggregation definition
+        
+    Returns:
+        The SELECT clause as a string
+    """
     dims = definition.dimensions
     dims_clause = "\n  , ".join(dims) if dims else ""
     measures_clause = ", ".join([f"{m['expression']} AS {m['alias']}" for m in definition.measures])
-    select_clause = f"{dims_clause}\n  , {measures_clause}" if dims_clause and measures_clause else (dims_clause or measures_clause)
     
-    # Add statistical metadata for each measure
+    return f"{dims_clause}\n  , {measures_clause}" if dims_clause and measures_clause else (dims_clause or measures_clause)
+
+def _build_metadata_clauses(definition: AggregationDefinition) -> str:
+    """
+    Builds SQL clauses for metadata collection.
+    
+    Args:
+        definition: The aggregation definition
+        
+    Returns:
+        SQL clauses for metadata as a string
+    """
+    dims = definition.dimensions
     stats_metadata = ""
+    
+    # Add statistics for each measure
     for measure in definition.measures:
         measure_alias = measure['alias']
         
@@ -98,41 +129,97 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
   , median({measure_alias}) over () as metadata_median_{measure_alias}
   , stddev({measure_alias}) over () as metadata_stddev_{measure_alias}"""
         
-        # Add top/bottom entries with their dimension values
-        # For top/bottom values, include ALL dimensions, not just the primary one
+        # Add top/bottom entries with dimension values
         if dims:
-            # Build a JSON array containing all dimensions and the measure value
             dim_array_elements = ", ".join(dims) + f", {measure_alias}"
             stats_metadata += f"""
   , cast(max_by(json_array({dim_array_elements}), {measure_alias}, 3) over () as string) as metadata_top_3_{measure_alias}
   , cast(min_by(json_array({dim_array_elements}), {measure_alias}, 3) over () as string) as metadata_bottom_3_{measure_alias}"""
-        else:
-            stats_metadata += ""
     
     # Add result set size indicator
     stats_metadata += """
   , cast(sum(min(1)) over () > 5000 as string) as metadata_result_exceeds_limit"""
     
-    # Add date range metadata using window functions
+    # Add date range metadata
     date_metadata = """\n  , min(min(created_date)) over () as metadata_min_created_date\n  , max(max(created_date)) over () as metadata_max_created_date"""
     
-    # Add location reference if location is in the dimensions
+    # Add location reference if needed
     location_reference = ""
     if dims and any("location" in dim or "incident_zip" in dim or "neighborhood_name" in dim for dim in dims):
         location_reference = """\n  , min(borough) as reference_borough"""
-        logger.info("Adding location reference to query (borough)")
-
+        
         if dims and any("location" in dim for dim in dims):
             location_reference += """,\n  string_agg(distinct nullif(neighborhood_name, 'Unspecified'), ', ') as reference_neighborhood"""
-            logger.info("Adding location reference to query (neighborhood_name)")
     
-    # Combine all metadata
-    select_clause += stats_metadata + date_metadata + location_reference
-    
-    # Create the SQL query with all the added metadata
-    sql = f"SELECT\n  {select_clause}\nFROM {table_name}"
+    return stats_metadata + date_metadata + location_reference
 
+def _build_order_clause(definition: AggregationDefinition) -> str:
+    """
+    Builds the ORDER BY clause for a SQL query.
+    
+    Args:
+        definition: The aggregation definition
+        
+    Returns:
+        The ORDER BY clause as a string
+    """
+    dims = definition.dimensions
+    
+    # Use topN if available
+    if hasattr(definition, 'topN') and definition.topN:
+        order_by_keys = ', '.join(definition.topN.orderByKey)
+        return f"ORDER BY {order_by_keys}\nLIMIT {definition.topN.topN}"
+    
+    # Use standard ordering rules
+    if len(dims) == 1:
+        if dims[0] == 'time_to_resolve_day_bin':
+            return "ORDER BY time_to_resolve_day_bin ASC"
+        elif dims[0] == 'created_weekday_datepart':
+            return "ORDER BY MIN(created_weekday_order) ASC"
+        elif dims[0] == 'closed_weekday_datepart':
+            return "ORDER BY MIN(closed_weekday_order) ASC"
+        elif dims[0] in TIME_DIMENSIONS:
+            return f"ORDER BY {dims[0]} ASC"
+        elif definition.measures:
+            return f"ORDER BY {definition.measures[0]['alias']} DESC"
+    elif definition.timeDimension:
+        return f"ORDER BY {definition.timeDimension[0]} ASC"
+    elif definition.measures:
+        return f"ORDER BY {definition.measures[0]['alias']} DESC"
+    
+    return ""  # Default is no explicit ordering
+
+def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
+    """
+    Generates a SQL query from aggregation definition, keeping location placeholders intact.
+    
+    Args:
+        definition: The aggregation definition
+        table_name: The database table name
+        
+    Returns:
+        SQL query string with placeholders for location data
+    """
+    start_time = time.time()
+    logger.info("Generating SQL from aggregation definition")
+    
+    # Get dimension types for quality filters
+    dimension_types = _get_dimension_types()
+    
+    # Build SELECT clause
+    select_clause = _build_select_clause(definition)
+    
+    # Add metadata clauses
+    metadata_clauses = _build_metadata_clauses(definition)
+    
+    # Combine select and metadata
+    full_select = f"{select_clause}{metadata_clauses}"
+    
+    # Create the SQL query
+    sql = f"SELECT\n  {full_select}\nFROM {table_name}"
+    
     # Create quality filters based on dimensions
+    dims = definition.dimensions
     quality_filters = []
     for dim in dims:
         if dim in dimension_types:
@@ -141,14 +228,14 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
                 quality_filters.append(f"{dim} != 'Unspecified'")
             else:
                 quality_filters.append(f"{dim} IS NOT NULL")
-
-    # Add pre-aggregation filters first if they exist
+    
+    # Add pre-aggregation filters if they exist
     where_clause_exists = False
     if definition.preAggregationFilters:
         filters = definition.preAggregationFilters
         sql += f"\nWHERE {filters}"
         where_clause_exists = True
-
+    
     # Add quality filters
     if quality_filters:
         quality_condition = " AND ".join(quality_filters)
@@ -166,54 +253,62 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     if definition.postAggregationFilters:
         sql += f"\nHAVING {definition.postAggregationFilters}"
     
-    # Add ordering - prioritize topN if available
-    if hasattr(definition, 'topN') and definition.topN:
-        order_by_keys = ', '.join(definition.topN.orderByKey)
-        sql += f"\nORDER BY {order_by_keys}"
-        sql += f"\nLIMIT {definition.topN.topN};"
-    else:
-        # Use standard ordering rules
-        if len(dims) == 1:
-            if dims[0] == 'time_to_resolve_day_bin':
-                sql += f"\nORDER BY time_to_resolve_day_bin ASC"
-            elif dims[0] == 'created_weekday_datepart':
-                sql += f"\nORDER BY MIN(created_weekday_order) ASC"
-            elif dims[0] == 'closed_weekday_datepart':
-                sql += f"\nORDER BY MIN(closed_weekday_order) ASC"
-            elif dims[0] in TIME_DIMENSIONS:
-                sql += f"\nORDER BY {dims[0]} ASC"
-            elif definition.measures:
-                sql += f"\nORDER BY {definition.measures[0]['alias']} DESC"
-        elif definition.timeDimension:
-            sql += f"\nORDER BY {definition.timeDimension[0]} ASC"
-        elif definition.measures:
-            sql += f"\nORDER BY {definition.measures[0]['alias']} DESC"
-        
-        # Add default limit
-        sql += "\nLIMIT 5000;"
+    # Add ordering
+    order_clause = _build_order_clause(definition)
+    if order_clause:
+        sql += f"\n{order_clause}"
     
-    logger.info(f"Generated SQL with placeholders:\n{sql}")
+    # Add default limit if no ordering specified
+    if "LIMIT" not in sql:
+        sql += "\nLIMIT 5000"
+    
+    # Add semicolon
+    if not sql.strip().endswith(";"):
+        sql += ";"
+    
+    logger.info(f"SQL generation completed in {time.time() - start_time:.2f}s")
+    logger.info("Generated SQL with placeholders (sensitive data masked)")
+    
     return sql.strip()
 
-def execute_sql_in_duckDB(sql: str, db_filename: str, user_location: Optional[Dict[str, float]] = None) -> tuple[list, dict]:
+# =========================================================
+# SQL EXECUTION
+# =========================================================
+
+def execute_sql_in_duckDB(sql: str, db_filename: str, user_location: Optional[Dict[str, float]] = None) -> Tuple[List, Dict]:
     """
     Executes a SQL query in DuckDB, replacing location placeholders right before execution.
+    
+    Args:
+        sql: SQL query with potential location placeholders
+        db_filename: Path to DuckDB database file
+        user_location: Optional user location data (lat/long)
+        
+    Returns:
+        Tuple of (results, metadata)
     """
     start_time = time.time()
-    logger.info(f"Executing SQL query in DuckDB")
+    logger.info("Executing SQL query in DuckDB")
     
     # Replace location placeholders only at execution time
     execution_sql = sql
+    location_used = False
+    
     if user_location and ("{{user_latitude}}" in sql or "{user_latitude}" in sql):
         logger.info("Replacing location placeholders for execution only")
+        location_used = True
         
-        for placeholder, replacement in [
-            ("{{user_latitude}}", str(user_location.get('latitude'))),
-            ("{{user_longitude}}", str(user_location.get('longitude'))),
-            ("{user_latitude}", str(user_location.get('latitude'))),
-            ("{user_longitude}", str(user_location.get('longitude')))
+        # Limit precision to 3 decimal places for privacy
+        lat = user_location.get('latitude')
+        lng = user_location.get('longitude')
+        
+        for placeholder, value in [
+            ("{{user_latitude}}", str(lat)),
+            ("{{user_longitude}}", str(lng)),
+            ("{user_latitude}", str(lat)),
+            ("{user_longitude}", str(lng))
         ]:
-            execution_sql = execution_sql.replace(placeholder, replacement)
+            execution_sql = execution_sql.replace(placeholder, value)
     
     metadata = {}
     try:
@@ -226,40 +321,17 @@ def execute_sql_in_duckDB(sql: str, db_filename: str, user_location: Optional[Di
             # Execute the query with substituted values
             df = con.execute(execution_sql).fetchdf()
             row_count = len(df)
-            logger.info(f"Query executed successfully: {row_count} rows returned")
+            
+            if location_used:
+                logger.info(f"Location-based query executed successfully: {row_count} rows")
+            else:
+                logger.info(f"Query executed successfully: {row_count} rows")
 
             if row_count > 0:
-                # Extract metadata from the results
+                metadata = _extract_metadata_from_results(df)
+                
+                # Remove all metadata columns
                 metadata_cols = [col for col in df.columns if col.startswith('metadata_')]
-                
-                if metadata_cols:
-                    # Process date range metadata
-                    if 'metadata_min_created_date' in df.columns and 'metadata_max_created_date' in df.columns:
-                        metadata['createdDateRange'] = [
-                            df['metadata_min_created_date'].iloc[0],
-                            df['metadata_max_created_date'].iloc[0]
-                        ]
-                    
-                    # Process statistical metadata
-                    stats_metadata = {}
-                    for col in metadata_cols:
-                        if col.startswith('metadata_') and col not in ['metadata_min_created_date', 'metadata_max_created_date']:
-                            # Extract the statistic name and measure name
-                            parts = col.replace('metadata_', '').split('_', 1)
-                            if len(parts) == 2:
-                                stat_name, measure_name = parts
-                                
-                                if measure_name not in stats_metadata:
-                                    stats_metadata[measure_name] = {}
-                                
-                                # Store the statistic value
-                                stats_metadata[measure_name][stat_name] = df[col].iloc[0]
-                    
-                    # Add the statistics to the metadata
-                    if stats_metadata:
-                        metadata['statistics'] = stats_metadata
-                
-                # Remove all metadata columns from result set
                 if metadata_cols:
                     df = df.drop(columns=metadata_cols)
             else:
@@ -267,14 +339,22 @@ def execute_sql_in_duckDB(sql: str, db_filename: str, user_location: Optional[Di
                 
     except Exception as e:
         logger.error(f"Database query failed: {str(e)}")
-        logger.error(f"SQL with error:\n{sql}")
+        
+        # Log sanitized SQL (without location data)
+        sanitized_sql = execution_sql
+        if location_used and user_location:
+            # Replace actual coordinates with placeholders in error logs
+            for coord in [str(user_location.get('latitude')), str(user_location.get('longitude'))]:
+                sanitized_sql = sanitized_sql.replace(coord, "[MASKED_COORDINATE]")
+                
+        logger.error(f"SQL query with error:\n{sanitized_sql}")
         raise
     
     # Format datetime columns for JSON serialization
     for col in df.select_dtypes(include=['datetime64[ns]']).columns:
         df[col] = df[col].dt.strftime('%Y-%m-%d')
-        
-    # Format datetime values in metadata array
+    
+    # Format datetime values in metadata
     if 'createdDateRange' in metadata:
         metadata['createdDateRange'] = [
             value.strftime('%Y-%m-%d') if isinstance(value, pd.Timestamp) else value
@@ -285,70 +365,163 @@ def execute_sql_in_duckDB(sql: str, db_filename: str, user_location: Optional[Di
     results = json.loads(df.to_json(orient="records"))
     return results, metadata
 
+def _extract_metadata_from_results(df: pd.DataFrame) -> Dict:
+    """
+    Extracts metadata from query results.
+    
+    Args:
+        df: DataFrame containing query results
+        
+    Returns:
+        Dictionary of metadata
+    """
+    metadata = {}
+    metadata_cols = [col for col in df.columns if col.startswith('metadata_')]
+    
+    if not metadata_cols:
+        return metadata
+    
+    # Process date range metadata
+    if 'metadata_min_created_date' in df.columns and 'metadata_max_created_date' in df.columns:
+        metadata['createdDateRange'] = [
+            df['metadata_min_created_date'].iloc[0],
+            df['metadata_max_created_date'].iloc[0]
+        ]
+    
+    # Process statistical metadata
+    stats_metadata = {}
+    for col in metadata_cols:
+        if col.startswith('metadata_') and col not in ['metadata_min_created_date', 'metadata_max_created_date']:
+            # Extract the statistic name and measure name
+            parts = col.replace('metadata_', '').split('_', 1)
+            if len(parts) == 2:
+                stat_name, measure_name = parts
+                
+                if measure_name not in stats_metadata:
+                    stats_metadata[measure_name] = {}
+                
+                # Store the statistic value
+                stats_metadata[measure_name][stat_name] = df[col].iloc[0]
+    
+    # Add the statistics to the metadata
+    if stats_metadata:
+        metadata['statistics'] = stats_metadata
+        
+    return metadata
+
+# =========================================================
+# DIMENSION ANALYSIS
+# =========================================================
+
 def calculate_dimension_cardinality_stats(dataset: List[Dict], dimensions: List[str]) -> Dict[str, Dict[str, float]]:
     """
     Calculates cardinality statistics for each dimension in the dataset.
+    
+    Args:
+        dataset: List of data records
+        dimensions: List of dimension names
+        
+    Returns:
+        Dictionary mapping dimensions to their cardinality statistics
     """
     if not dataset or not dimensions:
         return {}
     
-    # Convert to Polars DataFrame for better performance
-    try:
-        df = pl.DataFrame(dataset)
-    except Exception as e:
-        logger.warning(f"Failed to use Polars: {str(e)}. Using pandas.")
-        df = pd.DataFrame(dataset)
+    # Try using Polars first, fall back to pandas if needed
+    df = _convert_to_dataframe(dataset)
     
     stats = {}
-    
-    # Calculate stats for each dimension
     for dim in dimensions:
         if dim not in df.columns:
             continue
             
-        total_unique = df[dim].n_unique()
-        
-        # Handle single dimension case
-        if len(dimensions) == 1:
-            stats[dim] = {
-                "total_unique": total_unique,
-                "min_per_group": total_unique,
-                "max_per_group": total_unique,
-                "avg_per_group": float(total_unique),
-                "median_per_group": float(total_unique),
-                "std_per_group": 0.0
-            }
-            continue
-        
-        # For multiple dimensions, calculate per-group stats
-        other_dims = [d for d in dimensions if d != dim]
-        
-        if isinstance(df, pl.DataFrame):
-            grouped = (df
-                      .group_by(other_dims)
-                      .agg(pl.col(dim).n_unique().alias("unique_count")))
-            
-            unique_counts = grouped["unique_count"].to_numpy()
-        else:
-            grouped = df.groupby(other_dims)[dim].nunique().reset_index()
-            unique_counts = grouped[dim].values
-        
-        # Calculate comprehensive statistics
-        stats[dim] = {
-            "total_unique": int(total_unique),
-            "min_per_group": int(np.min(unique_counts)),
-            "max_per_group": int(np.max(unique_counts)),
-            "avg_per_group": float(np.mean(unique_counts)),
-            "median_per_group": float(np.median(unique_counts)),
-            "std_per_group": float(np.std(unique_counts)),
-            "group_count": len(unique_counts)
-        }
+        # Calculate dimension stats
+        stats[dim] = _calculate_single_dimension_stats(df, dim, dimensions)
     
     return stats
+
+def _convert_to_dataframe(dataset: List[Dict]) -> Union[pl.DataFrame, pd.DataFrame]:
+    """
+    Converts dataset to a DataFrame, using Polars if possible.
+    
+    Args:
+        dataset: List of data records
+        
+    Returns:
+        Polars or pandas DataFrame
+    """
+    try:
+        return pl.DataFrame(dataset)
+    except Exception as e:
+        logger.warning(f"Failed to use Polars: {str(e)}. Using pandas.")
+        return pd.DataFrame(dataset)
+
+def _calculate_single_dimension_stats(
+    df: Union[pl.DataFrame, pd.DataFrame], 
+    dim: str, 
+    dimensions: List[str]
+) -> Dict[str, float]:
+    """
+    Calculates statistics for a single dimension.
+    
+    Args:
+        df: DataFrame containing data
+        dim: Dimension name
+        dimensions: List of all dimensions
+        
+    Returns:
+        Dictionary of dimension statistics
+    """
+    # Handle single dimension case
+    if isinstance(df, pl.DataFrame):
+        total_unique = df[dim].n_unique()
+    else:
+        total_unique = df[dim].nunique()
+        
+    if len(dimensions) == 1:
+        return {
+            "total_unique": total_unique,
+            "min_per_group": total_unique,
+            "max_per_group": total_unique,
+            "avg_per_group": float(total_unique),
+            "median_per_group": float(total_unique),
+            "std_per_group": 0.0
+        }
+        
+    # For multiple dimensions, calculate per-group stats
+    other_dims = [d for d in dimensions if d != dim]
+    
+    if isinstance(df, pl.DataFrame):
+        grouped = (df
+                 .group_by(other_dims)
+                 .agg(pl.col(dim).n_unique().alias("unique_count")))
+        
+        unique_counts = grouped["unique_count"].to_numpy()
+    else:
+        grouped = df.groupby(other_dims)[dim].nunique().reset_index()
+        unique_counts = grouped[dim].values
+    
+    # Calculate comprehensive statistics
+    return {
+        "total_unique": int(total_unique),
+        "min_per_group": int(np.min(unique_counts)),
+        "max_per_group": int(np.max(unique_counts)),
+        "avg_per_group": float(np.mean(unique_counts)),
+        "median_per_group": float(np.median(unique_counts)),
+        "std_per_group": float(np.std(unique_counts)),
+        "group_count": len(unique_counts)
+    }
 
 def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]]) -> AggregationDefinition:
     """
     Reorders dimensions by their cardinality (highest to lowest).
+    
+    Args:
+        agg_def: Aggregation definition
+        dimension_stats: Dictionary of dimension statistics
+        
+    Returns:
+        Updated aggregation definition with reordered dimensions
     """
     if not agg_def.dimensions or len(agg_def.dimensions) <= 1 or not dimension_stats:
         return agg_def

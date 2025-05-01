@@ -3,7 +3,7 @@ import os
 import time
 import uuid
 import json
-from typing import Dict, Optional, Tuple, Any
+from typing import Dict, Optional, Tuple, Any, List
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,7 +17,7 @@ from google.genai import types
 
 # Local imports
 from models import PromptRequest, AggregationDefinition
-from visualization_recommender import classify_dimensions, get_chart_options, is_topn_query
+from visualization_recommender import classify_dimensions, get_chart_options
 from query_engine import (
     extract_json_from_text, 
     create_text_response,
@@ -108,7 +108,38 @@ def setup_environment() -> Tuple[str, genai.Client]:
     return system_instruction, genai.Client(api_key=api_key)
 
 
-def extract_filter_fields(data_description: Dict[str, Any]) -> list:
+def collect_metadata(fields: List[str]) -> Tuple[List[Dict], List[Dict]]:
+    """Collect metadata for fields and their data sources"""
+    # Get all field descriptions
+    all_field_descriptions = (
+        data_schema["dimensions"]["time_dimension"] + 
+        data_schema["dimensions"]["geo_dimension"] + 
+        data_schema["dimensions"]["categorical_dimension"] + 
+        data_schema["measures"]
+    )
+
+    # Match field metadata
+    field_metadata = []
+    for field in fields:
+        for field_description in all_field_descriptions:
+            if field_description["physical_name"] == field:
+                field_desc_copy = field_description.copy()
+                field_desc_copy.pop("synonym", None)
+                field_metadata.append(field_desc_copy)
+    
+    # Identify and collect data source metadata
+    used_datasources = set(field['data_source_id'] for field in field_metadata if 'data_source_id' in field)
+    
+    datasource_metadata = []
+    for used_datasource in used_datasources:
+        for datasource in data_schema["data_sources"]:
+            if datasource["data_source_id"] == used_datasource:
+                datasource_metadata.append(datasource)
+                
+    return field_metadata, datasource_metadata
+
+
+def extract_filter_fields(data_description: Dict[str, Any]) -> List[str]:
     """Extract field names from filter descriptions"""
     filter_fields = []
     if data_description.get("filterDescription"):
@@ -116,41 +147,6 @@ def extract_filter_fields(data_description: Dict[str, Any]) -> list:
             if isinstance(filter_desc, dict) and "filteredFieldName" in filter_desc:
                 filter_fields.append(filter_desc["filteredFieldName"])
     return filter_fields
-
-
-def collect_field_metadata(fields: list) -> Tuple[list, set]:
-    """Collect metadata for all fields and their data sources"""
-    # Combine all field descriptions
-    all_field_description = (
-        data_schema["dimensions"]["time_dimension"] + 
-        data_schema["dimensions"]["geo_dimension"] + 
-        data_schema["dimensions"]["categorical_dimension"] + 
-        data_schema["measures"]
-    )
-
-    # Collect metadata
-    field_metadata = []
-    for field in fields:
-        for field_description in all_field_description:
-            if field_description["physical_name"] == field:
-                field_description = field_description.copy()
-                field_description.pop("synonym", None)
-                field_metadata.append(field_description)
-    
-    # Identify data sources
-    used_datasources = set(field['data_source_id'] for field in field_metadata if 'data_source_id' in field)
-    
-    return field_metadata, used_datasources
-
-
-def collect_datasource_metadata(used_datasources: set) -> list:
-    """Collect metadata for all used data sources"""
-    datasource_metadata = []
-    for used_datasource in used_datasources:
-        for datasource in data_schema["data_sources"]:
-            if datasource["data_source_id"] == used_datasource:
-                datasource_metadata.append(datasource)
-    return datasource_metadata
 
 
 def get_location_required_response() -> Dict[str, Any]:
@@ -194,14 +190,14 @@ logger.info("Environment setup completed")
 async def process_prompt(request_data: PromptRequest, request: Request):
     """Process natural language queries about NYC 311 data"""
     request_id = str(uuid.uuid4())[:8]
-    logger.info(f"[{request_id}] Processing: '{request_data.prompt[:50]}...'")
+    logger.info(f"[{request_id}] Processing new request")
     start_time = time.time()
     
     # Initialize response structure
     response_payload = initialize_response()
     
     try:
-        # Process location data if available
+        # Process location data if available (with privacy protection)
         user_location = None
         raw_query = request_data.prompt
         context = request_data.context.dict() if request_data.context else None
@@ -218,157 +214,136 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         if is_direct_response:
             logger.info(f"[{request_id}] Returning direct response from query translator")
             response_payload.update(create_text_response(response_text))
+            return JSONResponse(content=response_payload)
         
         # CASE 2: Data aggregation flow
+        # Prepare for Gemini call
+        prompt = response_text
+        logger.info(f"[{request_id}] Sending prompt to Gemini (sensitive data masked)")
+
+        # Call Gemini API to process the prompt
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-preview-04-17",
+            config=types.GenerateContentConfig(system_instruction=system_instruction, temperature=0),
+            contents=[prompt],
+        )
+        
+        # Parse the AI response
+        json_text = response.candidates[0].content.parts[0].text
+        parsed_json, is_valid_json = extract_json_from_text(json_text)
+        
+        # CASE 2A: Text response from aggregation AI
+        if not is_valid_json or "textResponse" in parsed_json:
+            text = parsed_json.get("textResponse", json_text)
+            response_payload.update(create_text_response(text))
+            return JSONResponse(content=response_payload)
+        
+        # CASE 2B: Data visualization response
+        # Process data response - classify dimensions
+        agg_def = AggregationDefinition(**parsed_json)
+        time_dim, geo_dim, cat_dim = classify_dimensions(agg_def.dimensions)
+        agg_def = agg_def.copy(update={
+            "timeDimension": time_dim,
+            "geoDimension": geo_dim,
+            "categoricalDimension": cat_dim
+        })
+        
+        # Generate SQL with placeholders intact
+        sql = generate_sql(agg_def, "requests_311")
+        
+        # Check if location is required but not provided
+        location_enabled = bool(user_location)
+        if ('user_latitude' in sql or 'user_longitude' in sql) and not location_enabled:
+            logger.info(f"[{request_id}] Query requires location services but they are disabled")
+            response_payload.update(get_location_required_response())
+            return JSONResponse(content=response_payload)
+        
+        # Execute SQL with location data only at execution time
+        dataset, query_metadata = execute_sql_in_duckDB(sql, DUCKDB_FILE, user_location)
+
+        # Return the placeholder version to frontend (with location data protected)
+        response_payload["sql"] = sql
+        response_payload["dataset"] = dataset
+        
+        # Add date range to aggregation definition
+        if 'createdDateRange' in query_metadata:
+            agg_def.createdDateRange = query_metadata['createdDateRange']
+        
+        # Process dimension statistics and optimize dimensions
+        dimension_stats = {}
+        if dataset and agg_def.dimensions:
+            dimension_stats = calculate_dimension_cardinality_stats(dataset, agg_def.dimensions)
+            agg_def = reorder_dimensions_by_cardinality(agg_def, dimension_stats)
+        
+        response_payload["dimensionStats"] = dimension_stats
+        
+        # Determine best visualization
+        if len(dataset) == 0:
+            available_charts = ['text']
+            ideal_chart = 'text'
         else:
-            # Prepare for Gemini call
-            gemini_model = "gemini-2.5-flash-preview-04-17"
-            prompt = response_text
-            logger.info(f"[{request_id}] Prompt: {prompt}")
+            available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats, len(dataset))
 
-            # Call Gemini API to process the prompt
-            response = client.models.generate_content(
-                model=gemini_model,
-                config=types.GenerateContentConfig(system_instruction=system_instruction, temperature=0),
-                contents=[prompt],
-            )
-            
-            # Parse the AI response
-            json_text = response.candidates[0].content.parts[0].text
-            parsed_json, is_valid_json = extract_json_from_text(json_text)
-            
-            # CASE 2A: Text response from aggregation AI
-            if not is_valid_json or "textResponse" in parsed_json:
-                text = parsed_json.get("textResponse", json_text)
-                response_payload.update(create_text_response(text))
-            
-            # CASE 2B: Data visualization response
-            else:
-                # Process data response - classify dimensions
-                agg_def = AggregationDefinition(**parsed_json)
-                time_dim, geo_dim, cat_dim = classify_dimensions(agg_def.dimensions)
-                agg_def = agg_def.copy(update={
-                    "timeDimension": time_dim,
-                    "geoDimension": geo_dim,
-                    "categoricalDimension": cat_dim
-                })
-                
-                # Generate SQL with placeholders intact
-                sql = generate_sql(agg_def, "requests_311")
+        response_payload["chartType"] = ideal_chart
+        response_payload["availableChartTypes"] = available_charts
 
-                # Execute SQL with location data only at execution time
-                results, metadata = execute_sql_in_duckDB(sql, DUCKDB_FILE, user_location)
+        # Define fields that will be displayed in table
+        visible_fields = agg_def.dimensions + [field["alias"] for field in agg_def.measures]
+        response_payload["fields"] = visible_fields
+        
+        # Collect metadata for visible fields
+        field_metadata, datasource_metadata = collect_metadata(visible_fields)
 
-                # Return the placeholder version to frontend
-                response_payload["sql"] = sql
+        # Create a streamlined aggregation definition for the descriptor
+        # (with location placeholders preserved for privacy)
+        descriptor_agg_def = {
+            'dimensions': agg_def.dimensions,
+            'measures': agg_def.measures,
+            'preAggregationFilters': agg_def.preAggregationFilters,  # Contains placeholders, not values
+            'postAggregationFilters': agg_def.postAggregationFilters,
+            'topN': getattr(agg_def, 'topN', None),
+            'createdDateRange': query_metadata.get('createdDateRange', []),
+            'datasourceMetadata': datasource_metadata,
+            'fieldMetadata': field_metadata,
+            'statistics': query_metadata.get('statistics', {})
+        }
+        
+        # Generate data description with the streamlined definition
+        data_description = generate_data_description(
+            original_query=request_data.prompt, 
+            dataset=dataset,
+            aggregation_definition=descriptor_agg_def,
+            chart_type=ideal_chart
+        )
 
-                # CASE 2B-1: Location check
-                location_enabled = bool(user_location)
-                if ('user_latitude' in sql or 'user_longitude' in sql) and not location_enabled:
-                    logger.info(f"[{request_id}] Query requires location services but they are disabled")
-                    response_payload.update(get_location_required_response())
-                
-                # CASE 2B-2: Normal data execution
-                else:
-                    # Execute the query
-                    dataset, query_metadata = results, metadata
-                    response_payload["dataset"] = dataset
-                    
-                    # Add date range to aggregation definition
-                    if 'createdDateRange' in query_metadata:
-                        agg_def.createdDateRange = query_metadata['createdDateRange']
-                    
-                    # Process dimension statistics and optimize dimensions
-                    dimension_stats = {}
-                    if dataset and agg_def.dimensions:
-                        dimension_stats = calculate_dimension_cardinality_stats(dataset, agg_def.dimensions)
-                        agg_def = reorder_dimensions_by_cardinality(agg_def, dimension_stats)
-                    
-                    response_payload["dimensionStats"] = dimension_stats
-                    
-                    # Determine best visualization
-                    if len(dataset) == 0:
-                        available_charts = ['text']
-                        ideal_chart = 'text'
-                    else:
-                        available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats, len(dataset))
-
-                    response_payload["chartType"] = ideal_chart
-                    response_payload["availableChartTypes"] = available_charts
-
-                    # First define fields that will be displayed in table (only dimensions and measures)
-                    visible_fields = agg_def.dimensions + [field["alias"] for field in agg_def.measures]
-                    
-                    # Collect initial metadata
-                    field_metadata, used_datasources = collect_field_metadata(visible_fields)
-                    datasource_metadata = collect_datasource_metadata(used_datasources)
-
-                    # Create a streamlined aggregation definition for the descriptor
-                    descriptor_agg_def = {
-                        'dimensions': agg_def.dimensions,
-                        'measures': agg_def.measures,
-                        'preAggregationFilters': agg_def.preAggregationFilters,
-                        'postAggregationFilters': agg_def.postAggregationFilters,
-                        'topN': agg_def.topN,
-                        'createdDateRange': query_metadata.get('createdDateRange', []),
-                        'datasourceMetadata': datasource_metadata,
-                        'fieldMetadata': field_metadata,
-                        'statistics': query_metadata.get('statistics', {})
-                    }
-                    
-                    # Include topN if it exists
-                    if hasattr(agg_def, 'topN') and agg_def.topN:
-                        descriptor_agg_def['topN'] = {
-                            'orderByKey': agg_def.topN.orderByKey,
-                            'topN': agg_def.topN.topN
-                        }
-
-                    # Generate data description with the streamlined definition
-                    data_description = generate_data_description(
-                        original_query=request_data.prompt, 
-                        dataset=dataset,
-                        aggregation_definition=descriptor_agg_def,
-                        chart_type=ideal_chart
-                    )
-
-                    # Now extract filter fields from the description
-                    filter_fields = extract_filter_fields(data_description)
-                    
-                    # Set fields in response payload (ONLY dimensions and measures, NO filter fields)
-                    response_payload["fields"] = visible_fields
-                    
-                    # Create metadata list that includes ALL fields including filters
-                    all_metadata_fields = visible_fields.copy()
-                    for field in filter_fields:
-                        if field not in all_metadata_fields:
-                            all_metadata_fields.append(field)
-                    
-                    # Only update metadata if we need to include additional filter fields
-                    if len(all_metadata_fields) > len(visible_fields):
-                        field_metadata, used_datasources = collect_field_metadata(all_metadata_fields)
-                        datasource_metadata = collect_datasource_metadata(used_datasources)
-                    
-                    # Update aggregation definition with complete metadata
-                    agg_def = agg_def.copy(update={
-                        "datasourceMetadata": datasource_metadata,
-                        "fieldMetadata": field_metadata
-                    })
-                    
-                    # Add to response payload    
-                    response_payload["aggregationDefinition"] = agg_def.dict()
-                    response_payload["dataMetadataAll"] = data_schema
-                    response_payload["dataInsights"] = {
-                        "title": data_description.get("title"),
-                        "dataDescription": data_description.get("dataDescription"),
-                        "filterDescription": data_description.get("filterDescription", [])
-                    }
+        # Extract filter fields from the description and add their metadata
+        filter_fields = extract_filter_fields(data_description)
+        all_fields = list(set(visible_fields + filter_fields))
+        
+        if len(all_fields) > len(visible_fields):
+            field_metadata, datasource_metadata = collect_metadata(all_fields)
+        
+        # Update aggregation definition with complete metadata
+        agg_def = agg_def.copy(update={
+            "datasourceMetadata": datasource_metadata,
+            "fieldMetadata": field_metadata
+        })
+        
+        # Add to response payload    
+        response_payload["aggregationDefinition"] = agg_def.dict()
+        response_payload["dataMetadataAll"] = data_schema
+        response_payload["dataInsights"] = {
+            "title": data_description.get("title"),
+            "dataDescription": data_description.get("dataDescription"),
+            "filterDescription": data_description.get("filterDescription", [])
+        }
         
         logger.info(f"[{request_id}] Completed in {time.time() - start_time:.2f}s")
+        return JSONResponse(content=response_payload)
         
     except Exception as error:
         logger.exception(f"[{request_id}] Error processing prompt")
-        response_payload = {"error": str(error)}
-        return JSONResponse(status_code=500, content=response_payload)
-    
-    # Single return point for all responses
-    return JSONResponse(content=response_payload)
+        return JSONResponse(
+            status_code=500, 
+            content={"error": "An error occurred while processing your request"}
+        )
