@@ -346,8 +346,8 @@ Follow this when you have to explain system limitations:
 
 ### Example 1: Simple Data Aggregation Request
 
-**User Query:** "Show me noise complaints across NYC"
-**Current Context:** No prior conversation or visualization (new session)
+- **User Query:** "Show me noise complaints across NYC"
+- **Current Context:** No prior conversation or visualization (new session)
 
 **Output**
 * Dimensions: ['complaint_type_middle']
@@ -357,8 +357,8 @@ Follow this when you have to explain system limitations:
 
 ### Example 2: Composition/Percentage Query
 
-**User Query:** "What percentage of 311 complaints come from each borough?"
-**Current Context:** No prior conversation or visualization (new session) 
+- **User Query:** "What percentage of 311 complaints come from each borough?"
+- **Current Context:** No prior conversation or visualization (new session) 
 
 **Output**
 * Dimensions: ['borough']
@@ -368,8 +368,8 @@ Follow this when you have to explain system limitations:
 
 ### Example 3: Trend Analysis Over Time
 
-**User Query:** "How have noise complaints changed over time in Brooklyn?"
-**Current Context:** No prior conversation or visualization (new session)
+- **User Query:** "How have noise complaints changed over time in Brooklyn?"
+- **Current Context:** No prior conversation or visualization (new session)
 
 **Output**
 * Dimensions: ['created_week']
@@ -379,8 +379,8 @@ Follow this when you have to explain system limitations:
 
 ### Example 4: Follow-Up Query with Context
 
-**User Query:** "What about in Queens?"
-**Current Context:** Visualization showing noise complaints by neighborhood in Brooklyn
+- **User Query:** "What about in Queens?"
+- **Current Context:** Visualization showing noise complaints by neighborhood in Brooklyn
 
 **Output**
 
@@ -391,8 +391,8 @@ Follow this when you have to explain system limitations:
 
 ### Example 5: Dimension Hierarchy Drill-Down
 
-**User Query:** "Show me the specific types of noise complaints in Williamsburg"
-**Current Context:** No prior conversation or visualization (new session)
+- **User Query:** "Show me the specific types of noise complaints in Williamsburg"
+- **Current Context:** No prior conversation or visualization (new session)
 
 **Output**
 * Dimensions: ['complaint_type_middle']
@@ -402,8 +402,8 @@ Follow this when you have to explain system limitations:
 
 ### Example 6: Top-N Query with Explicit Count
 
-**User Query:** "Show me the top 5 neighborhoods with the most heating complaints"
-**Current Context:** No prior conversation or visualization (new session)
+- **User Query:** "Show me the top 5 neighborhoods with the most heating complaints"
+- **Current Context:** No prior conversation or visualization (new session)
 
 **Output**
 * Dimensions: ['neighborhood_name']
@@ -414,8 +414,8 @@ Follow this when you have to explain system limitations:
 
 ### Example 7: User Location-Based Query
 
-**User Query:** "Show me noise complaints near me"
-**Current Context:** {locationEnabled: true}
+- **User Query:** "Show me noise complaints near me"
+- **Current Context:** {locationEnabled: true}
 
 **Output**
 
@@ -426,8 +426,8 @@ Follow this when you have to explain system limitations:
 
 ### Example 8: Alternative Measure (Not Count)
 
-**User Query:** "What's the average resolution time for noise complaints by agency?"
-**Current Context:** No prior conversation or visualization (new session)
+- **User Query:** "What's the average resolution time for noise complaints by agency?"
+- **Current Context:** No prior conversation or visualization (new session)
 
 **Output**
 * Dimensions: ['agency_name']
@@ -437,8 +437,8 @@ Follow this when you have to explain system limitations:
 
 ### Example 9: Using PostAggregationFilters
 
-**User Query:** "Which neighborhoods have more than 1000 heating complaints per month?"
-**Current Context:** No prior conversation or visualization (new session)
+- **User Query:** "Which neighborhoods have more than 1000 heating complaints per month?"
+- **Current Context:** No prior conversation or visualization (new session)
 
 **Output**
 * Dimensions: ['neighborhood_name', 'created_month']
@@ -448,8 +448,8 @@ Follow this when you have to explain system limitations:
 
 ### Example 10: Direct Response Query
 
-**User Query:** "Why are there more noise complaints in the summer?"
-**Current Context:** No prior conversation or visualization (new session)
+- **User Query:** "Why are there more noise complaints in the summer?"
+- **Current Context:** No prior conversation or visualization (new session)
 
 **Output**
 DIRECT_RESPONSE: That's an interesting question about seasonal patterns in noise complaints!
@@ -465,8 +465,8 @@ Would you like to see a visualization of how noise complaints vary by month to c
 
 ### Example 11: Vague Follow-Up to Previous Suggestion
 
-**User Query:** "Let's do that"
-**Current Context:**
+- **User Query:** "Let's do that"
+- **Current Context:**
 
 ```json
 {
