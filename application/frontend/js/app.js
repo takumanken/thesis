@@ -6,11 +6,15 @@
 import apiService from "./apiService.js";
 import visualization from "./visualization.js";
 import initializeEventListeners from "./eventHandlers.js";
+import { initializeLocationCheckbox, getLocationPreference, getCurrentPosition } from "./locationService.js";
 
 // Application initialization when DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
-  // Initialize event listeners first so they're available
+  // Initialize event listeners
   initializeEventListeners();
+
+  // Initialize location checkbox
+  initializeLocationCheckbox();
 
   // Process any query passed from landing page
   processInitialQuery();
@@ -48,9 +52,29 @@ export async function handleUserQuery(query) {
 
   // Call API service with the query and update visualization
   try {
-    await apiService(userQuery);
+    await processQueryWithLocation(userQuery);
     visualization();
   } catch (error) {
     console.error("Error processing query:", error);
   }
+}
+
+/**
+ * Process a query with location data if location preference is enabled
+ *
+ * @param {string} query - The query to process
+ */
+async function processQueryWithLocation(query) {
+  let locationData = null;
+
+  if (getLocationPreference()) {
+    try {
+      locationData = await getCurrentPosition();
+    } catch (error) {
+      console.error("Could not get location:", error);
+    }
+  }
+
+  // Call your API with the location data
+  await apiService(query, locationData);
 }

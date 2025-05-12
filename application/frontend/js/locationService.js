@@ -1,6 +1,9 @@
 /**
- * Location service to handle geolocation functionality
+ * Location service to handle geolocation functionality across all pages
  */
+
+// Constants
+const LOCATION_STORAGE_KEY = "locationEnabled";
 
 /**
  * Get the user's current position using the Geolocation API
@@ -34,5 +37,38 @@ export function getCurrentPosition() {
         maximumAge: 0,
       }
     );
+  });
+}
+
+/**
+ * Save the location permission preference
+ * @param {boolean} isEnabled - Whether location is enabled
+ */
+export function saveLocationPreference(isEnabled) {
+  localStorage.setItem(LOCATION_STORAGE_KEY, isEnabled.toString());
+}
+
+/**
+ * Get the current location permission preference
+ * @returns {boolean} Whether location is enabled
+ */
+export function getLocationPreference() {
+  return localStorage.getItem(LOCATION_STORAGE_KEY) === "true";
+}
+
+/**
+ * Initialize location checkbox on any page
+ * @param {string} checkboxId - ID of the location checkbox element (default: "useLocationCheckbox")
+ */
+export function initializeLocationCheckbox(checkboxId = "useLocationCheckbox") {
+  const checkbox = document.getElementById(checkboxId);
+  if (!checkbox) return;
+
+  // Set initial state from storage
+  checkbox.checked = getLocationPreference();
+
+  // Add change listener to save preference
+  checkbox.addEventListener("change", (e) => {
+    saveLocationPreference(e.target.checked);
   });
 }

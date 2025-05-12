@@ -1,16 +1,39 @@
+import { initializeLocationCheckbox, getLocationPreference, saveLocationPreference } from "./locationService.js";
+
 /**
  * Landing page functionality for ASK NYC application
  */
 
 // Sample queries for the "Surprise Me" feature
 const SURPRISE_QUERIES = [
-  "Which neighborhoods have the most noise complaints",
-  "What are the common complaint types in Manhattan?",
-  "Where are the rat hotspots in East Village?",
-  "What are the most common complaints in Brooklyn?",
-  "How many 311 complaints are filed every day?",
-  "What are the most common complaints in the Bronx?",
-  "When is the timing of the illegal fireworks complaints?",
+  {
+    query: "Which neighborhoods had the most noise complaints?",
+    requiresLocation: false,
+  },
+  {
+    query: "What are the common complaint types in Manhattan?",
+    requiresLocation: false,
+  },
+  {
+    query: "Where are the rat hotspots in the East Village?",
+    requiresLocation: false,
+  },
+  {
+    query: "When did the most noise complaints happen?",
+    requiresLocation: false,
+  },
+  {
+    query: "Where are the rat hotspots around me?",
+    requiresLocation: true,
+  },
+  {
+    query: "Show me the noise hotspots near me",
+    requiresLocation: true,
+  },
+  {
+    query: "What are the common complaints near me?",
+    requiresLocation: true,
+  },
 ];
 
 /**
@@ -37,7 +60,7 @@ function handleSearch() {
 
 /**
  * Get a random query from the surprise queries list
- * @returns {string} A randomly selected query
+ * @returns {Object} Contains query string and whether location is required
  */
 function getRandomQuery() {
   const randomIndex = Math.floor(Math.random() * SURPRISE_QUERIES.length);
@@ -64,16 +87,41 @@ function initializeEventListeners() {
     navigateToApp("What can you answer?");
   });
 
-  // "Surprise Me!" button
+  // "Surprise Me!" button with improved location checkbox handling
   document.querySelector(".surprise-btn").addEventListener("click", () => {
     const inputField = document.getElementById("promptInput");
-    inputField.value = getRandomQuery();
+    const locationCheckbox = document.getElementById("useLocationCheckbox");
+    const randomSelection = getRandomQuery();
+
+    // Set the query text
+    inputField.value = randomSelection.query;
+
+    // Set checkbox based on query requirements - default to OFF
+    if (locationCheckbox) {
+      locationCheckbox.checked = randomSelection.requiresLocation;
+      saveLocationPreference(randomSelection.requiresLocation);
+    }
 
     // Focus the input and move cursor to the end
     inputField.focus();
     const valueLength = inputField.value.length;
     inputField.setSelectionRange(valueLength, valueLength);
   });
+
+  // Initialize the location checkbox with explicit false default
+  const locationCheckbox = document.getElementById("useLocationCheckbox");
+  if (locationCheckbox) {
+    // Explicitly set to unchecked by default
+    locationCheckbox.checked = false;
+
+    // Save the default preference
+    saveLocationPreference(false);
+
+    // Add change listener to save preferences when user changes it
+    locationCheckbox.addEventListener("change", (e) => {
+      saveLocationPreference(e.target.checked);
+    });
+  }
 }
 
 // Initialize the page when DOM is ready
