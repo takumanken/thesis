@@ -39,16 +39,16 @@
 .landing-logo h1 {
     color: var(--color-primary);
     font-family: 'Outfit', sans-serif;
-    font-size: 5.8rem;
-    font-weight: 700;
+    font-size: 6rem;
+    font-weight: 600;
     margin: 0;
-    line-height: 1.1;
+    line-height: 1;
 }
 
 .landing-logo h2 {
     color: #bdbdbd;
     font-family: 'Outfit', sans-serif;
-    font-size: 2.05rem;
+    font-size: 2.1rem;
     font-weight: 500;
     margin: 0;
     letter-spacing: 0.03em;
@@ -92,7 +92,7 @@
 .landing-buttons {
     display: flex;
     gap: 20px;
-    margin-top: 30px;
+    margin-top: 10px;
 }
 
 .landing-btn {
@@ -102,9 +102,9 @@
     color: white;
     cursor: pointer;
     font-family: 'Noto Sans', sans-serif;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
-    padding: 12px 25px;
+    padding: 10px 25px;
     transition: background-color 0.2s ease;
 }
 
