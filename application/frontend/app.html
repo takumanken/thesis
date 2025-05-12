@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASK NYC: NYC Open Data Explorer</title>
+    
+    <!-- CSS Resources -->
+    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Asap:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@40,700,1,200&icon_names=database" />
+    <link href="css/styles.css" rel="stylesheet">
+    
+    <!-- JavaScript Libraries -->
+    <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js" defer></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js" defer></script>
+    <script src="https://d3js.org/d3.v7.min.js" defer></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js" defer></script>
+</head>
+<body>
+    <header class="app-header">
+        <a href="index.html" class="logo-link">
+            <div class="app-logo">
+              <h1>ASK NYC</h1>
+            </div>
+        </a>
+        
+        <div class="search-bar">
+            <input type="text" id="promptInput" placeholder="What is the monthly trend of 311 complaints by borough?">
+            <button id="sendButton" class="search-button">
+                <span class="material-icons">search</span>
+            </button>
+        </div>
+        
+        <label for="useLocationCheckbox" class="location-control">
+            <input type="checkbox" id="useLocationCheckbox"> 
+            Use my NYC location
+        </label>
+    </header>
+
+    <main class="app-main">
+        <section class="dashboard-header">
+            <span class="material-icons dashboard-icon">auto_awesome</span>
+            <span class="dashboard-title">AI Generated Insight</span>
+        </section>
+        
+        <section id="dashboard-panel" class="dashboard-panel">
+            <div class="loader-overlay" id="loader">
+                <div class="loader-content">
+                    <span class="loader"></span>
+                    <div class="loader-text">Thinking...</div>
+                </div>
+            </div>
+            
+            <div class="visualization-area" id="visualization-area">
+                <h3 class="viz-title">Enter a question to explore NYC data</h3>
+                <p class="viz-description">Ask a question about New York City using the search bar above.</p>
+                <div id="viz-container" class="viz-container"></div>
+                <div id="text-response" class="text-response"></div>
+            </div>
+            
+            <aside class="control-panel">
+                <div class="viz-controls">
+                    <div>
+                        <h3 class="control-heading">Chart Types</h3>
+                        <div class="viz-type-selector"></div>
+                    </div>
+                    
+                    <div class="viz-definition">
+                        <h3 class="control-heading">About Data</h3>
+                        
+                        <div class="viz-dimensions">
+                            <h4 class="control-section-title">Attributes</h4>
+                            <div class="dimension-tags"></div>
+                        </div>
+                        
+                        <div class="viz-metrics">
+                            <h4 class="control-section-title">Measures</h4>
+                            <div class="metrics-tags"></div>
+                        </div>
+                        
+                        <div class="viz-filters">
+                            <h4 class="control-section-title">Filter</h4>
+                            <div class="filter-tags"></div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </section>
+    </main>
+    
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
