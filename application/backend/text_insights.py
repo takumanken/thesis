@@ -10,6 +10,16 @@ logger = logging.getLogger(__name__)
 # Single client instance
 gemini_client = None
 
+# Add a custom JSON encoder to handle non-serializable objects
+class CustomJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles TopNDefinition and other custom objects"""
+    def default(self, obj):
+        # Handle objects with __dict__ attribute (like TopNDefinition)
+        if hasattr(obj, '__dict__'):
+            return obj.__dict__
+        # Handle any other special cases
+        return super().default(obj)
+
 def get_gemini_client():
     """Initialize and return the Gemini client"""
     global gemini_client
@@ -36,13 +46,14 @@ def generate_data_description(
         # Sample dataset to reduce tokens
         sample_size = min(100, len(dataset))
         sample_data = dataset[:sample_size]
-        # Build simple prompt with required information
+        
+        # Use custom encoder to handle TopNDefinition objects
         prompt = f"""
 User Query: "{original_query}"
 Chart Type: {chart_type}
 
 Aggregation Definition:
-{json.dumps(aggregation_definition, indent=2)}
+{json.dumps(aggregation_definition, indent=2, cls=CustomJSONEncoder)}
 
 Dataset Sample ({sample_size} of {len(dataset)} rows):
 {json.dumps(sample_data, indent=2)}
