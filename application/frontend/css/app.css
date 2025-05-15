@@ -1,19 +1,6 @@
-/* ===============================================
-   TABLE OF CONTENTS
-   ===============================================
-   1. Variables & Reset
-   2. Layout Structure
-   3. Header Components
-   4. Dashboard Components
-   5. Chart Components
-   6. Sidebar & Controls
-   7. Media Queries
-   8. Loading Spinner
-   =============================================== */
-
 /* 1. VARIABLES & RESET
    =============================================== */
-   :root {
+:root {
     /* Colors */
     --color-primary: #414577;
     --color-primary-light: #e6f0ff;
@@ -49,6 +36,9 @@
     --sidebar-width: 300px;
     --content-gap: var(--space-md);
     --border-radius: 25px;
+    
+    /* Transitions */
+    --transition-default: all 0.2s ease;
 }
 
 * {
@@ -77,6 +67,10 @@ body {
 /* 3. HEADER COMPONENTS
    =============================================== */
 /* Logo styling */
+.app-logo {
+    cursor: pointer;
+}
+
 .app-logo h1 {
     color: var(--color-primary);
     font-family: 'Outfit', sans-serif;
@@ -84,14 +78,10 @@ body {
     font-weight: 700;
 }
 
-.app-logo {
-    cursor: pointer;
-}
-
 .logo-link {
-    text-decoration: none;
     color: inherit;
     display: inline-block;
+    text-decoration: none;
 }
 
 .logo-link:hover {
@@ -108,6 +98,7 @@ body {
 }
 
 #promptInput {
+    background-color: transparent;
     border: none;
     border-radius: var(--border-radius);
     flex: 1;
@@ -126,13 +117,6 @@ body {
     background-color: white !important;
 }
 
-#promptInput:focus {
-    box-shadow: none;
-    outline: none;
-    background-color: transparent;
-}
-
-
 .search-button {
     align-items: center;
     background-color: transparent;
@@ -142,7 +126,7 @@ body {
     display: flex;
     height: 50px;
     justify-content: center;
-    transition: background-color 0.2s;
+    transition: var(--transition-default);
     width: 50px;
 }
 
@@ -154,24 +138,23 @@ body {
 .location-control {
     align-items: center;
     color: var(--color-text-secondary);
+    cursor: pointer;
     display: flex;
     font-size: 12px;
     gap: 8px;
-    cursor: pointer;
 }
 
 .location-control input[type="checkbox"] {
     appearance: none;
-    -webkit-appearance: none;
     background-color: white;
     border: none;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     cursor: pointer;
     height: 16px;
-    width: 16px;
-    position: relative;
     margin: 0;
+    position: relative;
+    width: 16px;
 }
 
 .location-control input[type="checkbox"]:checked {
@@ -179,20 +162,20 @@ body {
 }
 
 .location-control input[type="checkbox"]:checked::after {
-    content: "";
-    position: absolute;
-    left: 5px;
-    top: 2px;
-    width: 4px;
-    height: 8px;
     border: solid white;
     border-width: 0 2px 2px 0;
+    content: "";
+    height: 8px;
+    left: 5px;
+    position: absolute;
+    top: 2px;
     transform: rotate(45deg);
+    width: 4px;
 }
 
 .location-control input[type="checkbox"]:focus {
-    outline: none;
     box-shadow: 0 0 0 1px rgba(65, 69, 119, 0.2);
+    outline: none;
 }
 
 /* 4. DASHBOARD COMPONENTS
@@ -219,20 +202,20 @@ body {
     background-color: white;
     border-radius: var(--border-radius);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
     height: 100%;
     margin: 0 var(--space-xl) var(--space-xl);
     max-height: calc(100vh - 180px);
     padding: 25px;
-    display: flex;
     position: relative;
 }
 
 .visualization-area {
     border-right: 1px solid var(--color-border);
     display: flex;
+    flex: 1;
     flex-direction: column;
     padding-right: 30px;
-    flex: 1;
 }
 
 .viz-title {
@@ -244,9 +227,9 @@ body {
 .viz-description {
     color: #696969;
     font-size: 0.9rem;
+    font-weight: 100;
     line-height: 1.5;
     margin-bottom: 10px;
-    font-weight: 100;
 }
 
 /* 5. CHART COMPONENTS
@@ -297,7 +280,7 @@ body {
     display: flex;
     height: 44px;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: var(--transition-default);
 }
 
 .chart-type-option:hover {
@@ -315,13 +298,9 @@ body {
 }
 
 .chart-type-option .chart-icon {
-    width: 35px;
     display: block;
     margin: auto;
-}
-
-.chart-type-option.selected .chart-icon {
-    filter: brightness(1);
+    width: 35px;
 }
 
 /* 6. SIDEBAR & CONTROLS
@@ -375,16 +354,15 @@ body {
 /* Tag/Pill Components */
 .tag-item {
     align-items: center;
+    background-color: var(--color-primary-light); /* Default styling (for dimensions) */
     border-radius: 16px;
+    color: var(--color-primary-dark);
+    cursor: default;
     display: inline-flex;
     font-size: 0.8rem;
     margin: 0 4px 8px 0;
     padding: 4px 10px;
-    transition: background-color 0.2s;
-    cursor: default;
-    /* Default styling (for dimensions) */
-    background-color: var(--color-primary-light);
-    color: var(--color-primary-dark);
+    transition: var(--transition-default);
 }
 
 .tag-item:hover {
@@ -392,9 +370,9 @@ body {
 }
 
 .tag-item .material-icons {
+    color: var(--color-primary);
     font-size: 18px;
     margin-right: 4px;
-    color: var(--color-primary);
 }
 
 /* Measures styling */
@@ -452,44 +430,44 @@ body {
 
 /* Data Source Pills */
 .data-source-pills {
-    display: flex;
     align-items: center;
+    color: #868DB4;
+    display: flex;
     flex-wrap: wrap;
-    margin: 10px 0;
     font-size: 14px;
     line-height: 1.4;
-    color: #868DB4;
+    margin: 10px 0;
 }
 
 .data-source-label {
-    margin-right: 8px;
-    font-weight: normal;
     font-size: 0.9em;
+    font-weight: normal;
+    margin-right: 8px;
 }
 
 .data-source-pill {
-    display: inline-flex;
     align-items: center;
     background-color: #F0F1F6;
     border-radius: 16px;
-    padding: 4px 12px;
-    margin-right: 6px;
-    margin-bottom: 4px;
     color: #868DB4;
-    font-weight: 500;
+    display: inline-flex;
     font-size: 0.8em;
+    font-weight: 500;
+    margin-bottom: 4px;
+    margin-right: 6px;
+    padding: 4px 12px;
 }
 
 .data-source-pill .material-symbols-outlined {
-    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-    vertical-align: middle;
     font-size: 14px;
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
     padding-right: 4px;
+    vertical-align: middle;
 }
 
 /* Dimension Swap Button */
 .dimension-swap-btn {
-    transition: background-color 0.2s, border-color 0.2s;
+    transition: var(--transition-default);
 }
 
 .dimension-swap-btn:hover {
@@ -504,7 +482,61 @@ body {
     opacity: 0.7;
 }
 
-/* 7. MEDIA QUERIES
+/* 7. LOADING SPINNER
+   =============================================== */
+.loader-overlay {
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.85);
+    border-radius: var(--border-radius);
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    left: 0;
+    opacity: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: opacity 0.3s, visibility 0.3s;
+    visibility: hidden;
+    z-index: 1000;
+}
+
+.loader-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.loader-content {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.loader-text {
+    color: var(--color-primary);
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    margin-top: 12px;
+}
+
+.loader {
+    animation: rotation 1s linear infinite;
+    border: 5px solid var(--color-primary-light);
+    border-bottom-color: var(--color-primary);
+    border-radius: 50%;
+    box-sizing: border-box;
+    display: inline-block;
+    height: 48px;
+    width: 48px;
+}
+
+@keyframes rotation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 8. MEDIA QUERIES
    =============================================== */
 @media (max-width: 900px) {
     .app-header {
@@ -537,9 +569,9 @@ body {
     }
     
     .visualization-area {
+        border-right: none;
         max-width: 100%;
         padding-right: 0;
-        border-right: none;
     }
 }
 
@@ -552,58 +584,4 @@ body {
     .viz-type-selector {
         grid-template-columns: repeat(2, 1fr);
     }
-}
-
-/* 8. LOADING SPINNER
-   =============================================== */
-.loader-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(255, 255, 255, 0.85);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s;
-    border-radius: var(--border-radius);
-}
-
-.loader-overlay.visible {
-    opacity: 1;
-    visibility: visible;
-}
-
-.loader-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.loader-text {
-    margin-top: 12px;
-    font-family: 'Noto Sans', sans-serif;
-    color: var(--color-primary);
-    font-size: 16px;
-    font-weight: 500;
-}
-
-.loader {
-    width: 48px;
-    height: 48px;
-    border: 5px solid var(--color-primary-light);
-    border-bottom-color: var(--color-primary);
-    border-radius: 50%;
-    display: inline-block;
-    box-sizing: border-box;
-    animation: rotation 1s linear infinite;
-}
-
-@keyframes rotation {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
 }
