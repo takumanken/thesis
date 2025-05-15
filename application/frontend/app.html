@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ASK NYC: NYC Open Data Explorer</title>
     
-    <!-- CSS Resources -->
+    <!-- Font preconnect performance hints -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- External resources -->
     <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet">
     <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Asap:wght@400;500;600&display=swap" rel="stylesheet">
@@ -22,32 +26,35 @@
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js" defer></script>
 </head>
 <body>
+    <!-- App header -->
     <header class="app-header">
         <a href="index.html" class="logo-link">
             <div class="app-logo">
-              <h1>ASK NYC</h1>
+                <h1>ASK NYC</h1>
             </div>
         </a>
         
         <div class="search-bar">
-            <input type="text" id="promptInput" placeholder="What is the monthly trend of 311 complaints by borough?">
+            <input type="text" id="promptInput" placeholder="What is the monthly trend of 311 complaints by borough?" />
             <button id="sendButton" class="search-button">
                 <span class="material-icons">search</span>
             </button>
         </div>
         
         <label for="useLocationCheckbox" class="location-control">
-            <input type="checkbox" id="useLocationCheckbox"> 
+            <input type="checkbox" id="useLocationCheckbox" /> 
             Use my NYC location
         </label>
     </header>
 
+    <!-- Main content -->
     <main class="app-main">
         <section class="dashboard-header">
             <span class="material-icons dashboard-icon">auto_awesome</span>
             <span class="dashboard-title">AI Generated Insight</span>
         </section>
         
+        <!-- Visualization dashboard -->
         <section id="dashboard-panel" class="dashboard-panel">
             <div class="loader-overlay" id="loader">
                 <div class="loader-content">
@@ -63,6 +70,7 @@
                 <div id="text-response" class="text-response"></div>
             </div>
             
+            <!-- Chart controls -->
             <aside class="control-panel">
                 <div class="viz-controls">
                     <div>
