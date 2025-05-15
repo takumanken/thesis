@@ -1,5 +1,4 @@
 import { state } from "./state.js";
-import { updateChartTypeSelectors } from "./eventHandlers.js";
 import { getCurrentPosition } from "./locationService.js";
 
 export async function apiService() {
@@ -91,8 +90,6 @@ export async function apiService() {
 
     // Store conversation history after state is updated
     state.updateConversationHistory(userQuery, result.textResponse || result.dataInsights?.dataDescription);
-
-    updateChartTypeSelectors();
   } catch (error) {
     console.error("Error in apiService:", error);
   } finally {

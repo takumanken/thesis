@@ -48,11 +48,6 @@ export const state = {
       };
     }
 
-    const chartTypeSelector = document.getElementById("chartTypeSelector");
-    if (chartTypeSelector) {
-      chartTypeSelector.value = this.chartType || "table";
-    }
-
     // Store original data sources when initially loading
     if (newData.aggregationDefinition?.datasourceMetadata) {
       this.originalDataSources = [...newData.aggregationDefinition.datasourceMetadata];
