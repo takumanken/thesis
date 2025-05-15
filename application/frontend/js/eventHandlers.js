@@ -10,10 +10,7 @@ import visualization from "./visualization.js";
  * Initialize all event listeners
  */
 export default function initializeEventListeners() {
-  // Set up search functionality
   setupSearchForm();
-
-  // Set up chart type selectors
   setupChartSelectors();
 }
 
@@ -21,7 +18,6 @@ export default function initializeEventListeners() {
  * Set up search form and location checkbox
  */
 function setupSearchForm() {
-  // Search input and button
   const promptInput = document.getElementById("promptInput");
   const sendButton = document.getElementById("sendButton");
 
@@ -35,7 +31,7 @@ function setupSearchForm() {
     sendButton.addEventListener("click", handleUserQuery);
   }
 
-  // Location checkbox
+  // Track user location preference for query context
   const locationCheckbox = document.getElementById("useLocationCheckbox");
   if (locationCheckbox) {
     locationCheckbox.addEventListener("change", (e) => {
@@ -48,36 +44,30 @@ function setupSearchForm() {
  * Set up chart type selector(s)
  */
 function setupChartSelectors() {
-  // Find all chart type selectors (dropdown and visual selector)
-  const selectors = [document.getElementById("chartTypeSelector"), document.getElementById("chartTypeDropdown")].filter(
-    Boolean
-  );
+  // Find chart type selector element
+  const selector = document.getElementById("chartTypeSelector");
 
-  // Add change listeners to all selectors
-  selectors.forEach((selector) => {
+  if (selector) {
     selector.addEventListener("change", (e) => {
       if (e.target.value !== state.chartType) {
         state.chartType = e.target.value;
         visualization();
       }
     });
-  });
+  }
 
-  // Initialize dropdown with available chart types
-  updateChartTypeDropdown();
+  updateChartTypeSelectors();
 }
 
 /**
  * Update chart type dropdown with available options
  */
-export function updateChartTypeDropdown() {
+export function updateChartTypeSelectors() {
   const dropdown = document.getElementById("chartTypeSelector");
   if (!dropdown) return;
 
-  // Clear existing options
   dropdown.innerHTML = "";
 
-  // Add available chart types
   state.availableChartTypes.forEach((type) => {
     const option = document.createElement("option");
     option.value = type;
