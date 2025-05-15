@@ -1,12 +1,12 @@
 /**
- * Location service to handle geolocation functionality across all pages
+ * Location services for geolocation features and preferences
  */
 
 // Constants
 const LOCATION_STORAGE_KEY = "locationEnabled";
 
 /**
- * Get the user's current position using the Geolocation API
+ * Get user coordinates with privacy-conscious precision
  * @returns {Promise<Object>} A promise that resolves to the user's location {latitude, longitude}
  */
 export function getCurrentPosition() {
@@ -20,7 +20,7 @@ export function getCurrentPosition() {
     // Get current position
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        // Limit precision to 3 decimal places (approximately 110m precision)
+        // Limit to 3 decimal places (~110m precision) for privacy
         const location = {
           latitude: parseFloat(position.coords.latitude.toFixed(3)),
           longitude: parseFloat(position.coords.longitude.toFixed(3)),
@@ -41,7 +41,7 @@ export function getCurrentPosition() {
 }
 
 /**
- * Save the location permission preference
+ * Store user preference for location services
  * @param {boolean} isEnabled - Whether location is enabled
  */
 export function saveLocationPreference(isEnabled) {
@@ -49,7 +49,7 @@ export function saveLocationPreference(isEnabled) {
 }
 
 /**
- * Get the current location permission preference
+ * Retrieve saved location preference
  * @returns {boolean} Whether location is enabled
  */
 export function getLocationPreference() {
@@ -57,7 +57,7 @@ export function getLocationPreference() {
 }
 
 /**
- * Initialize location checkbox on any page
+ * Set up location checkbox with stored preference
  * @param {string} checkboxId - ID of the location checkbox element (default: "useLocationCheckbox")
  */
 export function initializeLocationCheckbox(checkboxId = "useLocationCheckbox") {
