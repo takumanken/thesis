@@ -4,7 +4,6 @@
  */
 import { handleUserQuery } from "./app.js";
 import { state } from "./state.js";
-import visualization from "./visualization.js";
 
 /**
  * Initialize all event listeners
