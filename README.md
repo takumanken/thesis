@@ -1,196 +1,63 @@
-# A Natural Language Interface for Exploring NYC Open Data: Enhancing Public Access to Data
+# 🗽 ASK NYC: NYC Open Data Explorer
 
-## 1. Abstract
+This is the GitHub repository for ASK NYC – NYC Data Explorer, a natural language interface for exploring New York City’s 311 service requests.
 
-Open data portals are valuable resources for research, civic engagement, business insights, and data-driven policymaking. However, these portals are often underused because they can be complex to navigate—especially for people without technical expertise. This thesis proposes a **natural language interface (NLI)** that leverages modern AI techniques to simplify data exploration and visualization. As a proof of concept, the system focuses on a subset of [NYC Open Data](https://opendata.cityofnewyork.us/), one of the largest municipal data repositories in the United States.
+This project was developed as part of a 2025 thesis for the M.S. in Data Visualization program at Parsons School of Design. The thesis is titled “A Natural Language Interface for Exploring NYC Open Data – Enhancing Public Access to Data.”
 
-With this NLI, users can pose everyday questions—such as “Show crime trends in Brooklyn since 2020” or “How many rat sightings have been reported in each borough?”—and receive relevant visualizations automatically. By reducing the need for manual data processing, the NLI helps non-technical users explore open data in a more intuitive and meaningful way.
+- 🌐 [Application URL](https://takumanken.github.io/thesis/application/frontend/index.html)
+- ✍️ [Thesis Paper](https://github.com/takumanken/thesis/blob/main/A%20Natural%20Language%20Interface%20for%20Exploring%20NYC%20Open%20Data_%20Enhancing%20Public%20Access%20to%20Data.pdf)
+- 📹 [Demo Video](https://drive.google.com/file/d/1SkV6AFB3EMg4uR__qWwvjVxzxlrXK5dw/view)
 
-By combining established methods of data aggregation and visualization with recent advances in AI, this thesis demonstrates how NLIs can broaden access to open data. It also discusses the main challenges of creating such interfaces and offers practical strategies to enhance user experience. Ultimately, this work aims to encourage broader participation and a deeper, data-informed understanding of urban communities.
+## Background
 
----
+While open data is intended to be universally accessible, using it often requires technical knowledge in data aggregation and visualization. This project aims to reduce that barrier by developing a natural language interface that allows users to generate visualized charts simply by asking questions.
 
-## 2. Introduction
+## How to Use
 
-### 2.1 Current Open Data Challenges
+### Top Page
 
-Open data portals have improved government transparency, inspired innovation, and strengthened community engagement. Despite these benefits, many people find it difficult to fully use these portals. Although the information is publicly available, interpreting it often requires programming or analytical skills. This limitation can prevent researchers, policymakers, and community members from gaining insights that could drive informed decisions.
+Upon landing on ASK NYC, you’ll encounter a clean, search-engine–style interface featuring:
 
-NYC Open Data—one of the most prominent open data portals—faces similar issues. A 2017 study noted that many users saw it as a platform mainly for “civic hackers and tech journalists,” highlighting the need to make open data more accessible. Converting raw datasets into useful information requires expertise that many users do not possess.
+| Element                           | Purpose                                                                                                                                                                                           |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Search bar**                    | Type a plain-English question about the NYC 311 dataset (e.g., “What are the most common complaint types in Brooklyn?”) and press Enter.|
+| **“What can you answer?” button** | Displays a sample query explaining how to use the system.|
+| **“Surprise Me!” button**         | Autofills the search bar with a random example to encourage exploration, even if you're unfamiliar with the dataset’s structure. |
+| **Use my NYC Location** | When enabled, supports location-specific queries such as “Where are the rat hotspots around me?” using your approximate location. |
 
-A significant part of the challenge lies in **data aggregation and visualization**, which typically demand specialized knowledge. These tasks can be divided into two main areas:
+### Application Page
 
----
+After submitting a question, you're taken to the main application workspace, which includes five key sections:
+| Section                         | Description                                                                                                                 |
+|---------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| **Search Section (top)**        | Submit follow-up questions or refine your current query.                                                                   |
+| **Title & Insight Panel**       | Displays an AI-generated headline and summary, along with metadata on the dataset used.                                    |
+| **Visualization Canvas (center)** | Shows a chart selected to best match your query. Hover over elements for tooltips or zoom in on maps.                    |
+| **Chart Controls (right sidebar, upper)** | Switch chart types (when applicable) and toggle between data categories.                                      |
+| **About the Data (right sidebar, lower)** | Provides details on time span, dimensions, measures, and filters for full transparency.                     |
 
-#### Data Aggregation
 
-Most open data portals assume users can manage raw data on their own. In practice, two common approaches to distributing open data demonstrate the hurdles that non-technical users frequently encounter.
+## Datasets Used
+| Data Source                           | Description                                                                                                                                                                                          |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**NYC Open Data - 311 Requests**](https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2010-to-Present/erm2-nwe9/about_data) | Includes details on service requests submitted to NYC’s 311 system.|
+| [**NYC Open Data - NTA Polygons**](https://data.cityofnewyork.us/City-Government/2020-Neighborhood-Tabulation-Areas-NTAs-/9nt8-h7nd/about_data) | Geospatial data defining boundaries, names, and types of Neighborhood Tabulation Areas (NTAs).|
+| [**NYC Open Data - Zip Code Polygons**](https://data.cityofnewyork.us/Health/Modified-Zip-Code-Tabulation-Areas-MODZCTA-/pri4-ifjk/about_data) | Geospatial data for Modified Zip Code Tabulation Areas (MODZCTA), including boundary definitions.|
+| [**NYC Department City Planning - NYC 2020 Census Data**](https://www.nyc.gov/content/planning/pages/resources/datasets/decennial-census) | Includes demographic and housing data.Note: Only 2020 population data at the NTA level is used; no other demographic details or finer granularity are included.|
 
-##### Approach 1: File-Based Data Distribution
 
-Many platforms, including [DATA.GOV](https://data.gov/), provide datasets in CSV, Excel, or JSON formats. While these files are easy to download, they come with certain challenges:
+## Privacy Notice
+- All queries entered into the search bar are processed via the Gemini API. Please refrain from submitting sensitive or personally identifiable information.
+- If the “Use my NYC Location” option is enabled, your browser’s latitude and longitude (rounded to three decimal places) will be sent to the server. This information is used solely to retrieve relevant local data and is neither stored nor shared.
 
-1. **Local Burden**  
-   Users have to load, clean, filter, and transform the data themselves, usually relying on tools such as Excel, Python, or R.
+## AI Model
+This project uses [Gemini 2.5 Flash](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash) as of May 14, 2025.
 
-2. **Scalability Constraints**  
-   Large datasets can exceed the capabilities of a standard computer, making it difficult—or even impossible—to process them locally.
+## Special Thanks
+- **Daniel Sauter** – Thesis Advisor and Professor
+- All my wonderful classmates in the M.S. in Data Visualization program
 
-##### Approach 2: Portal-Based Aggregation Tools
+## 📄 License
 
-Portals like [NYC Open Data](https://opendata.cityofnewyork.us/) offer built-in tools for filtering and grouping data prior to download. Although this approach helps reduce dataset sizes, users must still understand operations like “group-by” and “aggregation methods,” which can be daunting for those without a data background.
+MIT © 2025 Tak Watanabe
 
----
-
-#### Data Visualization
-
-After data is aggregated, users face additional challenges when trying to present it clearly:
-
-1. **Chart Selection**  
-   Picking the right chart type—such as a bar chart, line chart, scatter plot, or histogram—requires a basic understanding of visualization principles.
-
-2. **Software Proficiency**  
-   Tools like Excel can be intimidating, especially for new users. Tasks like cleaning date fields, aligning data, and structuring variables can deter those with limited technical skills.
-
-While NYC Open Data’s interface includes features like setting dimensions and measures, it still assumes familiarity with specialized terms and workflows. This requirement may discourage people who are less technically inclined.
-
-In summary, although open data portals contain a wealth of information, the skills needed to aggregate and visualize data can exclude many potential users. This situation shows the value of a natural language interface that helps users carry out these tasks without extensive technical knowledge.
-
----
-
-### 2.2 The Proposed Natural Language Interface: Enhancing Open Data Accessibility
-
-This thesis introduces a **natural language interface (NLI)** to address the challenges described above. By allowing users to ask questions in everyday language—rather than writing code or using complicated tools—the NLI removes a major barrier to exploring open datasets. The following sections discuss why natural language is well-suited for data aggregation and visualization, and how modern language models make this approach increasingly practical.
-
-#### 2.2.1 Why Natural Language Is a Viable Solution
-
-Everyday language naturally encompasses the key elements necessary for **data aggregation** and **data visualization**:
-
-1. **Identifying Key Components**  
-   Consider a query such as “How have 311 noise complaints changed over the past five years in Manhattan?” This question already specifies the dimensions (time and location), measures (number of noise complaints), and filters (Manhattan, five-year timeframe). These components form the foundation of a data request.
-
-2. **Choosing the Right Chart**  
-   Natural language queries also hint at the most effective chart type:  
-   - A time-based query (“How has it changed over time?”) often suggests a **line chart**.  
-   - A query about relationships (“Are rat sightings more frequent in densely populated areas?”) may fit a **scatter plot**.  
-   - A request for comparisons (“Which borough had the highest rise in noise complaints?”) may call for a **bar chart**.
-
-By capturing both the data requirements and the likely visualization style, everyday language provides a strong basis for automating data operations and chart selection. The NLI interprets user intent, applies the necessary filters and groupings, and recommends a suitable chart without requiring technical skills from the user.
-
-#### 2.2.2 Why This Approach Is Feasible Today
-
-Using natural language to explore data is not new, but it has traditionally been difficult to implement reliably. Free-form text often led to errors or misinterpretations. However, modern **large language models (LLMs)** have made significant progress in addressing these issues:
-
-- **Better Semantic Understanding**  
-  Contemporary LLMs can parse nuanced language, including synonyms and ambiguous expressions.  
-- **Enhanced Contextual Reasoning**  
-  These models go beyond keyword matching, enabling them to handle incomplete or vaguely worded queries more robustly.
-
-Thanks to these advances, an NLI can now more consistently interpret user queries, convert them into accurate data transformations, and produce coherent visual outputs. The following sections outline how these ideas are applied to NYC Open Data, from parsing user requests to displaying the final charts.
-
-#### 2.2.3 Relevant Initiatives in the Business Intelligence Field
-
-The business intelligence (BI) sector has recently seen a surge in tools that use natural language and conversational analytics, making it easier for users to query data in plain language. Below are two notable examples:
-
-1. **ThoughtSpot’s “Spotter” Autonomous Agent**  
-   ThoughtSpot has long been a leader in search-based analytics. Their [Spotter](https://www.thoughtspot.com/press-releases/thoughtspot-launches-spotter-the-autonomous-agent-for-analytics) agent adds proactive features, suggesting insights or visualizations before the user even asks. This reflects the industry shift toward AI-driven, self-service analytics.
-
-2. **Looker’s Conversational Analytics**  
-   Part of Google Cloud, Looker uses AI agents to process natural language queries. As described in [recent discussions](https://www.nojitter.com/ai-automation/conversations-in-collaboration-peter-bailis-with-google-cloud-on-using-ai-agents-for-business-intelligence-and-analytics), the platform integrates with collaboration tools and relies on a semantic layer to interpret ambiguous questions, returning relevant charts or metrics.
-
-**Implications for Public Data**  
-These BI developments can guide future enhancements to open data portals. Integrating user-friendly, conversation-based features and proactive insights can significantly lower the entry barriers—particularly for non-technical users. Applying industry best practices to public portals like NYC Open Data can widen access to data and support deeper civic engagement.
-
-### 2.3 Key Challenges and Mitigation Strategies
-
-While modern language models improve the feasibility of natural language interfaces (NLIs), two critical challenges must be addressed to ensure trustworthy and actionable outputs: **hallucination** and **ambiguous data semantics**. This thesis tackles these issues through rigorous **data preparation** and a structured **semantic layer**.
-
-#### Mitigating Hallucination with a Trusted Data Model
-
-To anchor LLM outputs to factual data, raw datasets undergo preprocessing to create an intuitive, machine-friendly schema. For example:
-
--   Temporal fields like `Created Date` are parsed into granular components (`created_year`, `created_month`, `created_weekday`) to simplify time-based queries.
-
--   Domain-specific flags (e.g., `is_noise_complaint`) are derived from raw text fields to improve accuracy for common inquiry patterns.
-
-These transformations standardize ambiguous or unstructured fields, enabling reliable mappings between natural language queries (e.g., "noise complaints in 2023") and their underlying data representations.
-
-#### Semantic Layer: Constraining Interpretation
-
-The semantic layer builds on this prepared data model to enforce consistency:
-
-1.  **Schema Metadata** defines valid tables, columns, and relationships (e.g., `311_requests.created_year`).
-
-2.  **Synonyms and Mappings** link colloquial terms ("noise issues") to standardized fields (`is_noise_complaint`).
-
-3.  **Chart Logic** aligns query intent (e.g., trends over time) with visualization types (line charts).
-
-By combining a cleaned, semantically explicit data model with structured validation rules, the system minimizes misinterpretations and ensures outputs remain grounded in the source data. This dual approach---data preparation and semantic constraints---reduces hallucination risks while preserving the flexibility of natural language interaction.
-
-## 3. Treatment
-
-### 3.1 System Architecture
-
-This section outlines how the proposed natural language interface is built and how its components interact. **Figure 1** (below) depicts the overall workflow, from a user’s plain-language query to a final chart. The main goal is to let users explore open data through everyday language rather than having to code or learn complex analysis tools.
-
-**Figure 1**  
-![Figure1](concept/images/architecture.png)
-
-1. **Frontend (Web UI)**  
-   - Users enter queries in a text box (e.g., “How have 311 noise complaints changed over the past five years in Manhattan?”).  
-   - The **Backend** submits this query to **Google AI Studio (Gemini)** as a prompt.
-
-2. **Google AI Studio (Gemini)**  
-   - Gemini processes the query and generates an **aggregation definition** that specifies the needed dimensions, measures, and filters.  
-   - Based on the intent of the query, Gemini recommends the best **chart type** (e.g., bar chart, line chart, scatter plot).
-
-3. **SQL Generator**  
-   - The system sends Gemini’s aggregation details to the **SQL Generator**.  
-   - The SQL Generator creates a SQL query for an **in-memory database**, which stores the relevant datasets for faster response times.
-
-4. **In-Memory Database**  
-   - The database runs the SQL query, applying the specified filters and group-by operations.
-
-5. **Chart Visualization**  
-   - The system then combines the **aggregated data** with the suggested **chart type**.  
-   - The frontend displays a **chart** that aligns with the user’s original question, providing immediate insights.
-
-By orchestrating these components—Web UI, Gemini, SQL Generator, and the in-memory database—into a single pipeline, the system shields users from technical complexities. Users merely type a plain-language question, and the system returns an automated, data-driven visualization.
-
-### 3.2 User Interface
-
-The user interface is designed for simplicity and ease of use, making it accessible to both novices and experienced users. It offers two main screens—a **cover page** for initial queries and a **main page** for interactive exploration—each focused on delivering a smooth user experience.
-
-#### 3.2.1 Cover Page
-
-**Figure 2**  
-![Figure2](concept/images/cover_page.png)
-
-On first visit, the **cover page** greets users with a concise explanation of the system’s purpose. The layout features:
-
-- The system’s name, **“ASK NYC: Conversational Interface for NYC Open Data,”** alongside a brief overview of its mission.  
-- A prominent **search box** where users can type natural language queries like “What is the monthly trend of 311 complaints by borough?”  
-- A simple dropdown menu for choosing a dataset category (e.g., “311 Requests”), ensuring the query is directed to the correct data.  
-- **Example questions** below the search field that guide new users in forming their own queries.
-
-#### 3.2.2 Main Page
-
-**Figure 3**  
-![Figure3](concept/images/bar_chart.png)
-
-After entering a query, users arrive at the **main page**, where the system’s response is displayed. Key elements include:
-
-1. **AI-Generated Chart**  
-   - At the center is a **chart** created based on the user’s question.  
-   - **Google AI Studio (Gemini)** automatically picks the chart type—bar, line, or table—according to the query’s intent.  
-   - Each chart is labeled with a clear title and a timestamp, indicating the data source and timeframe.
-
-2. **Chart Definition Panel**  
-   - A side panel displays the **dimensions** (e.g., *Borough, Created Date*), **metrics** (e.g., *Number of Requests*), and **filters** (e.g., *Created Date >= 01/01/2020*) used to produce the chart.  
-   - This breakdown helps users understand how their natural language question was translated into data queries.
-
-3. **Chart Type Selector**  
-   - A **chart type selector** lets users switch among different chart formats (e.g., bar, line, table), helping them uncover different perspectives on the same data.
-
-4. **Interactive Features**  
-   - Additional features—such as a **download button** for exporting visualizations and tooltips for explaining specific data points—enhance the user experience and encourage deeper exploration.
