@@ -71,11 +71,14 @@ function getRandomQuery() {
  * Initialize all event listeners for the landing page
  */
 function initializeEventListeners() {
+  const promptInput = document.getElementById("promptInput");
+  const locationCheckbox = document.getElementById("useLocationCheckbox");
+
   // Search button click
   document.getElementById("sendButton").addEventListener("click", handleSearch);
 
   // Enter key in search input
-  document.getElementById("promptInput").addEventListener("keydown", (event) => {
+  promptInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
       handleSearch();
@@ -87,37 +90,29 @@ function initializeEventListeners() {
     navigateToApp("What can you answer?");
   });
 
-  // "Surprise Me!" button with improved location checkbox handling
+  // "Surprise Me!" button with location handling
   document.querySelector(".surprise-btn").addEventListener("click", () => {
-    const inputField = document.getElementById("promptInput");
-    const locationCheckbox = document.getElementById("useLocationCheckbox");
     const randomSelection = getRandomQuery();
 
     // Set the query text
-    inputField.value = randomSelection.query;
+    promptInput.value = randomSelection.query;
 
-    // Set checkbox based on query requirements - default to OFF
+    // Set checkbox based on query requirements
     if (locationCheckbox) {
       locationCheckbox.checked = randomSelection.requiresLocation;
       saveLocationPreference(randomSelection.requiresLocation);
     }
 
     // Focus the input and move cursor to the end
-    inputField.focus();
-    const valueLength = inputField.value.length;
-    inputField.setSelectionRange(valueLength, valueLength);
+    promptInput.focus();
+    promptInput.setSelectionRange(promptInput.value.length, promptInput.value.length);
   });
 
-  // Initialize the location checkbox with explicit false default
-  const locationCheckbox = document.getElementById("useLocationCheckbox");
+  // Initialize location checkbox (off by default)
   if (locationCheckbox) {
-    // Explicitly set to unchecked by default
     locationCheckbox.checked = false;
-
-    // Save the default preference
     saveLocationPreference(false);
 
-    // Add change listener to save preferences when user changes it
     locationCheckbox.addEventListener("change", (e) => {
       saveLocationPreference(e.target.checked);
     });
