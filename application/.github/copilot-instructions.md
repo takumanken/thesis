@@ -121,7 +121,7 @@ Explain purpose; keep to one line.
 // Fetch product list; show skeleton until resolved.
 ```
 
-* Comment *why* not *how*.
+* Comment *why* not *how*. Don't use JSDoc Style.
 * Strip `console.*` before production build except `console.error`.
 
 ### 5.8 Libraries

@@ -20,26 +20,37 @@ export const state = {
 
   // Updates application state with new data while preserving defaults
   update(newData) {
-    this.userQuery = newData.userQuery || this.userQuery;
-    this.dataset = newData.dataset || [];
-    this.fields = newData.fields || [];
-    this.sql = newData.sql || "";
-    this.aggregationDefinition = newData.aggregationDefinition || {};
-    this.chartType = newData.chartType || "table";
-    this.availableChartTypes = newData.availableChartTypes || ["table"];
-    this.textResponse = newData.textResponse || null;
-    this.dataMetadataAll = newData.dataMetadataAll || {};
-    this.dataInsights = {
-      title: newData.dataInsights.title || null,
-      dataDescription: newData.dataInsights.dataDescription || null,
-      filterDescription: newData.dataInsights.filterDescription || [],
-    };
-    this.originalDataSources = [...newData.aggregationDefinition.datasourceMetadata];
+    // Use nullish coalescing to update properties only when provided
+    this.userQuery = newData.userQuery ?? this.userQuery;
+    this.dataset = newData.dataset ?? [];
+    this.fields = newData.fields ?? [];
+    this.sql = newData.sql ?? "";
+    this.aggregationDefinition = newData.aggregationDefinition ?? {};
+    this.chartType = newData.chartType ?? "table";
+    this.availableChartTypes = newData.availableChartTypes ?? ["table"];
+    this.textResponse = newData.textResponse ?? null;
+    this.dataMetadataAll = newData.dataMetadataAll ?? {};
+
+    // Update data insights if provided
+    if (newData.dataInsights) {
+      this.dataInsights = {
+        title: newData.dataInsights.title ?? null,
+        dataDescription: newData.dataInsights.dataDescription ?? null,
+        filterDescription: newData.dataInsights.filterDescription ?? [],
+      };
+    }
+
+    // Save original data sources for reset capability
+    if (newData.aggregationDefinition?.datasourceMetadata) {
+      this.originalDataSources = [...newData.aggregationDefinition.datasourceMetadata];
+    }
   },
 
+  // Add data source to visualization by ID
   addDataSource(dataSourceId) {
     try {
       const dataSource = this.dataMetadataAll.data_sources.find((ds) => ds.data_source_id === dataSourceId);
+
       const exists = this.aggregationDefinition.datasourceMetadata.some((ds) => ds.data_source_id === dataSourceId);
 
       if (!exists && dataSource) {
@@ -55,10 +66,7 @@ export const state = {
     }
   },
 
-  /**
-   * Resets data sources to the original set from the API response
-   * @returns {boolean} Whether reset was successful
-   */
+  // Reset data sources to original set from API response
   resetDataSources() {
     if (this.originalDataSources && this.aggregationDefinition) {
       this.aggregationDefinition.datasourceMetadata = [...this.originalDataSources];
@@ -68,12 +76,7 @@ export const state = {
     return false;
   },
 
-  /**
-   * Updates conversation history with current message and visualization state
-   * @param {string} userMessage - The message from the user
-   * @param {string} aiResponse - The response from the AI
-   * @returns {Array} The updated conversation history
-   */
+  // Save current UI state with conversation for history tracking
   updateConversationHistory(userMessage, aiResponse) {
     const conversationEntry = {
       timestamp: new Date().toISOString(),
@@ -82,18 +85,19 @@ export const state = {
       visualizationState: {
         chartType: this.chartType,
         dataset: {
-          length: this.dataset?.length || 0,
-          sample: this.dataset?.slice(0, 10) || [],
+          length: this.dataset?.length ?? 0,
+          sample: this.dataset?.slice(0, 10) ?? [],
         },
-        dimensions: this.aggregationDefinition?.dimensions?.slice() || [],
-        measures: JSON.parse(JSON.stringify(this.aggregationDefinition?.measures || [])),
-        preAggregationFilters: this.aggregationDefinition?.preAggregationFilters || "",
-        postAggregationFilters: this.aggregationDefinition?.postAggregationFilters || "",
-        topNFilters: this.aggregationDefinition?.topN || {},
+        dimensions: this.aggregationDefinition?.dimensions?.slice() ?? [],
+        // Deep copy needed for nested objects
+        measures: JSON.parse(JSON.stringify(this.aggregationDefinition?.measures ?? [])),
+        preAggregationFilters: this.aggregationDefinition?.preAggregationFilters ?? "",
+        postAggregationFilters: this.aggregationDefinition?.postAggregationFilters ?? "",
+        topNFilters: this.aggregationDefinition?.topN ?? {},
       },
     };
 
-    // Maintain limited history size for performance
+    // Keep only 5 most recent conversations for performance
     this.conversationHistory = [conversationEntry, ...this.conversationHistory.slice(0, 4)];
 
     return this.conversationHistory;
