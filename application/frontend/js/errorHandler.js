@@ -4,7 +4,7 @@
 
 // Display generic error message
 export function showError() {
-  const message = "ASK NYC is facing temporary error, please visit again later.";
+  const message = "ASK NYC is facing temporary error, please try again later.";
   showErrorMessage(message);
 }
 
