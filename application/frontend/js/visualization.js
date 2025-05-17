@@ -1,6 +1,6 @@
 /**
  * Data Visualization Module
- * Handles rendering of charts and visualizations based on state
+ * Handles rendering of charts and visualizations based on application state
  */
 import { state } from "./state.js";
 import { chartControls } from "./chart/utils/chartControls.js";
@@ -21,7 +21,7 @@ import renderTextResponse from "./chart/text_response.js";
 import renderTreemap from "./chart/treemap.js";
 import renderNestedBarChart from "./chart/nested_bar_chart.js";
 
-// Chart type configuration with icons and labels
+// Chart type configuration with icons and labels for UI representation
 const CHART_CONFIG = {
   table: { icon: "table_chart", label: "Table", renderer: renderTable },
   single_bar_chart: { icon: "bar_chart", label: "Bar Chart", renderer: renderBarChart },
@@ -45,11 +45,6 @@ function visualizeData() {
   // Find containers
   const container = document.querySelector(".visualization-area");
   const wrapper = document.querySelector(".dashboard-panel");
-
-  if (!container || !wrapper) {
-    console.error("Visualization containers not found");
-    return;
-  }
 
   // Reset state and prepare for new visualization
   state.dimensionsSwapped = false;
@@ -77,8 +72,6 @@ function visualizeData() {
   // Show container and render the chart
   wrapper.style.display = "flex";
   renderChart(chartContainer);
-
-  console.log("State at visualization end:", JSON.parse(JSON.stringify(state)));
 }
 
 /**
@@ -110,21 +103,14 @@ function createHeader() {
  */
 function createChartTypeSwitcher() {
   const selector = document.querySelector(".viz-type-selector");
-  if (!selector) return;
 
   selector.innerHTML = "";
   const tooltip = chartStyles.createTooltip();
-  const chartTypes = state.availableChartTypes || ["table"];
+  const chartTypes = state.availableChartTypes;
 
   chartTypes.forEach((typeId) => {
     // Get chart config
-    const config = CHART_CONFIG[typeId] || {
-      icon: "help_outline",
-      label: typeId
-        .split("_")
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" "),
-    };
+    const config = CHART_CONFIG[typeId];
 
     // Create option element
     const option = document.createElement("div");
@@ -169,7 +155,7 @@ function renderChart(container) {
   cleanupVisualization(container);
 
   // Get chart type and renderer
-  const chartType = state.chartType || "single_bar_chart";
+  const chartType = state.chartType;
   const config = CHART_CONFIG[chartType];
 
   try {
@@ -185,7 +171,7 @@ function renderChart(container) {
 }
 
 /**
- * Clean up previous visualizations
+ * Clean up previous visualizations to prevent memory leaks
  */
 function cleanupVisualization(container) {
   // Destroy grid instance if exists
@@ -206,15 +192,4 @@ function cleanupVisualization(container) {
   container.innerHTML = "";
 }
 
-/**
- * Switch chart type (public API)
- */
-function switchChartType(chartType) {
-  state.chartType = chartType;
-  visualizeData();
-}
-
-// Exports
 export default visualizeData;
-window.switchChartType = switchChartType;
-window.updateAboutData = updateAboutData;
