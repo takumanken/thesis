@@ -108,19 +108,15 @@ export const state = {
 
   // Get or fetch the current location
   async getOrFetchLocation() {
-    // Return cached location if recent (within last 5 minutes)
-    const LOCATION_CACHE_TIME = 5 * 60 * 1000;
-    const now = Date.now();
-
-    if (this.currentLocation && this.lastLocationFetch && now - this.lastLocationFetch < LOCATION_CACHE_TIME) {
+    // Return cached location if available
+    if (this.currentLocation) {
       return this.currentLocation;
     }
 
-    // Fetch new location
+    // Fetch new location if allowed
     if (getLocationPreference()) {
       try {
         this.currentLocation = await getCurrentPosition();
-        this.lastLocationFetch = now;
         return this.currentLocation;
       } catch (error) {
         console.error("Could not get location:", error);
