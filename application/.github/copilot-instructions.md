@@ -9,6 +9,8 @@
 * **Minimal** – generate only what is needed for stated requirements.
 * **Readable** – clarity over cleverness; explicit over implicit.
 * **Consistent** – follow these rules uniformly across languages.
+* **Direct** - Should not suggest a robust solution outside the scope of request. Always suggest a simple and direct solution.
+* **Add debug if needed** - Suggest adding debug codes when needed. Don't suggesting codes based on your assumption.
 
 ---
 
