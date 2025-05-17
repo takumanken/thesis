@@ -19,7 +19,6 @@ function processInitialQuery() {
   const initialQuery = localStorage.getItem("initialQuery");
 
   if (initialQuery) {
-    // Clear storage to prevent persistence across refreshes
     localStorage.removeItem("initialQuery");
     document.getElementById("promptInput").value = initialQuery;
     handleUserQuery(initialQuery);
@@ -29,19 +28,25 @@ function processInitialQuery() {
 // Process user query and update visualization
 export async function handleUserQuery(query) {
   const userQuery = query || document.getElementById("promptInput").value;
-
   if (!userQuery.trim()) return;
 
   try {
-    await processQueryWithLocation(userQuery);
-    visualization();
+    const result = await processQueryWithLocation(userQuery);
+
+    // Only visualize data if query was successful
+    if (result !== false) {
+      visualization();
+    }
   } catch (error) {
     console.error("Error processing query:", error);
   }
 }
 
+// Make handleUserQuery available globally for the error handler
+window.handleUserQuery = handleUserQuery;
+
 // Add location data to query when enabled by user
 async function processQueryWithLocation(query) {
   const locationData = await state.getOrFetchLocation();
-  await apiService(query, locationData);
+  return apiService(query, locationData);
 }
