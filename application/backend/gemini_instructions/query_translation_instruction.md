@@ -204,8 +204,8 @@ Before finalizing your output, review these rules. If any are violated, revise y
     * "created\_date must be within last year" (NOT "created\_date must be between '2024-01-01' and '2024-12-31'")
   * This ensures time references are always calculated based on the current date when the query is executed.
 
-* **Refusing to Show the Same Visualization Again**
-  * Never refuse to display the same visualization again if that's what the user is requesting even if the request ends up the same visualization which you showed before. This happens in some reasons.
+* **Refusing to process the same data Again**
+  * Never refuse to process the same query again if that's what the user is requesting. This happens in some reasons.
 
 ---
 
