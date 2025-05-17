@@ -191,7 +191,6 @@ logger.info("Environment setup completed")
 @app.post("/process")
 @limiter.limit("10/minute")
 async def process_prompt(request_data: PromptRequest, request: Request):
-    """Process natural language queries about NYC 311 data"""
     request_id = str(uuid.uuid4())[:8]
     logger.info(f"[{request_id}] Processing new request")
     start_time = time.time()
@@ -200,7 +199,7 @@ async def process_prompt(request_data: PromptRequest, request: Request):
     response_payload = initialize_response()
     
     try:
-        # Process location data if available (with privacy protection)
+        # Process location data if available
         user_location = None
         raw_query = request_data.prompt
         context = request_data.context.dict() if request_data.context else None
@@ -210,131 +209,46 @@ async def process_prompt(request_data: PromptRequest, request: Request):
             logger.info(f"[{request_id}] Location data available but masked for privacy")
             raw_query = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
 
-        # Get translator response
-        response_text, is_direct_response = translate_query(raw_query, context)
-        
+        # Step 1: Get translator response - wrap in try/except for early error catching
+        try:
+            response_text, is_direct_response = translate_query(raw_query, context)
+        except genai.errors.ClientError as error:
+            # Handle errors immediately and return
+            return handle_api_error(error, request_id)
+            
         # CASE 1: Direct text response from translator
         if is_direct_response:
             logger.info(f"[{request_id}] Returning direct response from query translator")
             response_payload.update(create_text_response(response_text))
             return JSONResponse(content=response_payload)
         
-        # CASE 2: Data aggregation flow
-        # Prepare for Gemini call
-        prompt = response_text
-        logger.info(f"[{request_id}] Sending prompt to Gemini (sensitive data masked)")
-
-        # Call Gemini API to process the prompt
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-preview-04-17",
-            config=types.GenerateContentConfig(system_instruction=system_instruction, temperature=0),
-            contents=[prompt],
-        )
+        # Step 2: Call Gemini API - wrap in try/except for early error catching
+        try:
+            # Call Gemini API to process the prompt
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                config=types.GenerateContentConfig(system_instruction=system_instruction, temperature=0),
+                contents=[response_text],
+            )
+        except genai.errors.ClientError as error:
+            # Handle errors immediately and return
+            return handle_api_error(error, request_id)
+            
+        # Continue with processing...
         
-        # Parse the AI response
-        json_text = response.candidates[0].content.parts[0].text
-        parsed_json, is_valid_json = extract_json_from_text(json_text)
+        # Step 3: Generate data description - wrap in try/except if it makes API calls
+        try:
+            data_description = generate_data_description(
+                original_query=request_data.prompt, 
+                dataset=dataset,
+                aggregation_definition=descriptor_agg_def,
+                chart_type=ideal_chart
+            )
+        except genai.errors.ClientError as error:
+            # Handle errors immediately and return
+            return handle_api_error(error, request_id)
         
-        # CASE 2A: Text response from aggregation AI
-        if not is_valid_json or "textResponse" in parsed_json:
-            text = parsed_json.get("textResponse", json_text)
-            response_payload.update(create_text_response(text))
-            return JSONResponse(content=response_payload)
-        
-        # CASE 2B: Data visualization response
-        # Process data response - classify dimensions
-        agg_def = AggregationDefinition(**parsed_json)
-        time_dim, geo_dim, cat_dim = classify_dimensions(agg_def.dimensions)
-        agg_def = agg_def.copy(update={
-            "timeDimension": time_dim,
-            "geoDimension": geo_dim,
-            "categoricalDimension": cat_dim
-        })
-        
-        # Generate SQL with placeholders intact
-        sql = generate_sql(agg_def, "requests_311")
-        
-        # Check if location is required but not provided
-        location_enabled = bool(user_location)
-        if ('user_latitude' in sql or 'user_longitude' in sql) and not location_enabled:
-            logger.info(f"[{request_id}] Query requires location services but they are disabled")
-            response_payload.update(get_location_required_response())
-            return JSONResponse(content=response_payload)
-        
-        # Execute SQL with location data only at execution time
-        dataset, query_metadata = execute_sql_in_duckDB(sql, DUCKDB_FILE, user_location)
-
-        # Return the placeholder version to frontend (with location data protected)
-        response_payload["sql"] = sql
-        response_payload["dataset"] = dataset
-        
-        # Add date range to aggregation definition
-        if 'createdDateRange' in query_metadata:
-            agg_def.createdDateRange = query_metadata['createdDateRange']
-        
-        # Process dimension statistics and optimize dimensions
-        dimension_stats = {}
-        if dataset and agg_def.dimensions:
-            dimension_stats = calculate_dimension_cardinality_stats(dataset, agg_def.dimensions)
-            agg_def = reorder_dimensions_by_cardinality(agg_def, dimension_stats)
-        
-        response_payload["dimensionStats"] = dimension_stats
-        
-        # Determine best visualization
-        if len(dataset) == 0:
-            available_charts = ['text']
-            ideal_chart = 'text'
-        else:
-            available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats, len(dataset))
-
-        response_payload["chartType"] = ideal_chart
-        response_payload["availableChartTypes"] = available_charts
-
-        # Define fields that will be displayed in table
-        visible_fields = agg_def.dimensions + [field["alias"] for field in agg_def.measures]
-        response_payload["fields"] = visible_fields
-        
-        # Collect metadata for visible fields
-        field_metadata, datasource_metadata = collect_metadata(visible_fields)
-
-        # Create a streamlined aggregation definition for the descriptor
-        # (with location placeholders preserved for privacy)
-        descriptor_agg_def = {
-            'dimensions': agg_def.dimensions,
-            'measures': agg_def.measures,
-            'preAggregationFilters': agg_def.preAggregationFilters,  # Contains placeholders, not values
-            'postAggregationFilters': agg_def.postAggregationFilters,
-            'topN': getattr(agg_def, 'topN', None),
-            'createdDateRange': query_metadata.get('createdDateRange', []),
-            'datasourceMetadata': datasource_metadata,
-            'fieldMetadata': field_metadata,
-            'statistics': query_metadata.get('statistics', {})
-        }
-        
-        # Generate data description with the streamlined definition
-        data_description = generate_data_description(
-            original_query=request_data.prompt, 
-            dataset=dataset,
-            aggregation_definition=descriptor_agg_def,
-            chart_type=ideal_chart
-        )
-
-        # Extract filter fields from the description and add their metadata
-        filter_fields = extract_filter_fields(data_description)
-        all_fields = list(set(visible_fields + filter_fields))
-        
-        if len(all_fields) > len(visible_fields):
-            field_metadata, datasource_metadata = collect_metadata(all_fields)
-        
-        # Update aggregation definition with complete metadata
-        agg_def = agg_def.copy(update={
-            "datasourceMetadata": datasource_metadata,
-            "fieldMetadata": field_metadata
-        })
-        
-        # Add to response payload    
-        response_payload["aggregationDefinition"] = agg_def.dict()
-        response_payload["dataMetadataAll"] = data_schema
+        # Complete processing and return response
         response_payload["dataInsights"] = {
             "title": data_description.get("title"),
             "dataDescription": data_description.get("dataDescription"),
@@ -345,8 +259,25 @@ async def process_prompt(request_data: PromptRequest, request: Request):
         return JSONResponse(content=response_payload)
         
     except Exception as error:
+        # Catch-all for other errors
         logger.exception(f"[{request_id}] Error processing prompt")
         return JSONResponse(
             status_code=500, 
             content={"error": "An error occurred while processing your request"}
+        )
+
+# Helper function to handle API errors
+def handle_api_error(error, request_id):
+    if hasattr(error, 'status_code') and error.status_code == 429:
+        logger.warning(f"[{request_id}] Rate limit exceeded")
+        return JSONResponse(
+            status_code=429,
+            content={"error": "Rate limit exceeded"}
+        )
+    else:
+        status_code = getattr(error, 'status_code', 500)
+        logger.error(f"[{request_id}] API error: {error}")
+        return JSONResponse(
+            status_code=status_code,
+            content={"error": "API error", "message": str(error)}
         )
