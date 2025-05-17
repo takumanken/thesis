@@ -15,11 +15,10 @@ export const state = {
     filterDescription: [],
   },
   dataMetadataAll: {},
-  // Track original data sources from API
   originalDataSources: null,
   conversationHistory: [],
 
-  // Update method
+  // Updates application state with new data while preserving defaults
   update(newData) {
     this.userQuery = newData.userQuery || this.userQuery;
     this.dataset = newData.dataset || [];
@@ -30,51 +29,26 @@ export const state = {
     this.availableChartTypes = newData.availableChartTypes || ["table"];
     this.textResponse = newData.textResponse || null;
     this.dataMetadataAll = newData.dataMetadataAll || {};
-
-    // Handle dataInsights property
-    if (newData.dataInsights) {
-      this.dataInsights = {
-        title: newData.dataInsights.title || null,
-        dataDescription: newData.dataInsights.dataDescription || null,
-        filterDescription: newData.dataInsights.filterDescription || [],
-      };
-    }
-    // Handle legacy flat structure
-    else {
-      this.dataInsights = {
-        title: newData.title || null,
-        dataDescription: newData.dataDescription || null,
-        filterDescription: newData.filterDescription || [],
-      };
-    }
-
-    // Store original data sources when initially loading
-    if (newData.aggregationDefinition?.datasourceMetadata) {
-      this.originalDataSources = [...newData.aggregationDefinition.datasourceMetadata];
-    }
+    this.dataInsights = {
+      title: newData.dataInsights.title || null,
+      dataDescription: newData.dataInsights.dataDescription || null,
+      filterDescription: newData.dataInsights.filterDescription || [],
+    };
+    this.originalDataSources = [...newData.aggregationDefinition.datasourceMetadata];
   },
 
-  /**
-   * Adds a data source to the current visualization by ID
-   * @param {number} dataSourceId - The ID of the data source to add
-   * @returns {boolean} - Whether the operation was successful
-   */
   addDataSource(dataSourceId) {
     try {
-      // Find the data source in the metadata
       const dataSource = this.dataMetadataAll.data_sources.find((ds) => ds.data_source_id === dataSourceId);
-
-      // Check if this data source is already included
       const exists = this.aggregationDefinition.datasourceMetadata.some((ds) => ds.data_source_id === dataSourceId);
 
-      // Add it if it's not already included
-      if (!exists) {
+      if (!exists && dataSource) {
         this.aggregationDefinition.datasourceMetadata.push(dataSource);
-        updateAboutData(); // Update the About Data section
+        updateAboutData();
         return true;
       }
 
-      return false; // No change made
+      return false;
     } catch (error) {
       console.error("Error adding data source:", error);
       return false;
@@ -83,12 +57,12 @@ export const state = {
 
   /**
    * Resets data sources to the original set from the API response
-   * Removes any sources added by chart components
+   * @returns {boolean} Whether reset was successful
    */
   resetDataSources() {
     if (this.originalDataSources && this.aggregationDefinition) {
       this.aggregationDefinition.datasourceMetadata = [...this.originalDataSources];
-      updateAboutData(); // Update the About Data section to reflect changes
+      updateAboutData();
       return true;
     }
     return false;
@@ -101,7 +75,6 @@ export const state = {
    * @returns {Array} The updated conversation history
    */
   updateConversationHistory(userMessage, aiResponse) {
-    // Create a new conversation entry
     const conversationEntry = {
       timestamp: new Date().toISOString(),
       userMessage,
@@ -120,16 +93,9 @@ export const state = {
       },
     };
 
-    // Add the new entry to the beginning of the array
-    this.conversationHistory.unshift(conversationEntry);
+    // Maintain limited history size for performance
+    this.conversationHistory = [conversationEntry, ...this.conversationHistory.slice(0, 4)];
 
-    // Keep only the 3 most recent conversations
-    if (this.conversationHistory.length > 3) {
-      this.conversationHistory = this.conversationHistory.slice(0, 5);
-    }
-
-    // Log for debugging
-    console.log("Conversation history updated:", this.conversationHistory);
     return this.conversationHistory;
   },
 };
