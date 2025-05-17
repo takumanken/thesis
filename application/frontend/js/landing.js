@@ -1,8 +1,4 @@
-import { initializeLocationCheckbox, getLocationPreference, saveLocationPreference } from "./locationService.js";
-
-/**
- * Landing page functionality for ASK NYC application
- */
+import { initializeLocationCheckbox, saveLocationPreference } from "./locationService.js";
 
 // Sample queries for the "Surprise Me" feature
 const SURPRISE_QUERIES = [
@@ -36,40 +32,27 @@ const SURPRISE_QUERIES = [
   },
 ];
 
-/**
- * Navigate to the application page with the specified query
- * @param {string} query - The query to send to the application
- */
+// Navigate to the application page with the specified query
 function navigateToApp(query) {
   if (!query?.trim()) return;
 
-  // Store query for the app page to retrieve
   localStorage.setItem("initialQuery", query);
-
-  // Navigate to app page
   window.location.href = "app.html";
 }
 
-/**
- * Handle search form submission
- */
+// Handle search form submission
 function handleSearch() {
   const query = document.getElementById("promptInput").value.trim();
   navigateToApp(query);
 }
 
-/**
- * Get a random query from the surprise queries list
- * @returns {Object} Contains query string and whether location is required
- */
+// Get a random query from the surprise queries list
 function getRandomQuery() {
   const randomIndex = Math.floor(Math.random() * SURPRISE_QUERIES.length);
   return SURPRISE_QUERIES[randomIndex];
 }
 
-/**
- * Initialize all event listeners for the landing page
- */
+// Initialize all event listeners for the landing page
 function initializeEventListeners() {
   const promptInput = document.getElementById("promptInput");
   const locationCheckbox = document.getElementById("useLocationCheckbox");
@@ -94,10 +77,9 @@ function initializeEventListeners() {
   document.querySelector(".surprise-btn").addEventListener("click", () => {
     const randomSelection = getRandomQuery();
 
-    // Set the query text
     promptInput.value = randomSelection.query;
 
-    // Set checkbox based on query requirements
+    // Update location preference if needed for this query
     if (locationCheckbox) {
       locationCheckbox.checked = randomSelection.requiresLocation;
       saveLocationPreference(randomSelection.requiresLocation);
@@ -110,6 +92,7 @@ function initializeEventListeners() {
 
   // Initialize location checkbox (off by default)
   if (locationCheckbox) {
+    // Override standard initialization with explicit "off" default for landing page
     locationCheckbox.checked = false;
     saveLocationPreference(false);
 
