@@ -108,22 +108,15 @@ export const state = {
 
   // Get or fetch the current location
   async getOrFetchLocation() {
-    // Return cached location if available
-    if (this.currentLocation) {
-      return this.currentLocation;
+    if (!getLocationPreference()) {
+      return null;
     }
 
-    // Fetch new location if allowed
-    if (getLocationPreference()) {
-      try {
-        this.currentLocation = await getCurrentPosition();
-        return this.currentLocation;
-      } catch (error) {
-        console.error("Could not get location:", error);
-        return null;
-      }
+    try {
+      return await getCurrentPosition();
+    } catch (error) {
+      console.error("Could not get location:", error);
+      return null;
     }
-
-    return null;
   },
 };

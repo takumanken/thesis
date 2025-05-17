@@ -51,5 +51,10 @@ export function initializeLocationCheckbox(checkboxId = "useLocationCheckbox") {
 
   checkbox.addEventListener("change", (e) => {
     saveLocationPreference(e.target.checked);
+
+    // Clear cached location when disabled
+    if (!e.target.checked && window.state) {
+      window.state.currentLocation = null;
+    }
   });
 }

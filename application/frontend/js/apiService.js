@@ -40,11 +40,11 @@ export async function apiService(query, locationData) {
     // Prepare request data
     const requestBody = {
       prompt: userQuery,
-      context: prepareContext(useLocation),
+      context: prepareContext(useLocation && locationData !== null),
     };
 
     // Add location if available
-    if (locationData && useLocation) {
+    if (locationData) {
       requestBody.location = locationData;
     }
 
