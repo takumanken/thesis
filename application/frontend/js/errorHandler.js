@@ -75,7 +75,7 @@ function createRetryButton() {
   button.id = "clearErrorBtn";
   button.textContent = "Try Again";
   button.style.cssText = `
-    background-color: #414577;
+    background-color: var(--color-primary);
     color: white;
     border: none;
     border-radius: 4px;
