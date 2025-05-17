@@ -1,33 +1,34 @@
 import { state } from "./state.js";
 import { getLocationPreference } from "./locationService.js";
+import { showError, showRateLimitError } from "./errorHandler.js";
 
 // API endpoint determination based on environment
-const getServerEndpoint = () => {
+function getServerEndpoint() {
   return window.location.hostname === "127.0.0.1"
     ? "http://localhost:8000/process"
     : "https://thesis-production-65a4.up.railway.app/process";
-};
+}
 
 // Prepares context object from current application state
-const prepareContext = (useLocation) => {
+function prepareContext(useLocation) {
   return {
     currentVisualization: {
       chartType: state.chartType,
-      dimensions: state.aggregationDefinition?.dimensions || [],
-      measures: state.aggregationDefinition?.measures || [],
-      preAggregationFilters: state.aggregationDefinition?.preAggregationFilters || "",
-      postAggregationFilters: state.aggregationDefinition?.postAggregationFilters || "",
-      topN: state.aggregationDefinition?.topN || null,
+      dimensions: state.aggregationDefinition?.dimensions ?? [],
+      measures: state.aggregationDefinition?.measures ?? [],
+      preAggregationFilters: state.aggregationDefinition?.preAggregationFilters ?? "",
+      postAggregationFilters: state.aggregationDefinition?.postAggregationFilters ?? "",
+      topN: state.aggregationDefinition?.topN ?? null,
     },
-    conversationHistory: state.conversationHistory || [],
+    conversationHistory: state.conversationHistory ?? [],
     locationEnabled: useLocation,
   };
-};
+}
 
 // Main API service function
 export async function apiService(query, locationData) {
   const loader = document.getElementById("loader");
-  loader.classList.add("visible");
+  if (loader) loader.classList.add("visible");
 
   try {
     // Use passed query or get from input
@@ -55,13 +56,36 @@ export async function apiService(query, locationData) {
       body: JSON.stringify(requestBody),
     });
 
-    // Process response
+    if (!response.ok) {
+      // Handle error responses
+      const responseText = await response.text();
+
+      try {
+        const errorData = JSON.parse(responseText);
+
+        // Check if this is a rate limit error
+        if (response.status === 429) {
+          showRateLimitError();
+          return false;
+        }
+      } catch (parseErr) {
+        // If JSON parsing fails, just show generic error
+      }
+
+      // Show generic error for non-rate-limit errors
+      showError();
+      return false;
+    }
+
+    // Process successful response
     const result = await response.json();
     updateStateFromResponse(result, userQuery);
+    return true;
   } catch (error) {
-    console.error("Error in apiService:", error);
+    showError();
+    return false;
   } finally {
-    loader.classList.remove("visible");
+    if (loader) loader.classList.remove("visible");
   }
 }
 
