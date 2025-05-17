@@ -1,4 +1,5 @@
 import { updateAboutData } from "./aboutData.js";
+import { getCurrentPosition, getLocationPreference } from "./locationService.js";
 
 export const state = {
   userQuery: "",
@@ -17,6 +18,8 @@ export const state = {
   dataMetadataAll: {},
   originalDataSources: null,
   conversationHistory: [],
+  lastLocationFetch: null,
+  currentLocation: null,
 
   // Updates application state with new data while preserving defaults
   update(newData) {
@@ -101,5 +104,30 @@ export const state = {
     this.conversationHistory = [conversationEntry, ...this.conversationHistory.slice(0, 4)];
 
     return this.conversationHistory;
+  },
+
+  // Get or fetch the current location
+  async getOrFetchLocation() {
+    // Return cached location if recent (within last 5 minutes)
+    const LOCATION_CACHE_TIME = 5 * 60 * 1000;
+    const now = Date.now();
+
+    if (this.currentLocation && this.lastLocationFetch && now - this.lastLocationFetch < LOCATION_CACHE_TIME) {
+      return this.currentLocation;
+    }
+
+    // Fetch new location
+    if (getLocationPreference()) {
+      try {
+        this.currentLocation = await getCurrentPosition();
+        this.lastLocationFetch = now;
+        return this.currentLocation;
+      } catch (error) {
+        console.error("Could not get location:", error);
+        return null;
+      }
+    }
+
+    return null;
   },
 };

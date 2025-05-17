@@ -1,38 +1,16 @@
 import { state } from "./state.js";
-import { getCurrentPosition } from "./locationService.js";
+import { getLocationPreference } from "./locationService.js";
 
-export async function apiService() {
-  // Show loading spinner
-  const loader = document.getElementById("loader");
-  loader.classList.add("visible");
+// API endpoint determination based on environment
+const getServerEndpoint = () => {
+  return window.location.hostname === "127.0.0.1"
+    ? "http://localhost:8000/process"
+    : "https://thesis-production-65a4.up.railway.app/process";
+};
 
-  const userQuery = document.getElementById("promptInput").value;
-  state.userQuery = userQuery;
-
-  // Check if location checkbox is checked
-  const useLocation = document.getElementById("useLocationCheckbox").checked;
-  let locationData = null;
-
-  // If location is requested, get the current position
-  if (useLocation) {
-    try {
-      locationData = await getCurrentPosition();
-    } catch (error) {
-      console.error("Failed to get location:", error);
-      alert("Unable to access your location. Please check your browser permissions.");
-    }
-  }
-
-  const hostname = window.location.hostname;
-  const serverEndpoint =
-    hostname === "127.0.0.1"
-      ? "http://localhost:8000/process"
-      : "https://thesis-production-65a4.up.railway.app/process";
-
-  console.log("Using server endpoint:", serverEndpoint);
-
-  // Create the current context object
-  const currentContext = {
+// Prepares context object from current application state
+const prepareContext = (useLocation) => {
+  return {
     currentVisualization: {
       chartType: state.chartType,
       dimensions: state.aggregationDefinition?.dimensions || [],
@@ -44,58 +22,72 @@ export async function apiService() {
     conversationHistory: state.conversationHistory || [],
     locationEnabled: useLocation,
   };
+};
 
-  // Create the request body with prompt, context, and optional location
-  const requestBody = {
-    prompt: userQuery,
-    context: currentContext,
-  };
-
-  // Add location data if available
-  if (locationData) {
-    requestBody.location = locationData;
-    console.log("Including location in query:", locationData);
-  }
+// Main API service function
+export async function apiService(query, locationData) {
+  const loader = document.getElementById("loader");
+  loader.classList.add("visible");
 
   try {
-    const response = await fetch(serverEndpoint, {
+    // Use passed query or get from input
+    const userQuery = query || document.getElementById("promptInput").value;
+    state.userQuery = userQuery;
+
+    // Check if location is enabled
+    const useLocation = getLocationPreference();
+
+    // Prepare request data
+    const requestBody = {
+      prompt: userQuery,
+      context: prepareContext(useLocation),
+    };
+
+    // Add location if available
+    if (locationData && useLocation) {
+      requestBody.location = locationData;
+    }
+
+    // Send request to backend
+    const response = await fetch(getServerEndpoint(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     });
 
+    // Process response
     const result = await response.json();
-    console.log("Raw response from backend:", result);
-
-    // Create a proper dataInsights object
-    const dataInsights = result.dataInsights || {};
-
-    // Update state with the exact structure from the API response
-    state.update({
-      fields: result.fields || [],
-      dataset: result.dataset || [],
-      aggregationDefinition: result.aggregationDefinition || {},
-      sql: result.sql || "",
-      chartType: result.chartType || "table",
-      availableChartTypes: result.availableChartTypes || ["table"],
-      textResponse: result.textResponse || null,
-      schemaMetadata: result.schemaMetadata || null,
-      dataInsights: {
-        title: dataInsights.title || null,
-        dataDescription: dataInsights.dataDescription || null,
-        filterDescription: dataInsights.filterDescription || [],
-      },
-      dataMetadataAll: result.dataMetadataAll || {},
-    });
-
-    // Store conversation history after state is updated
-    state.updateConversationHistory(userQuery, result.textResponse || result.dataInsights?.dataDescription);
+    updateStateFromResponse(result, userQuery);
   } catch (error) {
     console.error("Error in apiService:", error);
   } finally {
-    // Hide loading spinner when done (whether successful or not)
     loader.classList.remove("visible");
   }
+}
+
+// Updates application state with API response data
+function updateStateFromResponse(result, userQuery) {
+  const dataInsights = result.dataInsights || {};
+
+  state.update({
+    fields: result.fields || [],
+    dataset: result.dataset || [],
+    aggregationDefinition: result.aggregationDefinition || {},
+    sql: result.sql || "",
+    chartType: result.chartType || "table",
+    availableChartTypes: result.availableChartTypes || ["table"],
+    textResponse: result.textResponse || null,
+    schemaMetadata: result.schemaMetadata || null,
+    dataInsights: {
+      title: dataInsights.title || null,
+      dataDescription: dataInsights.dataDescription || null,
+      filterDescription: dataInsights.filterDescription || [],
+    },
+    dataMetadataAll: result.dataMetadataAll || {},
+  });
+
+  // Update conversation history
+  state.updateConversationHistory(userQuery, result.textResponse || result.dataInsights?.dataDescription);
 }
 
 export default apiService;

@@ -4,7 +4,8 @@
 import apiService from "./apiService.js";
 import visualization from "./visualization.js";
 import initializeEventListeners from "./eventHandlers.js";
-import { initializeLocationCheckbox, getLocationPreference, getCurrentPosition } from "./locationService.js";
+import { initializeLocationCheckbox } from "./locationService.js";
+import { state } from "./state.js";
 
 // Initialize app when DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
@@ -41,15 +42,6 @@ export async function handleUserQuery(query) {
 
 // Add location data to query when enabled by user
 async function processQueryWithLocation(query) {
-  let locationData = null;
-
-  if (getLocationPreference()) {
-    try {
-      locationData = await getCurrentPosition();
-    } catch (error) {
-      console.error("Could not get location:", error);
-    }
-  }
-
+  const locationData = await state.getOrFetchLocation();
   await apiService(query, locationData);
 }
