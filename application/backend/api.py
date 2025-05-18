@@ -5,7 +5,7 @@ import uuid
 import json
 import functools
 from dataclasses import dataclass, field, asdict
-from typing import Dict, Optional, Tuple, Any, List
+from typing import Dict, Optional, Tuple, Any, List, Union
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,7 +30,8 @@ from query_engine import (
 from text_insights import generate_data_description
 from query_translator import translate_query
 
-# ---- SETUP AND CONFIGURATION ----
+
+# ======================== CONFIGURATION ========================
 
 # Setup logging
 logging.basicConfig(
@@ -63,10 +64,12 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
-# ---- DATACLASS DEFINITIONS ----
+
+# ======================== DATA MODELS ========================
 
 @dataclass
 class ResponsePayload:
+    """Standard response structure for the API"""
     chartType: str = "text"
     availableChartTypes: List[str] = field(default_factory=lambda: ["text"])
     textResponse: Optional[str] = None
@@ -85,22 +88,22 @@ class ResponsePayload:
     dataMetadataAll: Optional[Dict] = None
 
 
-# ---- HELPER FUNCTIONS ----
+# ======================== HELPER FUNCTIONS ========================
 
 def get_simplified_schema(data_schema: Dict[str, Any]) -> Dict[str, Any]:
-    """Create a simplified schema without description_to_user fields"""
+    """Remove description_to_user fields from schema for AI prompt"""
     strip = lambda obj: {k: v for k, v in obj.items() if k != "description_to_user"}
 
     return {
         "dimensions": {
-            t: [strip(dim) for dim in dims]
-            for t, dims in data_schema["dimensions"].items()
+            dim_type: [strip(dim) for dim in dims]
+            for dim_type, dims in data_schema["dimensions"].items()
         },
         "measures": [strip(m) for m in data_schema["measures"]],
     }
 
 
-def setup_environment():
+def setup_environment() -> Dict[str, Any]:
     """Load all resources and initialize services"""
     # Load data schema
     with open(DATA_SCHEMA_FILE, "r") as f:
@@ -114,10 +117,10 @@ def setup_environment():
     with open(FILTER_VALUES_FILE, "r") as f:
         all_filters = json.load(f)
         
-    # Generate simplified schema
+    # Generate simplified schema for AI
     simplified_schema = get_simplified_schema(data_schema)
                 
-    # Replace the placeholders
+    # Replace the placeholders in system instruction
     system_instruction = system_instruction.replace("{all_filters}", json.dumps(all_filters))
     system_instruction = system_instruction.replace("{data_schema}", json.dumps(simplified_schema))
     
@@ -132,8 +135,8 @@ def setup_environment():
 
 
 def collect_metadata(fields: List[str], data_schema: Dict[str, Any]) -> Tuple[List[Dict], List[Dict]]:
-    """Collect metadata for fields and their data sources"""
-    # Get all field descriptions
+    """Collect metadata for fields and their associated data sources"""
+    # Get all field descriptions from schema
     all_field_descriptions = (
         data_schema["dimensions"]["time_dimension"] + 
         data_schema["dimensions"]["geo_dimension"] + 
@@ -141,18 +144,23 @@ def collect_metadata(fields: List[str], data_schema: Dict[str, Any]) -> Tuple[Li
         data_schema["measures"]
     )
 
-    # Match field metadata
+    # Match fields to their metadata
     field_metadata = []
     for field in fields:
         for field_description in all_field_descriptions:
             if field_description["physical_name"] == field:
                 field_desc_copy = field_description.copy()
-                field_desc_copy.pop("synonym", None)
+                field_desc_copy.pop("synonym", None)  # Remove redundant synonym info
                 field_metadata.append(field_desc_copy)
     
-    # Identify and collect data source metadata
-    used_datasources = set(field['data_source_id'] for field in field_metadata if 'data_source_id' in field)
+    # Build set of unique data source IDs referenced by fields
+    used_datasources = set(
+        field['data_source_id'] 
+        for field in field_metadata 
+        if 'data_source_id' in field
+    )
     
+    # Collect metadata for each data source
     datasource_metadata = []
     for used_datasource in used_datasources:
         for datasource in data_schema["data_sources"]:
@@ -182,7 +190,8 @@ def get_location_required_response() -> Dict[str, Any]:
         }
     }
 
-def create_text_response(text: str) -> Dict:
+
+def create_text_response(text: str) -> Dict[str, Any]:
     """
     Creates a standardized text-only response payload.
     
@@ -210,7 +219,8 @@ def create_text_response(text: str) -> Dict:
         "textResponse": text
     }
 
-# ---- API ERROR HANDLING ----
+
+# ======================== ERROR HANDLING ========================
 
 def gemini_safe(fn):
     """Decorator for handling Gemini API errors consistently"""
@@ -226,26 +236,29 @@ def gemini_safe(fn):
     return wrapper
 
 
-# ---- WRAPPED API FUNCTIONS ----
+# ======================== WRAPPED API FUNCTIONS ========================
 
 @gemini_safe
 def translate_query_safe(*args, **kwargs):
+    """Safe wrapper for translate_query that handles API errors"""
     return translate_query(*args, **kwargs)
 
 
 @gemini_safe
 def generate_content_safe(*args, **kwargs):
+    """Safe wrapper for generate_content that handles API errors"""
     return client.models.generate_content(*args, **kwargs)
 
 
 @gemini_safe
 def generate_data_description_safe(*args, **kwargs):
+    """Safe wrapper for generate_data_description that handles API errors"""
     return generate_data_description(*args, **kwargs)
 
 
-# ---- INITIALIZE ENVIRONMENT ----
+# ======================== INITIALIZE ENVIRONMENT ========================
 
-# Load resources
+# Load all resources
 resources = setup_environment()
 data_schema = resources["data_schema"]
 system_instruction = resources["system_instruction"]
@@ -253,75 +266,42 @@ client = resources["client"]
 logger.info("Environment setup completed")
 
 
-# ---- API ROUTES ----
+# ======================== QUERY PROCESSING FUNCTIONS ========================
 
-@app.post("/process")
-@limiter.limit("10/minute")
-async def process_prompt(request_data: PromptRequest, request: Request):
-    """Process natural language queries about NYC 311 data"""
-    request_id = str(uuid.uuid4())[:8]
-    logger.info(f"[{request_id}] Processing new request")
-    start_time = time.time()
+def extract_query_info(request_data: PromptRequest, request_id: str) -> Dict[str, Any]:
+    """Extract query, context, and location information from request"""
+    user_location = None
+    raw_query = request_data.prompt
+    context = request_data.context.dict() if request_data.context else None
     
-    # Initialize response structure with dataclass
-    response_payload = asdict(ResponsePayload())
+    # Add location info to query if available
+    if hasattr(request_data, 'location') and request_data.location:
+        user_location = request_data.location
+        logger.info(f"[{request_id}] Location data available but masked for privacy")
+        raw_query = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
     
-    try:
-        # Process query and location
-        user_location = None
-        raw_query = request_data.prompt
-        context = request_data.context.dict() if request_data.context else None
-        
-        if hasattr(request_data, 'location') and request_data.location:
-            user_location = request_data.location
-            logger.info(f"[{request_id}] Location data available but masked for privacy")
-            raw_query = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
-        
-        # Step 1: Query translation
-        response_text, is_direct_response = translate_query_safe(
-            request_id, raw_query, context
-        )
-        
-        # Case 1: Direct text response
-        if is_direct_response:
-            logger.info(f"[{request_id}] Returning direct response from query translator")
-            response_payload.update(create_text_response(response_text))
-            return JSONResponse(content=response_payload)
-        
-        # Step 2: Generate structured data query
-        json_result = await _process_data_visualization(
-            response_text, user_location, request_id, request_data.prompt
-        )
-        response_payload.update(json_result)
-        
-        logger.info(f"[{request_id}] Completed in {time.time() - start_time:.2f}s")
-        return JSONResponse(content=response_payload)
-        
-    except HTTPException as http_error:
-        # Handle API errors
-        return JSONResponse(
-            status_code=http_error.status_code,
-            content=http_error.detail
-        )
-    except Exception as error:
-        # Handle general errors
-        logger.exception(f"[{request_id}] Error processing prompt")
-        return JSONResponse(
-            status_code=500, 
-            content={"error": "An error occurred while processing your request"}
-        )
+    return {
+        "raw_query": raw_query,
+        "user_location": user_location,
+        "context": context
+    }
 
 
-# ---- PROCESSING FUNCTIONS ----
-
-async def _process_data_visualization(
-    response_text: str,
-    user_location: Optional[Dict],
-    request_id: str,
-    original_query: str
+async def generate_data_query(
+    response_text: str, 
+    user_location: Optional[Dict[str, Any]], 
+    request_id: str
 ) -> Dict[str, Any]:
-    """Process data visualization response"""
-    # Call Gemini API for data aggregation
+    """
+    Generate data query from translated response text
+    
+    This function:
+    1. Calls Gemini API to get aggregation definition
+    2. Classifies dimensions for visualization
+    3. Generates SQL query
+    4. Executes SQL and returns results
+    """
+    # Call Gemini API for data aggregation definition
     response = generate_content_safe(
         request_id,
         model="gemini-2.5-flash-preview-04-17",
@@ -333,25 +313,10 @@ async def _process_data_visualization(
     json_text = response.candidates[0].content.parts[0].text
     parsed_json, is_valid_json = extract_json_from_text(json_text)
     
-    # Case 2A: Text response from aggregation AI
+    # If not valid JSON or contains text response, return as text
     if not is_valid_json or "textResponse" in parsed_json:
         text = parsed_json.get("textResponse", json_text)
         return create_text_response(text)
-    
-    # Case 2B: Data visualization response
-    return _generate_data_visualization(
-        parsed_json, user_location, request_id, original_query
-    )
-
-
-def _generate_data_visualization(
-    parsed_json: Dict, 
-    user_location: Optional[Dict],
-    request_id: str,
-    original_query: str
-) -> Dict[str, Any]:
-    """Generate data visualization from parsed JSON"""
-    result = {}
     
     # Process data response - classify dimensions
     agg_def = AggregationDefinition(**parsed_json)
@@ -373,12 +338,40 @@ def _generate_data_visualization(
     
     # Execute SQL with location data
     dataset, query_metadata = execute_sql_in_duckDB(sql, DUCKDB_FILE, user_location)
-
-    # Return the placeholder version to frontend (with location data protected)
-    result["sql"] = sql
-    result["dataset"] = dataset
     
-    # Add date range to aggregation definition
+    # Return basic query results
+    return {
+        "sql": sql,
+        "dataset": dataset,
+        "aggregationDefinition": agg_def,
+        "queryMetadata": query_metadata
+    }
+
+
+def generate_insights(
+    query_result: Dict[str, Any], 
+    user_location: Optional[Dict[str, Any]], 
+    request_id: str, 
+    original_query: str
+) -> Dict[str, Any]:
+    """
+    Enhance data results with statistics, visualization recommendations, and insights
+    
+    This function:
+    1. Calculates dataset statistics 
+    2. Recommends visualization types
+    3. Collects metadata about fields
+    4. Generates natural language description
+    """
+    result = {}
+    
+    # Extract info from query result
+    sql = query_result["sql"] 
+    dataset = query_result["dataset"]
+    agg_def = query_result["aggregationDefinition"]
+    query_metadata = query_result["queryMetadata"]
+    
+    # Add date range to aggregation definition if available
     if 'createdDateRange' in query_metadata:
         agg_def.createdDateRange = query_metadata['createdDateRange']
     
@@ -395,17 +388,17 @@ def _generate_data_visualization(
         available_charts, ideal_chart = ['text'], 'text'
     else:
         available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats, len(dataset))
-
+    
     result["chartType"] = ideal_chart
     result["availableChartTypes"] = available_charts
-
+    
     # Define fields that will be displayed in table
     visible_fields = agg_def.dimensions + [field["alias"] for field in agg_def.measures]
     result["fields"] = visible_fields
     
     # Collect metadata for visible fields
     field_metadata, datasource_metadata = collect_metadata(visible_fields, data_schema)
-
+    
     # Create streamlined aggregation definition for the descriptor
     descriptor_agg_def = {
         'dimensions': agg_def.dimensions,
@@ -419,7 +412,7 @@ def _generate_data_visualization(
         'statistics': query_metadata.get('statistics', {})
     }
     
-    # Generate data description
+    # Generate natural language data description
     data_description = generate_data_description_safe(
         request_id,
         original_query=original_query, 
@@ -432,6 +425,7 @@ def _generate_data_visualization(
     filter_fields = extract_filter_fields(data_description)
     all_fields = list(set(visible_fields + filter_fields))
     
+    # If we have additional fields from filters, get their metadata too
     if len(all_fields) > len(visible_fields):
         field_metadata, datasource_metadata = collect_metadata(all_fields, data_schema)
     
@@ -441,7 +435,9 @@ def _generate_data_visualization(
         "fieldMetadata": field_metadata
     })
     
-    # Add to response payload    
+    # Add to response payload
+    result["sql"] = sql
+    result["dataset"] = dataset
     result["aggregationDefinition"] = agg_def.dict()
     result["dataMetadataAll"] = data_schema
     result["dataInsights"] = {
@@ -451,3 +447,77 @@ def _generate_data_visualization(
     }
     
     return result
+
+
+# ======================== API ENDPOINTS ========================
+
+@app.post("/process")
+@limiter.limit("10/minute")
+async def process_prompt(request_data: PromptRequest, request: Request) -> JSONResponse:
+    """
+    Process natural language queries about NYC 311 data
+    
+    This is the main entry point for the API that:
+    1. Extracts query information
+    2. Translates the natural language to a structured query
+    3. Generates and executes a data query
+    4. Enhances results with insights and metadata
+    5. Returns formatted response to the client
+    """
+    request_id = str(uuid.uuid4())[:8]
+    logger.info(f"[{request_id}] Processing new request")
+    start_time = time.time()
+    
+    # Initialize response structure
+    response_payload = asdict(ResponsePayload())
+    
+    try:
+        # ---- STEP 1: EXTRACT QUERY INFO ----
+        query_info = extract_query_info(request_data, request_id)
+        raw_query = query_info["raw_query"]
+        user_location = query_info["user_location"]
+        context = query_info["context"]
+        
+        # ---- STEP 2: TRANSLATE QUERY ----
+        translation_result = translate_query_safe(request_id, raw_query, context)
+        response_text, is_direct_response = translation_result
+        
+        # If it's a simple question with direct answer, return immediately
+        if is_direct_response:
+            logger.info(f"[{request_id}] Returning direct response from query translator")
+            response_payload.update(create_text_response(response_text))
+            return JSONResponse(content=response_payload)
+        
+        # ---- STEP 3: GENERATE DATA QUERY ----
+        query_result = await generate_data_query(
+            response_text, user_location, request_id
+        )
+        
+        # If it's a text-only response (no data needed), return immediately
+        if query_result.get("textResponse"):
+            response_payload.update(query_result)
+            return JSONResponse(content=response_payload)
+            
+        # ---- STEP 4: GENERATE INSIGHTS ----
+        insights_result = generate_insights(
+            query_result, user_location, request_id, request_data.prompt
+        )
+        
+        # ---- STEP 5: RETURN RESPONSE ----
+        response_payload.update(insights_result)
+        logger.info(f"[{request_id}] Completed in {time.time() - start_time:.2f}s")
+        return JSONResponse(content=response_payload)
+        
+    except HTTPException as http_error:
+        # Handle API errors
+        return JSONResponse(
+            status_code=http_error.status_code,
+            content=http_error.detail
+        )
+    except Exception as error:
+        # Handle general errors
+        logger.exception(f"[{request_id}] Error processing prompt")
+        return JSONResponse(
+            status_code=500, 
+            content={"error": "An error occurred while processing your request"}
+        )
