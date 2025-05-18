@@ -1,6 +1,6 @@
 import { state } from "./state.js";
 import { getLocationPreference } from "./locationService.js";
-import { showError, showRateLimitError } from "./errorHandler.js";
+import { showError } from "./errorHandler.js";
 
 // API endpoint determination based on environment
 function getServerEndpoint() {
@@ -63,9 +63,8 @@ export async function apiService(query, locationData) {
       try {
         const errorData = JSON.parse(responseText);
 
-        // Check if this is a rate limit error
         if (response.status === 429) {
-          showRateLimitError();
+          showError("We've reached our query limit. Please try again later.");
           return false;
         }
       } catch (parseErr) {

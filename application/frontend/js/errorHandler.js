@@ -2,16 +2,11 @@
  * Error handling functionality for the application
  */
 
-// Display generic error message
-export function showError() {
-  const message = "ASK NYC is facing temporary error, please try again later.";
-  showErrorMessage(message);
-}
-
-// Display rate limit error message
-export function showRateLimitError() {
-  const message = "We've reached our query limit. Please try again later.";
-  showErrorMessage(message);
+// Display error message - handles all error types
+export function showError(message) {
+  // Default generic error message if none provided
+  const errorMessage = message || "ASK NYC is facing temporary error, please try again later.";
+  showErrorMessage(errorMessage);
 }
 
 // Create and display error message with retry button
