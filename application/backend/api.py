@@ -27,12 +27,10 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 # Local imports
+import query_engine
 from models import AggregationDefinition, PromptRequest
 from query_engine import (
     calculate_dimension_cardinality_stats,
-    execute_sql_in_duckDB,
-    extract_json_from_text,
-    generate_sql,
     reorder_dimensions_by_cardinality,
 )
 from query_translator import translate_query
@@ -261,59 +259,27 @@ async def generate_data_query(
     request_id: str
 ) -> Dict[str, Any]:
     """
-    Generate data query from translated response text
-    
-    This function:
-    1. Calls Gemini API to get aggregation definition
-    2. Classifies dimensions for visualization
-    3. Generates SQL query
-    4. Executes SQL and returns results
+    Generate data query by calling the query engine
     """
-    # Call Gemini API for data aggregation definition
-    response = generate_content_safe(
-        request_id,
-        model="gemini-2.5-flash-preview-04-17",
-        config=types.GenerateContentConfig(system_instruction=system_instruction, temperature=0),
-        contents=[response_text]
+    # Call the query engine to process the query
+    result = await query_engine.process_aggregation_query(
+        response_text=response_text,
+        user_location=user_location,
+        request_id=request_id,
+        system_instruction=system_instruction,
+        db_filename=DUCKDB_FILE,
+        generate_content_safe=generate_content_safe
     )
     
-    # Parse the AI response
-    json_text = response.candidates[0].content.parts[0].text
-    parsed_json, is_valid_json = extract_json_from_text(json_text)
-    
-    # If not valid JSON or contains text response, return as text
-    if not is_valid_json or "textResponse" in parsed_json:
-        text = parsed_json.get("textResponse", json_text)
-        return create_text_response(text)
-    
-    # Process data response - classify dimensions
-    agg_def = AggregationDefinition(**parsed_json)
-    time_dim, geo_dim, cat_dim = classify_dimensions(agg_def.dimensions)
-    agg_def = agg_def.copy(update={
-        "timeDimension": time_dim,
-        "geoDimension": geo_dim,
-        "categoricalDimension": cat_dim
-    })
-    
-    # Generate SQL with placeholders intact
-    sql = generate_sql(agg_def, "requests_311")
-    
-    # Check if location is required but not provided
-    location_enabled = bool(user_location)
-    if ('user_latitude' in sql or 'user_longitude' in sql) and not location_enabled:
-        logger.info(f"[{request_id}] Query requires location services but they are disabled")
+    # Handle location required case
+    if result.get("locationRequired"):
         return get_location_required_response()
-    
-    # Execute SQL with location data
-    dataset, query_metadata = execute_sql_in_duckDB(sql, DUCKDB_FILE, user_location)
-    
-    # Return basic query results
-    return {
-        "sql": sql,
-        "dataset": dataset,
-        "aggregationDefinition": agg_def,
-        "queryMetadata": query_metadata
-    }
+        
+    # Handle text response case
+    if result.get("textResponse"):
+        return create_text_response(result["textResponse"])
+        
+    return result
 
 
 def generate_insights(

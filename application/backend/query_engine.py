@@ -7,6 +7,7 @@ import polars as pl
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Any, Union
 
+from google.genai import types
 from models import AggregationDefinition
 from visualization_recommender import TIME_DIMENSIONS, GEO_DIMENSIONS, classify_dimensions
 
@@ -514,3 +515,75 @@ def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_
         "geoDimension": geo_dim,
         "categoricalDimension": cat_dim
     })
+
+# =========================================================
+# QUERY PROCESSING
+# =========================================================
+
+async def process_aggregation_query(
+    response_text: str,
+    user_location: Optional[Dict[str, Any]],
+    request_id: str,
+    system_instruction: str,
+    db_filename: str,
+    generate_content_safe
+) -> Dict[str, Any]:
+    """
+    Process translated query text into a data query and execute it
+    
+    Args:
+        response_text: Translated query from NL processor
+        user_location: Optional user location data
+        request_id: Unique identifier for the request
+        system_instruction: System instruction for Gemini API
+        db_filename: Path to DuckDB database file
+        generate_content_safe: Safe wrapper for Gemini API calls
+        
+    Returns:
+        Dictionary with query results and metadata
+    """
+    # Call Gemini API for data aggregation definition
+    response = generate_content_safe(
+        request_id,
+        model="gemini-2.5-flash-preview-04-17",
+        config=types.GenerateContentConfig(system_instruction=system_instruction, temperature=0),
+        contents=[response_text]
+    )
+    
+    # Parse the AI response
+    json_text = response.candidates[0].content.parts[0].text
+    parsed_json, is_valid_json = extract_json_from_text(json_text)
+    
+    # If not valid JSON or contains text response, return as text
+    if not is_valid_json or "textResponse" in parsed_json:
+        text = parsed_json.get("textResponse", json_text)
+        return {"textResponse": text, "chartType": "text", "availableChartTypes": ["text"]}
+    
+    # Process data response - classify dimensions
+    agg_def = AggregationDefinition(**parsed_json)
+    time_dim, geo_dim, cat_dim = classify_dimensions(agg_def.dimensions)
+    agg_def = agg_def.copy(update={
+        "timeDimension": time_dim,
+        "geoDimension": geo_dim,
+        "categoricalDimension": cat_dim
+    })
+    
+    # Generate SQL with placeholders intact
+    sql = generate_sql(agg_def, "requests_311")
+    
+    # Check if location is required but not provided
+    location_enabled = bool(user_location)
+    if ('user_latitude' in sql or 'user_longitude' in sql) and not location_enabled:
+        logger.info(f"[{request_id}] Query requires location services but they are disabled")
+        return {"locationRequired": True}
+    
+    # Execute SQL with location data
+    dataset, query_metadata = execute_sql_in_duckDB(sql, db_filename, user_location)
+    
+    # Return basic query results
+    return {
+        "sql": sql,
+        "dataset": dataset,
+        "aggregationDefinition": agg_def,
+        "queryMetadata": query_metadata
+    }
