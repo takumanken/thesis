@@ -201,7 +201,7 @@ def create_text_response(text: str) -> Dict[str, Any]:
     }
 
 
-def extract_query_info(request_data: PromptRequest, request_id: str) -> Dict[str, Any]:
+def extract_query_info(request_id: str, request_data: PromptRequest) -> Dict[str, Any]:
     """Extract query, context, and location information from request"""
     user_location = None
     raw_query = request_data.prompt
@@ -263,7 +263,7 @@ def generate_data_description_safe(request_id, *args, **kwargs):
 
 
 # === QUERY PROCESSING FUNCTIONS ===
-async def execute_sql_query(response_text, user_location, request_id):
+async def execute_sql_query(request_id, response_text, user_location):
     """
     Execute SQL query based on translated query
     
@@ -409,19 +409,19 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
     
     try:
         # ---- STEP 1: EXTRACT QUERY INFO ----
-        query_info = extract_query_info(request_data, request_id)
+        query_info = extract_query_info(request_id, request_data)
         raw_query = query_info["raw_query"]
         user_location = query_info["user_location"]
         context = query_info["context"]
         
         # ---- STEP 2: TRANSLATE QUERY ----
-        query_text_or_response = translate_query_safe(request_id, raw_query, context)
-        if isinstance(query_text_or_response, JSONResponse):
-            return query_text_or_response
+        translated_query = translate_query_safe(request_id, raw_query, context)
+        if isinstance(translated_query, JSONResponse):
+            return translated_query
         
         # ---- STEP 3: EXECUTE SQL QUERY ----
         query_result = await execute_sql_query(
-            query_text_or_response, user_location, request_id
+            request_id, translated_query, user_location
         )
         if isinstance(query_result, JSONResponse):
             return query_result
