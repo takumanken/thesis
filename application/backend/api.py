@@ -82,36 +82,62 @@ def get_simplified_schema(data_schema: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def setup_environment() -> Dict[str, Any]:
-    """Load all resources and initialize services"""
-    # Load data schema
-    with open(DATA_SCHEMA_FILE, "r") as f:
-        data_schema = json.load(f)
+def extract_query_info(request_id: str, request_data: PromptRequest) -> Dict[str, Any]:
+    """Extract query, context, and location information from request"""
+    user_location = None
+    raw_query = request_data.prompt
+    context = request_data.context.dict() if request_data.context else None
     
-    # Load system instructions
-    with open(SYSTEM_INSTRUCTION_FILE, "r") as f:
-        system_instruction = f.read()
+    # Add location info to query if available
+    if hasattr(request_data, 'location') and request_data.location:
+        user_location = request_data.location
+        logger.info(f"[{request_id}] Location data available but masked for privacy")
+        raw_query = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
     
-    # Load filter values
-    with open(FILTER_VALUES_FILE, "r") as f:
-        all_filters = json.load(f)
-        
-    # Generate simplified schema for AI
-    simplified_schema = get_simplified_schema(data_schema)
-                
-    # Replace the placeholders in system instruction
-    system_instruction = system_instruction.replace("{all_filters}", json.dumps(all_filters))
-    system_instruction = system_instruction.replace("{data_schema}", json.dumps(simplified_schema))
-    
-    # Set up API client
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY environment variable is required")
-        
     return {
-        "data_schema": data_schema,
-        "system_instruction": system_instruction,
-        "client": genai.Client(api_key=api_key)
+        "raw_query": raw_query,
+        "user_location": user_location,
+        "context": context
+    }
+
+
+def create_text_response(text: str) -> Dict[str, Any]:
+    """
+    Creates a standardized text-only response payload.
+    
+    Args:
+        text: The text content of the response
+        
+    Returns:
+        Response dictionary with text content and null data fields
+    """
+    return {
+        "dataset": [],
+        "fields": [],
+        "sql": "",
+        "aggregationDefinition": {
+            "dimensions": [],
+            "measures": [],
+            "preAggregationFilters": "",
+            "postAggregationFilters": "",
+            "timeDimension": [],
+            "geoDimension": [],
+            "categoricalDimension": []
+        },
+        "chartType": "text",
+        "availableChartTypes": ["text"],
+        "textResponse": text
+    }
+
+
+def get_location_required_response() -> Dict[str, Any]:
+    """Return a response for when location services are required but not enabled"""
+    return {
+        "dataInsights": {
+            "title": "Location Services Required",
+            "dataDescription": "This query requires location services to be enabled. Please check 'Use my NYC location'.",
+            "filterDescription": []
+        }
     }
 
 
@@ -161,65 +187,6 @@ def extract_filter_fields(data_description: Dict[str, Any]) -> List[str]:
     return filter_fields
 
 
-def get_location_required_response() -> Dict[str, Any]:
-    """Return a response for when location services are required but not enabled"""
-    return {
-        "dataInsights": {
-            "title": "Location Services Required",
-            "dataDescription": "This query requires location services to be enabled. Please check 'Use my NYC location'.",
-            "filterDescription": []
-        }
-    }
-
-
-def create_text_response(text: str) -> Dict[str, Any]:
-    """
-    Creates a standardized text-only response payload.
-    
-    Args:
-        text: The text content of the response
-        
-    Returns:
-        Response dictionary with text content and null data fields
-    """
-    return {
-        "dataset": [],
-        "fields": [],
-        "sql": "",
-        "aggregationDefinition": {
-            "dimensions": [],
-            "measures": [],
-            "preAggregationFilters": "",
-            "postAggregationFilters": "",
-            "timeDimension": [],
-            "geoDimension": [],
-            "categoricalDimension": []
-        },
-        "chartType": "text",
-        "availableChartTypes": ["text"],
-        "textResponse": text
-    }
-
-
-def extract_query_info(request_id: str, request_data: PromptRequest) -> Dict[str, Any]:
-    """Extract query, context, and location information from request"""
-    user_location = None
-    raw_query = request_data.prompt
-    context = request_data.context.dict() if request_data.context else None
-    
-    # Add location info to query if available
-    if hasattr(request_data, 'location') and request_data.location:
-        user_location = request_data.location
-        logger.info(f"[{request_id}] Location data available but masked for privacy")
-        raw_query = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
-    
-    return {
-        "raw_query": raw_query,
-        "user_location": user_location,
-        "context": context
-    }
-
-
 # === ERROR HANDLING ===
 def gemini_safe(fn):
     """Decorator for handling Gemini API errors consistently"""
@@ -233,67 +200,6 @@ def gemini_safe(fn):
             msg = "Rate limit exceeded" if status == 429 else "API error"
             raise HTTPException(status_code=status, detail={"error": msg})
     return wrapper
-
-
-# === WRAPPED API FUNCTIONS ===
-@gemini_safe
-def translate_query_safe(request_id, raw_query, context):
-    """Translate natural language query and handle direct responses"""
-    response_text, is_direct_response = translate_query(raw_query, context)
-    
-    if is_direct_response:
-        logger.info(f"[{request_id}] Returning direct response")
-        response_payload = asdict(ResponsePayload())
-        response_payload.update(create_text_response(response_text))
-        return JSONResponse(content=response_payload)
-    
-    return response_text
-
-
-@gemini_safe
-def generate_content_safe(request_id, *args, **kwargs):
-    """Safe wrapper for generate_content that handles API errors"""
-    return client.models.generate_content(*args, **kwargs)
-
-
-@gemini_safe
-def generate_data_description_safe(request_id, *args, **kwargs):
-    """Safe wrapper for generate_data_description that handles API errors"""
-    return generate_data_description(*args, **kwargs)
-
-
-# === QUERY PROCESSING FUNCTIONS ===
-async def execute_sql_query(request_id, response_text, user_location):
-    """
-    Execute SQL query based on translated query
-    
-    Returns:
-        - JSONResponse if a special case requires immediate response
-        - Dict with query results if processing should continue
-    """
-    # Call the query engine to process the query
-    result = await query_engine.process_aggregation_query(
-        response_text=response_text,
-        user_location=user_location,
-        request_id=request_id,
-        system_instruction=system_instruction,
-        db_filename=DUCKDB_FILE,
-        generate_content_safe=lambda *args, **kwargs: generate_content_safe(request_id, *args, **kwargs)
-    )
-    
-    # Handle location required case
-    if result.get("locationRequired"):
-        response_payload = asdict(ResponsePayload())
-        response_payload.update(get_location_required_response())
-        return JSONResponse(content=response_payload)
-    
-    # Handle text response case
-    if result.get("textResponse"):
-        response_payload = asdict(ResponsePayload())
-        response_payload.update(create_text_response(result["textResponse"]))
-        return JSONResponse(content=response_payload)
-    
-    return result
 
 
 # === DATA ANALYSIS FUNCTIONS ===
@@ -343,6 +249,33 @@ def prepare_field_metadata(agg_def, visible_fields, data_schema):
     return field_metadata, datasource_metadata, descriptor_agg_def
 
 
+# === WRAPPED API FUNCTIONS ===
+@gemini_safe
+def translate_query_safe(request_id, raw_query, context):
+    """Translate natural language query and handle direct responses"""
+    response_text, is_direct_response = translate_query(raw_query, context)
+    
+    if is_direct_response:
+        logger.info(f"[{request_id}] Returning direct response")
+        response_payload = asdict(ResponsePayload())
+        response_payload.update(create_text_response(response_text))
+        return JSONResponse(content=response_payload)
+    
+    return response_text
+
+
+@gemini_safe
+def generate_content_safe(request_id, *args, **kwargs):
+    """Safe wrapper for generate_content that handles API errors"""
+    return client.models.generate_content(*args, **kwargs)
+
+
+@gemini_safe
+def generate_data_description_safe(request_id, *args, **kwargs):
+    """Safe wrapper for generate_data_description that handles API errors"""
+    return generate_data_description(*args, **kwargs)
+
+
 def generate_data_insights(request_id, original_query, dataset, descriptor_agg_def, chart_type):
     """Generate natural language description of the data"""
     # Generate description using AI
@@ -359,6 +292,77 @@ def generate_data_insights(request_id, original_query, dataset, descriptor_agg_d
         "title": data_description.get("title"),
         "dataDescription": data_description.get("dataDescription"),
         "filterDescription": data_description.get("filterDescription", [])
+    }
+
+
+# === QUERY PROCESSING FUNCTIONS ===
+async def execute_sql_query(request_id, response_text, user_location):
+    """
+    Execute SQL query based on translated query
+    
+    Returns:
+        - JSONResponse if a special case requires immediate response
+        - Dict with query results if processing should continue
+    """
+    # Fix: Don't add request_id in the lambda function to avoid duplication
+    safe_content_generator = lambda *args, **kwargs: generate_content_safe(request_id, *args, **kwargs)
+    
+    # Call the query engine to process the query
+    result = await query_engine.process_aggregation_query(
+        response_text=response_text,
+        user_location=user_location,
+        request_id=request_id,
+        system_instruction=system_instruction,
+        db_filename=DUCKDB_FILE,
+        generate_content_safe=safe_content_generator
+    )
+    
+    # Handle location required case
+    if result.get("locationRequired"):
+        response_payload = asdict(ResponsePayload())
+        response_payload.update(get_location_required_response())
+        return JSONResponse(content=response_payload)
+    
+    # Handle text response case
+    if result.get("textResponse"):
+        response_payload = asdict(ResponsePayload())
+        response_payload.update(create_text_response(result["textResponse"]))
+        return JSONResponse(content=response_payload)
+    
+    return result
+
+
+# === ENVIRONMENT SETUP ===
+def setup_environment() -> Dict[str, Any]:
+    """Load all resources and initialize services"""
+    # Load data schema
+    with open(DATA_SCHEMA_FILE, "r") as f:
+        data_schema = json.load(f)
+    
+    # Load system instructions
+    with open(SYSTEM_INSTRUCTION_FILE, "r") as f:
+        system_instruction = f.read()
+    
+    # Load filter values
+    with open(FILTER_VALUES_FILE, "r") as f:
+        all_filters = json.load(f)
+        
+    # Generate simplified schema for AI
+    simplified_schema = get_simplified_schema(data_schema)
+                
+    # Replace the placeholders in system instruction
+    system_instruction = system_instruction.replace("{all_filters}", json.dumps(all_filters))
+    system_instruction = system_instruction.replace("{data_schema}", json.dumps(simplified_schema))
+    
+    # Set up API client
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY environment variable is required")
+        
+    return {
+        "data_schema": data_schema,
+        "system_instruction": system_instruction,
+        "client": genai.Client(api_key=api_key)
     }
 
 

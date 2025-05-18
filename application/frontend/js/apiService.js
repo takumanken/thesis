@@ -63,15 +63,24 @@ export async function apiService(query, locationData) {
       try {
         const errorData = JSON.parse(responseText);
 
+        // Handle specific error types
         if (response.status === 429) {
           showError("We've reached our query limit. Please try again later.");
+          return false;
+        } else if (response.status === 500) {
+          // Show a specific message for server errors
+          showError("The server encountered an error. Please try again later.");
+          return false;
+        } else if (errorData.error) {
+          // Use the error message from the backend if available
+          showError(errorData.error);
           return false;
         }
       } catch (parseErr) {
         // If JSON parsing fails, just show generic error
       }
 
-      // Show generic error for non-rate-limit errors
+      // Fall back to generic error for all other cases
       showError();
       return false;
     }
