@@ -41,34 +41,6 @@ def extract_json_from_text(json_text: str) -> Tuple[Dict, bool]:
     except json.JSONDecodeError:
         return {}, False
 
-def create_text_response(text: str) -> Dict:
-    """
-    Creates a standardized text-only response payload.
-    
-    Args:
-        text: The text content of the response
-        
-    Returns:
-        Response dictionary with text content and null data fields
-    """
-    return {
-        "dataset": [],
-        "fields": [],
-        "sql": "",
-        "aggregationDefinition": {
-            "dimensions": [],
-            "measures": [],
-            "preAggregationFilters": "",
-            "postAggregationFilters": "",
-            "timeDimension": [],
-            "geoDimension": [],
-            "categoricalDimension": []
-        },
-        "chartType": "text",
-        "availableChartTypes": ["text"],
-        "textResponse": text
-    }
-
 # =========================================================
 # SQL GENERATION
 # =========================================================
