@@ -1,72 +1,54 @@
+"""
+NYC 311 Data Explorer API
+
+This API processes natural language queries about NYC 311 data, translating them
+into SQL queries, executing them, and generating visualizations and insights.
+"""
+
+# Standard library imports
+import functools
+import json
 import logging
 import os
 import time
 import uuid
-import json
-import functools
-from dataclasses import dataclass, field, asdict
-from typing import Dict, Optional, Tuple, Any, List, Union
+from dataclasses import asdict, dataclass, field
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from fastapi import FastAPI, Request, HTTPException
+# Third-party library imports
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 # Local imports
-from models import PromptRequest, AggregationDefinition
-from visualization_recommender import classify_dimensions, get_chart_options
+from models import AggregationDefinition, PromptRequest
 from query_engine import (
-    extract_json_from_text, 
-    generate_sql, 
-    execute_sql_in_duckDB, 
-    calculate_dimension_cardinality_stats, 
-    reorder_dimensions_by_cardinality
+    calculate_dimension_cardinality_stats,
+    execute_sql_in_duckDB,
+    extract_json_from_text,
+    generate_sql,
+    reorder_dimensions_by_cardinality,
 )
-from text_insights import generate_data_description
 from query_translator import translate_query
+from text_insights import generate_data_description
+from visualization_recommender import classify_dimensions, get_chart_options
 
 
-# ======================== CONFIGURATION ========================
-
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-logger = logging.getLogger(__name__)
-
-# Define paths
+# === CONSTANTS ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SYSTEM_INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/data_aggregation_instruction.md")
 FILTER_VALUES_FILE = os.path.join(BASE_DIR, "gemini_instructions/references/all_filters.json")
 DATA_SCHEMA_FILE = os.path.join(BASE_DIR, "data/data_schema.json")
 DUCKDB_FILE = os.path.join(BASE_DIR, "data/nyc_open_data_explorer.duckdb")
 
-# App initialization
-load_dotenv()
-app = FastAPI()
 
-# Configure middleware
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://takumanken.github.io", "http://127.0.0.1:5500"],
-    allow_credentials=False,
-    allow_methods=["POST"],
-    allow_headers=["Content-Type"],
-)
-
-
-# ======================== DATA MODELS ========================
-
+# === DATA MODELS ===
 @dataclass
 class ResponsePayload:
     """Standard response structure for the API"""
@@ -88,8 +70,7 @@ class ResponsePayload:
     dataMetadataAll: Optional[Dict] = None
 
 
-# ======================== HELPER FUNCTIONS ========================
-
+# === HELPER FUNCTIONS ===
 def get_simplified_schema(data_schema: Dict[str, Any]) -> Dict[str, Any]:
     """Remove description_to_user fields from schema for AI prompt"""
     strip = lambda obj: {k: v for k, v in obj.items() if k != "description_to_user"}
@@ -220,54 +201,6 @@ def create_text_response(text: str) -> Dict[str, Any]:
     }
 
 
-# ======================== ERROR HANDLING ========================
-
-def gemini_safe(fn):
-    """Decorator for handling Gemini API errors consistently"""
-    @functools.wraps(fn)
-    def wrapper(request_id, *args, **kwargs):
-        try:
-            return fn(*args, **kwargs)
-        except genai.errors.ClientError as err:
-            logger.error(f"[{request_id}] API error: {err}")
-            status = getattr(err, "status_code", 500)
-            msg = "Rate limit exceeded" if status == 429 else "API error"
-            raise HTTPException(status_code=status, detail={"error": msg})
-    return wrapper
-
-
-# ======================== WRAPPED API FUNCTIONS ========================
-
-@gemini_safe
-def translate_query_safe(*args, **kwargs):
-    """Safe wrapper for translate_query that handles API errors"""
-    return translate_query(*args, **kwargs)
-
-
-@gemini_safe
-def generate_content_safe(*args, **kwargs):
-    """Safe wrapper for generate_content that handles API errors"""
-    return client.models.generate_content(*args, **kwargs)
-
-
-@gemini_safe
-def generate_data_description_safe(*args, **kwargs):
-    """Safe wrapper for generate_data_description that handles API errors"""
-    return generate_data_description(*args, **kwargs)
-
-
-# ======================== INITIALIZE ENVIRONMENT ========================
-
-# Load all resources
-resources = setup_environment()
-data_schema = resources["data_schema"]
-system_instruction = resources["system_instruction"]
-client = resources["client"]
-logger.info("Environment setup completed")
-
-
-# ======================== QUERY PROCESSING FUNCTIONS ========================
-
 def extract_query_info(request_data: PromptRequest, request_id: str) -> Dict[str, Any]:
     """Extract query, context, and location information from request"""
     user_location = None
@@ -287,6 +220,41 @@ def extract_query_info(request_data: PromptRequest, request_id: str) -> Dict[str
     }
 
 
+# === ERROR HANDLING ===
+def gemini_safe(fn):
+    """Decorator for handling Gemini API errors consistently"""
+    @functools.wraps(fn)
+    def wrapper(request_id, *args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except genai.errors.ClientError as err:
+            logger.error(f"[{request_id}] API error: {err}")
+            status = getattr(err, "status_code", 500)
+            msg = "Rate limit exceeded" if status == 429 else "API error"
+            raise HTTPException(status_code=status, detail={"error": msg})
+    return wrapper
+
+
+# === WRAPPED API FUNCTIONS ===
+@gemini_safe
+def translate_query_safe(*args, **kwargs):
+    """Safe wrapper for translate_query that handles API errors"""
+    return translate_query(*args, **kwargs)
+
+
+@gemini_safe
+def generate_content_safe(*args, **kwargs):
+    """Safe wrapper for generate_content that handles API errors"""
+    return client.models.generate_content(*args, **kwargs)
+
+
+@gemini_safe
+def generate_data_description_safe(*args, **kwargs):
+    """Safe wrapper for generate_data_description that handles API errors"""
+    return generate_data_description(*args, **kwargs)
+
+
+# === QUERY PROCESSING FUNCTIONS ===
 async def generate_data_query(
     response_text: str, 
     user_location: Optional[Dict[str, Any]], 
@@ -449,8 +417,40 @@ def generate_insights(
     return result
 
 
-# ======================== API ENDPOINTS ========================
+# === APPLICATION SETUP ===
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
+# App initialization
+load_dotenv()
+app = FastAPI()
+
+# Configure middleware
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://takumanken.github.io", "http://127.0.0.1:5500"],
+    allow_credentials=False,
+    allow_methods=["POST"],
+    allow_headers=["Content-Type"],
+)
+
+# Initialize environment
+resources = setup_environment()
+data_schema = resources["data_schema"]
+system_instruction = resources["system_instruction"]
+client = resources["client"]
+logger.info("Environment setup completed")
+
+
+# === API ENDPOINTS ===
 @app.post("/process")
 @limiter.limit("10/minute")
 async def process_prompt(request_data: PromptRequest, request: Request) -> JSONResponse:
