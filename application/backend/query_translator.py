@@ -14,7 +14,6 @@ from google import genai
 from google.genai import types
 
 # === LOCAL IMPORTS ===
-import utils
 from utils import BASE_DIR
 
 

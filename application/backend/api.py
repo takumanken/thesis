@@ -29,7 +29,6 @@ from slowapi.util import get_remote_address
 # Local imports
 import query_engine
 import text_insights
-import utils
 from models import AggregationDefinition, PromptRequest
 from query_translator import translate_query
 from visualization_recommender import get_viz_recommendations

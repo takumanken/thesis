@@ -17,9 +17,8 @@ import pandas as pd
 from google.genai import types
 
 # === LOCAL IMPORTS ===
-import utils
 from models import AggregationDefinition
-from utils import BASE_DIR, DATA_SCHEMA_FILE
+from utils import BASE_DIR, DATA_SCHEMA_FILE, TIME_DIMENSIONS, extract_json_from_text, classify_dimensions
 
 # === CONSTANTS ===
 SYSTEM_INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/data_aggregation_instruction.md")
@@ -149,7 +148,7 @@ def _build_order_clause(definition: AggregationDefinition) -> str:
             return "ORDER BY MIN(created_weekday_order) ASC"
         elif dims[0] == 'closed_weekday_datepart':
             return "ORDER BY MIN(closed_weekday_order) ASC"
-        elif dims[0] in utils.TIME_DIMENSIONS:
+        elif dims[0] in TIME_DIMENSIONS:
             return f"ORDER BY {dims[0]} ASC"
         elif definition.measures:
             return f"ORDER BY {definition.measures[0]['alias']} DESC"
@@ -403,7 +402,7 @@ async def process_aggregation_query(
     
     # Parse the AI response using utility function
     json_text = response.candidates[0].content.parts[0].text
-    parsed_json, is_valid_json = utils.extract_json_from_text(json_text)
+    parsed_json, is_valid_json = extract_json_from_text(json_text)
     
     # If not valid JSON or contains text response, return as text
     if not is_valid_json or "textResponse" in parsed_json:
@@ -412,7 +411,7 @@ async def process_aggregation_query(
     
     # Process data response - classify dimensions using utility function
     agg_def = AggregationDefinition(**parsed_json)
-    time_dim, geo_dim, cat_dim = utils.classify_dimensions(agg_def.dimensions)
+    time_dim, geo_dim, cat_dim = classify_dimensions(agg_def.dimensions)
     agg_def = agg_def.copy(update={
         "timeDimension": time_dim,
         "geoDimension": geo_dim,
