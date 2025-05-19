@@ -7,6 +7,7 @@ from typing import Dict, List, Tuple, Any, Union
 
 import pandas as pd
 import polars as pl
+from google import genai
 
 # Base directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -75,6 +76,25 @@ def extract_json_from_text(json_text: str) -> Tuple[Dict, bool]:
         return parsed_json, True
     except json.JSONDecodeError:
         return {}, False
+
+
+# === GEMINI API CLIENT ===
+_gemini_client = None
+
+def get_gemini_client():
+    """
+    Initialize and return the Gemini client using a singleton pattern.
+    
+    Returns:
+        genai.Client: Initialized Gemini API client
+    """
+    global _gemini_client
+    if _gemini_client is None:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY environment variable is required")
+        _gemini_client = genai.Client(api_key=api_key)
+    return _gemini_client
 
 
 # Setup logging

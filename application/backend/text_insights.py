@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 from google import genai
 from google.genai import types
+from utils import get_gemini_client
 
 # Single client instance
 gemini_client = None
@@ -20,17 +21,6 @@ class CustomJSONEncoder(json.JSONEncoder):
             return obj.__dict__
         # Handle any other special cases
         return super().default(obj)
-
-
-def get_gemini_client():
-    """Initialize and return the Gemini client"""
-    global gemini_client
-    if gemini_client is None:
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY environment variable not set")
-        gemini_client = genai.Client(api_key=api_key)
-    return gemini_client
 
 
 def generate_data_description(

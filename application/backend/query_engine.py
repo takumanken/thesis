@@ -12,7 +12,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 # === THIRD-PARTY IMPORTS ===
 import duckdb
-import numpy as np
 import pandas as pd
 from google.genai import types
 

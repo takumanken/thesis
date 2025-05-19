@@ -32,7 +32,7 @@ import text_insights
 from models import AggregationDefinition, PromptRequest
 from query_translator import translate_query
 from visualization_recommender import get_viz_recommendations
-from utils import BASE_DIR, DATA_SCHEMA_FILE
+from utils import BASE_DIR, DATA_SCHEMA_FILE, get_gemini_client
 
 # === LOGGING SETUP ===
 logging.basicConfig(
@@ -233,13 +233,9 @@ def setup_environment() -> Dict[str, Any]:
         data_schema = json.load(f)
     
     # Set up API client
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY environment variable is required")
-        
     return {
         "data_schema": data_schema,
-        "client": genai.Client(api_key=api_key)
+        "client": get_gemini_client()
     }
 
 

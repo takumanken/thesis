@@ -14,7 +14,7 @@ from google import genai
 from google.genai import types
 
 # === LOCAL IMPORTS ===
-from utils import BASE_DIR
+from utils import BASE_DIR, get_gemini_client
 
 
 # Configure logging
@@ -39,10 +39,7 @@ def _initialize():
         return
     
     # Load API client
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY environment variable is required")
-    _client = genai.Client(api_key=api_key)
+    _client = get_gemini_client()
     
     # Load system instruction
     with open(INSTRUCTION_FILE, "r") as f:
