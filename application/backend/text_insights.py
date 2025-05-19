@@ -10,6 +10,7 @@ import json
 import logging
 import os
 from typing import Dict, List, Any, Optional, Tuple
+import asyncio
 
 # Third-party imports
 from google import genai
@@ -146,26 +147,14 @@ def remove_date_filters(filter_descriptions: List[Any]) -> List[Any]:
 
 
 # === INSIGHT GENERATION ===
-def generate_data_description(
+async def generate_data_description(
     request_id: str,
     original_query: str,
     dataset: List[Dict[str, Any]],
     aggregation_definition: Dict[str, Any],
     chart_type: str
 ) -> Dict[str, Any]:
-    """
-    Generate a user-friendly description of data and chart.
-    
-    Args:
-        request_id: Unique identifier for tracking
-        original_query: User's original natural language query
-        dataset: Query result dataset
-        aggregation_definition: Enhanced aggregation definition with metadata
-        chart_type: Selected visualization type
-        
-    Returns:
-        Dictionary with title, data description, and filter descriptions
-    """
+    """Generate a user-friendly description of data and chart."""
     try:
         # Load system instruction
         with open(INSIGHTS_INSTRUCTION_FILE, "r") as f:
@@ -175,7 +164,7 @@ def generate_data_description(
         sample_size = min(MAX_SAMPLE_SIZE, len(dataset))
         sample_data = dataset[:sample_size]
         
-        # Prepare prompt with custom encoder for complex objects
+        # Prepare prompt
         prompt = f"""
 User Query: "{original_query}"
 Chart Type: {chart_type}
@@ -187,15 +176,16 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
 {json.dumps(sample_data, indent=2)}
 """
 
-        # Call Gemini API
+        # Call Gemini API using asyncio for non-blocking behavior
         client = get_gemini_client()
-        response = client.models.generate_content(
+        response = await asyncio.to_thread(
+            client.models.generate_content,
             model="gemini-2.0-flash",
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction, 
                 temperature=0
             ),
-            contents=[prompt],
+            contents=[prompt]
         )
             
         # Extract and parse response
@@ -203,14 +193,13 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
         logger.info(f"[{request_id}] Generated data description")
         result = extract_json(response_text)
         
-        # Ensure we have all expected fields with defaults
+        # Default values
         defaults = {
             "title": "Data Overview",
             "dataDescription": "Here is a summary of the requested data.",
             "filterDescription": []
         }
         
-        # Apply defaults for any missing fields
         for key, default_value in defaults.items():
             if key not in result:
                 result[key] = default_value
@@ -226,7 +215,7 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
         }
 
 
-def generate_data_insights_complete(
+async def generate_data_insights_complete(
     request_id: str,
     original_query: str,
     dataset: List[Dict[str, Any]],
@@ -269,7 +258,7 @@ def generate_data_insights_complete(
         descriptor_agg_def['statistics'] = query_metadata['statistics']
     
     # 4. Generate data insights/description
-    data_description = generate_data_description(
+    data_description = await generate_data_description(
         request_id=request_id,
         original_query=original_query, 
         dataset=dataset,

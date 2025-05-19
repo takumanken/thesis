@@ -10,6 +10,7 @@ import json
 import logging
 import os
 from typing import Any, Dict, Optional, Tuple, Union
+import asyncio
 
 # Third-party library imports
 from fastapi import HTTPException
@@ -133,25 +134,8 @@ def _prepare_context_prompt(context: Optional[Dict[str, Any]]) -> str:
 
 
 # === QUERY TRANSLATION ===
-def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) -> Tuple[str, bool]:
-    """
-    Translate natural language query into a structured aggregation definition.
-    
-    This function processes the user's query and optional context information
-    to produce either a structured query definition or a direct response.
-    
-    Args:
-        raw_query: The user's natural language query
-        context: Optional context information (conversation history, current viz)
-        
-    Returns:
-        Tuple of (response_text, is_direct_response)
-        - If is_direct_response is True, response_text is a message to show directly
-        - Otherwise, response_text is JSON to pass to the query engine
-        
-    Raises:
-        HTTPException: If there's an error with the Gemini API or query processing
-    """
+async def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) -> Tuple[str, bool]:
+    """Translate natural language query into a structured aggregation definition."""
     _initialize()
     
     try:
@@ -164,24 +148,25 @@ def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) ->
         else:
             full_prompt = raw_query
         
-        # Log basic query info but not full content for privacy
+        # Log basic query info
         query_preview = raw_query[:50] + "..." if len(raw_query) > 50 else raw_query
         logger.info(f"Translating query: {query_preview}")
         
-        # Call the Gemini API with full prompt
-        response = _client.models.generate_content(
+        # Call the Gemini API with full prompt using asyncio for non-blocking behavior
+        response = await asyncio.to_thread(
+            _client.models.generate_content,
             model="gemini-2.0-flash",
             config=types.GenerateContentConfig(
                 system_instruction=_system_instruction,
                 temperature=0,
             ),
-            contents=[full_prompt],
+            contents=[full_prompt]
         )
         
         # Extract response text
         response_text = response.candidates[0].content.parts[0].text.strip()
         
-        # Check if this is a direct response (non-query response)
+        # Check if this is a direct response
         if response_text.strip().startswith("DIRECT_RESPONSE:"):
             direct_response = response_text[len("DIRECT_RESPONSE:"):].strip()
             logger.info("Query translator provided direct response")
