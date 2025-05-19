@@ -3,21 +3,28 @@ Query Engine Module
 
 Handles SQL query generation, execution, and result processing for NYC 311 data.
 """
-# === STANDARD LIBRARY IMPORTS ===
+
+# Standard library imports
 import json
 import logging
 import os
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-# === THIRD-PARTY IMPORTS ===
+# Third-party imports
 import duckdb
 import pandas as pd
 from google.genai import types
 
-# === LOCAL IMPORTS ===
+# Local imports
 from models import AggregationDefinition
-from utils import BASE_DIR, DATA_SCHEMA_FILE, TIME_DIMENSIONS, extract_json, classify_dimensions
+from utils import (
+    BASE_DIR,
+    DATA_SCHEMA_FILE,
+    TIME_DIMENSIONS,
+    extract_json,
+    classify_dimensions
+)
 
 # === CONSTANTS ===
 SYSTEM_INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/data_aggregation_instruction.md")
@@ -27,6 +34,7 @@ DUCKDB_FILE = os.path.join(BASE_DIR, "data/nyc_open_data_explorer.duckdb")
 # === GLOBAL CONFIGURATION ===
 logger = logging.getLogger(__name__)
 _system_instruction = None  # Cache for system instruction
+
 
 # === SYSTEM INSTRUCTION HANDLING ===
 def get_system_instruction() -> str:
@@ -80,14 +88,20 @@ def _get_dimension_types() -> Dict[str, str]:
     return dimension_types
 
 
-# === SQL GENERATION ===
+# === SQL GENERATION HELPERS ===
 def _build_select_clause(definition: AggregationDefinition) -> str:
     """Builds the SELECT clause for a SQL query"""
     dims = definition.dimensions
     dims_clause = "\n  , ".join(dims) if dims else ""
-    measures_clause = ", ".join([f"{m['expression']} AS {m['alias']}" for m in definition.measures])
+    measures_clause = ", ".join([
+        f"{m['expression']} AS {m['alias']}" 
+        for m in definition.measures
+    ])
     
-    return f"{dims_clause}\n  , {measures_clause}" if dims_clause and measures_clause else (dims_clause or measures_clause)
+    if dims_clause and measures_clause:
+        return f"{dims_clause}\n  , {measures_clause}"
+    else:
+        return dims_clause or measures_clause
 
 
 def _build_metadata_clauses(definition: AggregationDefinition) -> str:
@@ -117,15 +131,20 @@ def _build_metadata_clauses(definition: AggregationDefinition) -> str:
   , cast(sum(min(1)) over () > 5000 as string) as metadata_result_exceeds_limit"""
     
     # Add date range metadata
-    date_metadata = """\n  , min(min(created_date)) over () as metadata_min_created_date\n  , max(max(created_date)) over () as metadata_max_created_date"""
+    date_metadata = """
+  , min(min(created_date)) over () as metadata_min_created_date
+  , max(max(created_date)) over () as metadata_max_created_date"""
     
     # Add location reference if needed
     location_reference = ""
-    if dims and any("location" in dim or "incident_zip" in dim or "neighborhood_name" in dim for dim in dims):
-        location_reference = """\n  , min(borough) as reference_borough"""
+    location_dims = ["location", "incident_zip", "neighborhood_name"]
+    if dims and any(loc_dim in dim for dim in dims for loc_dim in location_dims):
+        location_reference = """
+  , min(borough) as reference_borough"""
         
         if dims and any("location" in dim for dim in dims):
-            location_reference += """,\n  string_agg(distinct nullif(neighborhood_name, 'Unspecified'), ', ') as reference_neighborhood"""
+            location_reference += """,
+  string_agg(distinct nullif(neighborhood_name, 'Unspecified'), ', ') as reference_neighborhood"""
     
     return stats_metadata + date_metadata + location_reference
 
@@ -159,6 +178,44 @@ def _build_order_clause(definition: AggregationDefinition) -> str:
     return ""  # Default is no explicit ordering
 
 
+def _extract_metadata_from_results(df: pd.DataFrame) -> Dict:
+    """Extracts metadata from query results"""
+    metadata = {}
+    metadata_cols = [col for col in df.columns if col.startswith('metadata_')]
+    
+    if not metadata_cols:
+        return metadata
+    
+    # Process date range metadata
+    if 'metadata_min_created_date' in df.columns and 'metadata_max_created_date' in df.columns:
+        metadata['createdDateRange'] = [
+            df['metadata_min_created_date'].iloc[0],
+            df['metadata_max_created_date'].iloc[0]
+        ]
+    
+    # Process statistical metadata
+    stats_metadata = {}
+    for col in metadata_cols:
+        if col.startswith('metadata_') and col not in ['metadata_min_created_date', 'metadata_max_created_date']:
+            # Extract the statistic name and measure name
+            parts = col.replace('metadata_', '').split('_', 1)
+            if len(parts) == 2:
+                stat_name, measure_name = parts
+                
+                if measure_name not in stats_metadata:
+                    stats_metadata[measure_name] = {}
+                
+                # Store the statistic value
+                stats_metadata[measure_name][stat_name] = df[col].iloc[0]
+    
+    # Add the statistics to the metadata
+    if stats_metadata:
+        metadata['statistics'] = stats_metadata
+        
+    return metadata
+
+
+# === SQL GENERATION ===
 def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     """
     Generates a SQL query from aggregation definition, keeping location placeholders intact.
@@ -176,13 +233,9 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     # Get dimension types for quality filters
     dimension_types = _get_dimension_types()
     
-    # Build SELECT clause
+    # Build SQL components
     select_clause = _build_select_clause(definition)
-    
-    # Add metadata clauses
     metadata_clauses = _build_metadata_clauses(definition)
-    
-    # Combine select and metadata
     full_select = f"{select_clause}{metadata_clauses}"
     
     # Create the SQL query
@@ -202,8 +255,7 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     # Add pre-aggregation filters if they exist
     where_clause_exists = False
     if definition.preAggregationFilters:
-        filters = definition.preAggregationFilters
-        sql += f"\nWHERE {filters}"
+        sql += f"\nWHERE {definition.preAggregationFilters}"
         where_clause_exists = True
     
     # Add quality filters
@@ -243,7 +295,11 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
 
 
 # === SQL EXECUTION ===
-def execute_sql_in_duckDB(sql: str, db_filename: str, user_location: Optional[Dict[str, float]] = None) -> Tuple[List, Dict]:
+def execute_sql_in_duckDB(
+    sql: str, 
+    db_filename: str, 
+    user_location: Optional[Dict[str, float]] = None
+) -> Tuple[List, Dict]:
     """
     Executes a SQL query in DuckDB, replacing location placeholders right before execution.
     
@@ -334,42 +390,6 @@ def execute_sql_in_duckDB(sql: str, db_filename: str, user_location: Optional[Di
     return results, metadata
 
 
-def _extract_metadata_from_results(df: pd.DataFrame) -> Dict:
-    """Extracts metadata from query results"""
-    metadata = {}
-    metadata_cols = [col for col in df.columns if col.startswith('metadata_')]
-    
-    if not metadata_cols:
-        return metadata
-    
-    # Process date range metadata
-    if 'metadata_min_created_date' in df.columns and 'metadata_max_created_date' in df.columns:
-        metadata['createdDateRange'] = [
-            df['metadata_min_created_date'].iloc[0],
-            df['metadata_max_created_date'].iloc[0]
-        ]
-    
-    # Process statistical metadata
-    stats_metadata = {}
-    for col in metadata_cols:
-        if col.startswith('metadata_') and col not in ['metadata_min_created_date', 'metadata_max_created_date']:
-            # Extract the statistic name and measure name
-            parts = col.replace('metadata_', '').split('_', 1)
-            if len(parts) == 2:
-                stat_name, measure_name = parts
-                
-                if measure_name not in stats_metadata:
-                    stats_metadata[measure_name] = {}
-                
-                # Store the statistic value
-                stats_metadata[measure_name][stat_name] = df[col].iloc[0]
-    
-    # Add the statistics to the metadata
-    if stats_metadata:
-        metadata['statistics'] = stats_metadata
-        
-    return metadata
-
 # === QUERY PROCESSING ===
 async def process_aggregation_query(
     translated_query: str,
@@ -395,7 +415,10 @@ async def process_aggregation_query(
     # Call Gemini API for data aggregation definition
     response = generate_content_safe(
         model="gemini-2.0-flash",
-        config=types.GenerateContentConfig(system_instruction=system_instruction, temperature=0),
+        config=types.GenerateContentConfig(
+            system_instruction=system_instruction, 
+            temperature=0
+        ),
         contents=[translated_query]
     )
     
@@ -406,7 +429,11 @@ async def process_aggregation_query(
     # If not valid JSON or contains text response, return as text
     if not is_valid_json or "textResponse" in parsed_json:
         text = parsed_json.get("textResponse", json_text)
-        return {"textResponse": text, "chartType": "text", "availableChartTypes": ["text"]}
+        return {
+            "textResponse": text, 
+            "chartType": "text", 
+            "availableChartTypes": ["text"]
+        }
     
     # Process data response - classify dimensions using utility function
     agg_def = AggregationDefinition(**parsed_json)
