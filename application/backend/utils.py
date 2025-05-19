@@ -2,11 +2,15 @@
 
 import json
 import logging
+import os
 from typing import Dict, List, Tuple, Any, Union
 
 import numpy as np
 import pandas as pd
 import polars as pl
+
+# Base directory - centralized for all modules
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Constants that might be used in multiple places
 TIME_DIMENSIONS = [

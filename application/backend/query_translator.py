@@ -13,11 +13,15 @@ from fastapi import HTTPException
 from google import genai
 from google.genai import types
 
+# === LOCAL IMPORTS ===
+import utils
+from utils import BASE_DIR
+
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Constants
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/query_translation_instruction.md")
 SCHEMA_FILE = os.path.join(BASE_DIR, "data/data_schema.json")
 

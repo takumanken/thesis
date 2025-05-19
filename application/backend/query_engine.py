@@ -19,9 +19,9 @@ from google.genai import types
 # === LOCAL IMPORTS ===
 import utils
 from models import AggregationDefinition
+from utils import BASE_DIR
 
 # === CONSTANTS ===
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SYSTEM_INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/data_aggregation_instruction.md")
 FILTER_VALUES_FILE = os.path.join(BASE_DIR, "gemini_instructions/references/all_filters.json")
 DATA_SCHEMA_FILE = os.path.join(BASE_DIR, "data/data_schema.json")
