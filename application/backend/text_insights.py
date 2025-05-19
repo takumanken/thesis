@@ -66,7 +66,7 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
         # Call Gemini API
         client = get_gemini_client()
         response = client.models.generate_content(
-            model="gemini-2.5-flash-preview-04-17",
+            model="gemini-2.0-flash",
             config=types.GenerateContentConfig(system_instruction=system_instruction, temperature=0),
             contents=[prompt],
         )
