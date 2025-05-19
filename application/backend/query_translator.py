@@ -155,7 +155,8 @@ def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) ->
         
         # Call the Gemini API with full prompt
         response = _client.models.generate_content(
-            model="gemini-2.5-flash-preview-04-17",
+            # model="gemini-2.5-flash-preview-04-17",
+            model="gemini-2.0-flash",
             config=types.GenerateContentConfig(
                 system_instruction=_system_instruction,
                 temperature=0,

@@ -23,7 +23,6 @@ from fastapi.responses import JSONResponse
 from google import genai
 from google.genai import types
 import numpy as np
-import pandas as pd
 import polars as pl
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -40,6 +39,14 @@ from visualization_recommender import get_chart_options
 # === CONSTANTS ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_SCHEMA_FILE = os.path.join(BASE_DIR, "data/data_schema.json")
+
+# === LOGGING SETUP ===
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 # === DATA MODELS ===
 @dataclass
@@ -63,26 +70,22 @@ class ResponsePayload:
     dataMetadataAll: Optional[Dict] = None
 
 
-# === HELPER FUNCTIONS ===
-def extract_query_info(request_id: str, request_data: PromptRequest) -> Dict[str, Any]:
-    """Extract query, context, and location information from request"""
-    user_location = None
-    raw_query = request_data.prompt
-    context = request_data.context.dict() if request_data.context else None
-    
-    # Add location info to query if available
-    if hasattr(request_data, 'location') and request_data.location:
-        user_location = request_data.location
-        logger.info(f"[{request_id}] Location data available but masked for privacy")
-        raw_query = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
-    
-    return {
-        "raw_query": raw_query,
-        "user_location": user_location,
-        "context": context
-    }
+# === ERROR HANDLING ===
+def gemini_safe(fn):
+    """Decorator for handling Gemini API errors consistently"""
+    @functools.wraps(fn)
+    def wrapper(request_id, *args, **kwargs):
+        try:
+            return fn(request_id, *args, **kwargs)
+        except genai.errors.ClientError as err:
+            logger.error(f"[{request_id}] API error: {err}")
+            status = getattr(err, "status_code", 500)
+            msg = "Rate limit exceeded" if status == 429 else "API error"
+            raise HTTPException(status_code=status, detail={"error": msg})
+    return wrapper
 
 
+# === API RESPONSE HELPERS ===
 def create_text_response(text: str) -> Dict[str, Any]:
     """Creates a standardized text-only response payload."""
     return {
@@ -115,19 +118,24 @@ def get_location_required_response() -> Dict[str, Any]:
     }
 
 
-# === ERROR HANDLING ===
-def gemini_safe(fn):
-    """Decorator for handling Gemini API errors consistently"""
-    @functools.wraps(fn)
-    def wrapper(request_id, *args, **kwargs):
-        try:
-            return fn(request_id, *args, **kwargs)
-        except genai.errors.ClientError as err:
-            logger.error(f"[{request_id}] API error: {err}")
-            status = getattr(err, "status_code", 500)
-            msg = "Rate limit exceeded" if status == 429 else "API error"
-            raise HTTPException(status_code=status, detail={"error": msg})
-    return wrapper
+# === REQUEST PROCESSING HELPERS ===
+def extract_query_info(request_id: str, request_data: PromptRequest) -> Dict[str, Any]:
+    """Extract query, context, and location information from request"""
+    user_location = None
+    raw_query = request_data.prompt
+    context = request_data.context.dict() if request_data.context else None
+    
+    # Add location info to query if available
+    if hasattr(request_data, 'location') and request_data.location:
+        user_location = request_data.location
+        logger.info(f"[{request_id}] Location data available but masked for privacy")
+        raw_query = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
+    
+    return {
+        "raw_query": raw_query,
+        "user_location": user_location,
+        "context": context
+    }
 
 
 def add_date_range_metadata(agg_def: AggregationDefinition, query_metadata: Dict[str, Any]) -> AggregationDefinition:
@@ -138,78 +146,50 @@ def add_date_range_metadata(agg_def: AggregationDefinition, query_metadata: Dict
     return agg_def
 
 
-# === DIMENSION ANALYSIS FUNCTIONS ===
-def _convert_to_dataframe(dataset: List[Dict]) -> Union[pl.DataFrame, pd.DataFrame]:
-    """Converts dataset to a DataFrame, using Polars if possible."""
-    try:
-        return pl.DataFrame(dataset)
-    except Exception as e:
-        logger.warning(f"Failed to use Polars: {str(e)}. Using pandas.")
-        return pd.DataFrame(dataset)
-
-
-def _calculate_single_dimension_stats(
-    df: Union[pl.DataFrame, pd.DataFrame], 
-    dim: str, 
-    dimensions: List[str]
-) -> Dict[str, float]:
-    """Calculates statistics for a single dimension."""
-    # Handle single dimension case
-    if isinstance(df, pl.DataFrame):
-        total_unique = df[dim].n_unique()
-    else:
-        total_unique = df[dim].nunique()
-        
-    if len(dimensions) == 1:
-        return {
-            "total_unique": total_unique,
-            "min_per_group": total_unique,
-            "max_per_group": total_unique,
-            "avg_per_group": float(total_unique),
-            "median_per_group": float(total_unique),
-            "std_per_group": 0.0
-        }
-        
-    # For multiple dimensions, calculate per-group stats
-    other_dims = [d for d in dimensions if d != dim]
-    
-    if isinstance(df, pl.DataFrame):
-        grouped = (df
-                 .group_by(other_dims)
-                 .agg(pl.col(dim).n_unique().alias("unique_count")))
-        
-        unique_counts = grouped["unique_count"].to_numpy()
-    else:
-        grouped = df.groupby(other_dims)[dim].nunique().reset_index()
-        unique_counts = grouped[dim].values
-    
-    # Calculate comprehensive statistics
-    return {
-        "total_unique": int(total_unique),
-        "min_per_group": int(np.min(unique_counts)),
-        "max_per_group": int(np.max(unique_counts)),
-        "avg_per_group": float(np.mean(unique_counts)),
-        "median_per_group": float(np.median(unique_counts)),
-        "std_per_group": float(np.std(unique_counts)),
-        "group_count": len(unique_counts)
-    }
-
-
+# === DIMENSION ANALYSIS ===
 def calculate_dimension_cardinality_stats(dataset: List[Dict], dimensions: List[str]) -> Dict[str, Dict[str, float]]:
-    """Calculates cardinality statistics for each dimension in the dataset."""
+    """Calculates cardinality statistics for dimensions in the dataset."""
     if not dataset or not dimensions:
         return {}
     
-    # Try using Polars first, fall back to pandas if needed
-    df = _convert_to_dataframe(dataset)
+    # Convert to polars DataFrame
+    df = pl.DataFrame(dataset)
     
     stats = {}
     for dim in dimensions:
         if dim not in df.columns:
             continue
+        
+        # Calculate total unique values
+        total_unique = int(df[dim].n_unique())
+        
+        # Create basic stats dictionary
+        stats[dim] = {"total_unique": total_unique}
+        
+        # Handle single vs multiple dimensions
+        if len(dimensions) == 1:
+            # For single dimension, all stats are based on the total value
+            unique_counts = [total_unique]
+            group_count = 1
+        else:
+            # For multiple dimensions, calculate per-group stats
+            other_dims = [d for d in dimensions if d != dim]
+            grouped = (df
+                    .group_by(other_dims)
+                    .agg(pl.col(dim).n_unique().alias("unique_count")))
             
-        # Calculate dimension stats
-        stats[dim] = _calculate_single_dimension_stats(df, dim, dimensions)
+            unique_counts = grouped["unique_count"].to_numpy()
+            group_count = len(unique_counts)
+        
+        # Add common statistics with appropriate values
+        stats[dim].update({
+            "min_per_group": int(np.min(unique_counts)),
+            "max_per_group": int(np.max(unique_counts)),
+            "avg_per_group": float(np.mean(unique_counts)),
+            "median_per_group": float(np.median(unique_counts)),
+            "std_per_group": float(np.std(unique_counts)) if len(unique_counts) > 1 else 0.0,
+            "group_count": group_count
+        })
     
     return stats
 
@@ -227,7 +207,7 @@ def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_
     )
     
     # Re-classify dimensions after sorting
-    time_dim, geo_dim, cat_dim = utils.classify_dimensions(sorted_dims)  # Use utils version
+    time_dim, geo_dim, cat_dim = utils.classify_dimensions(sorted_dims)
     
     return agg_def.copy(update={
         "dimensions": sorted_dims,
@@ -237,19 +217,18 @@ def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_
     })
 
 
-def recommend_visualization(agg_def, dimension_stats, dataset_size):
+def recommend_visualization(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]], 
+                           dataset_size: int) -> Tuple[List[str], str]:
     """Recommend the best visualization type for the data"""
     if dataset_size == 0:
-        available_charts, ideal_chart = ['text'], 'text'
-    else:
-        available_charts, ideal_chart = get_chart_options(agg_def, dimension_stats, dataset_size)
+        return ['text'], 'text'
     
-    return available_charts, ideal_chart
+    return get_chart_options(agg_def, dimension_stats, dataset_size)
 
 
-# === WRAPPED API FUNCTIONS ===
+# === API INTEGRATION ===
 @gemini_safe
-def translate_query_safe(request_id, raw_query, context):
+def translate_query_safe(request_id: str, raw_query: str, context: Optional[Dict]) -> Union[str, JSONResponse]:
     """Translate natural language query and handle direct responses"""
     translated_query, is_direct_response = translate_query(raw_query, context)
     
@@ -263,13 +242,13 @@ def translate_query_safe(request_id, raw_query, context):
 
 
 @gemini_safe
-def generate_content_safe(request_id, *args, **kwargs):
+def generate_content_safe(request_id: str, *args, **kwargs):
     """Safe wrapper for generate_content that handles API errors"""
     return client.models.generate_content(*args, **kwargs)
 
 
-# === QUERY PROCESSING FUNCTIONS ===
-async def execute_sql_query(request_id, translated_query, user_location):
+async def execute_sql_query(request_id: str, translated_query: str, 
+                           user_location: Optional[Dict]) -> Union[Dict, JSONResponse]:
     """Execute SQL query based on translated query"""
     safe_content_generator = lambda *args, **kwargs: generate_content_safe(request_id, *args, **kwargs)
     
@@ -315,15 +294,6 @@ def setup_environment() -> Dict[str, Any]:
 
 
 # === APPLICATION SETUP ===
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-logger = logging.getLogger(__name__)
-
-# App initialization
 load_dotenv()
 app = FastAPI()
 
@@ -346,7 +316,7 @@ client = resources["client"]
 logger.info("Environment setup completed")
 
 
-# === API ENDPOINTS ===
+# === MAIN API ENDPOINT ===
 @app.post("/process")
 @limiter.limit("10/minute")
 async def process_prompt(request_data: PromptRequest, request: Request) -> JSONResponse:
@@ -396,7 +366,7 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
             agg_def, dimension_stats, len(dataset)
         )
         
-        # Use the new consolidated function from text_insights
+        # Generate insights
         insights_result = text_insights.generate_data_insights_complete(
             request_id,
             request_data.prompt,
