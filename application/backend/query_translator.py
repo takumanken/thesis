@@ -4,35 +4,42 @@ Query Translator Module
 This module translates natural language queries about NYC 311 data
 into structured query definitions for the database engine.
 """
-import os
+
+# Standard library imports
 import json
 import logging
-from typing import Tuple, Dict, Any, Optional, Union
+import os
+from typing import Any, Dict, Optional, Tuple, Union
 
+# Third-party library imports
 from fastapi import HTTPException
 from google import genai
 from google.genai import types
 
-# === LOCAL IMPORTS ===
-from utils import BASE_DIR, get_gemini_client
+# Local imports
+from utils import BASE_DIR, DATA_SCHEMA_FILE, get_gemini_client
 
+# === CONSTANTS ===
+INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/query_translation_instruction.md")
 
-# Configure logging
+# === GLOBAL CONFIGURATION ===
 logger = logging.getLogger(__name__)
 
-# Constants
-INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/query_translation_instruction.md")
-SCHEMA_FILE = os.path.join(BASE_DIR, "data/data_schema.json")
-
-# Module variables
+# Module state
 _client = None
 _system_instruction = None
 _schema = None
 _initialized = False
 
 
+# === INITIALIZATION ===
 def _initialize():
-    """Initialize the query translator with API client and instructions"""
+    """
+    Initialize the query translator with API client and instructions.
+    
+    This function loads the system instruction, data schema, and API client.
+    It runs only once during the module lifetime and caches the results.
+    """
     global _client, _system_instruction, _schema, _initialized
     
     if _initialized:
@@ -46,7 +53,7 @@ def _initialize():
         _system_instruction = f.read()
     
     # Load schema
-    with open(SCHEMA_FILE, "r") as f:
+    with open(DATA_SCHEMA_FILE, "r") as f:
         _schema = json.load(f)
     
     # Generate simplified schema (no user descriptions)
@@ -71,12 +78,13 @@ def _initialize():
     logger.info("Query translator initialized")
 
 
+# === CONTEXT HANDLING ===
 def _prepare_context_prompt(context: Optional[Dict[str, Any]]) -> str:
     """
-    Prepare a context prompt string from context information.
+    Prepare a context prompt string from conversation history and visualization state.
     
     Args:
-        context: Dict containing conversation history and current visualization
+        context: Dictionary containing conversation history and current visualization
         
     Returns:
         Formatted context string for the prompt
@@ -124,9 +132,13 @@ def _prepare_context_prompt(context: Optional[Dict[str, Any]]) -> str:
     return "\n".join(prompt_parts)
 
 
+# === QUERY TRANSLATION ===
 def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) -> Tuple[str, bool]:
     """
     Translate natural language query into a structured aggregation definition.
+    
+    This function processes the user's query and optional context information
+    to produce either a structured query definition or a direct response.
     
     Args:
         raw_query: The user's natural language query
@@ -136,6 +148,9 @@ def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) ->
         Tuple of (response_text, is_direct_response)
         - If is_direct_response is True, response_text is a message to show directly
         - Otherwise, response_text is JSON to pass to the query engine
+        
+    Raises:
+        HTTPException: If there's an error with the Gemini API or query processing
     """
     _initialize()
     
@@ -155,7 +170,6 @@ def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) ->
         
         # Call the Gemini API with full prompt
         response = _client.models.generate_content(
-            # model="gemini-2.5-flash-preview-04-17",
             model="gemini-2.0-flash",
             config=types.GenerateContentConfig(
                 system_instruction=_system_instruction,
@@ -172,11 +186,6 @@ def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) ->
             direct_response = response_text[len("DIRECT_RESPONSE:"):].strip()
             logger.info("Query translator provided direct response")
             return direct_response, True
-        
-        # For safety message check - this additional check can help detect hidden error cases
-        if response_text.strip() == "I can only answer questions about NYC 311 data":
-            logger.info("Query translator returned safety message")
-            return response_text, True
             
         # Log success and return the structured query definition
         logger.debug(f"Query translation successful, response length: {len(response_text)}")
@@ -202,13 +211,3 @@ def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) ->
             status_code=500,
             detail={"error": "An error occurred processing your request."}
         )
-
-
-if __name__ == "__main__":
-    # Simple test to run the module directly
-    logging.basicConfig(level=logging.INFO)
-    try:
-        result, is_direct = translate_query("Show me noise complaints in Manhattan")
-        print(f"Is direct response: {is_direct}")
-    except Exception as e:
-        print(f"Error: {e}")
