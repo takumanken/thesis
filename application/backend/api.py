@@ -14,6 +14,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
+from collections import defaultdict
 
 # Third-party library imports
 from dotenv import load_dotenv
@@ -162,17 +163,31 @@ def add_date_range_metadata(agg_def: AggregationDefinition, query_metadata: Dict
 
 # === DIMENSION ANALYSIS ===
 def calculate_dimension_cardinality(dataset: List[Dict], dimensions: List[str]) -> Dict[str, int]:
-    """Calculates total unique values for each dimension."""
+    """
+    Calculates total unique values for each dimension using memory-efficient streaming.
+    
+    Args:
+        dataset: List of data dictionaries 
+        dimensions: List of dimension names to analyze
+        
+    Returns:
+        Dictionary mapping dimension names to their cardinality
+    """
     if not dataset or not dimensions:
         return {}
-        
-    df = pl.DataFrame(dataset)
     
-    return {
-        dim: int(df[dim].n_unique())
-        for dim in dimensions
-        if dim in df.columns
-    }
+    unique_values = defaultdict(set)
+    
+    for row in dataset:
+        for dim in dimensions:
+            if dim in row and row[dim] is not None:
+                try:
+                    unique_values[dim].add(row[dim])
+                except TypeError:
+                    pass
+    
+    # Count unique values for each dimension
+    return {dim: len(values) for dim, values in unique_values.items()}
 
 
 def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_stats: Dict[str, int]) -> AggregationDefinition:
