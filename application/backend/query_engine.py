@@ -14,12 +14,11 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import duckdb
 import numpy as np
 import pandas as pd
-import polars as pl
 from google.genai import types
 
 # === LOCAL IMPORTS ===
+import utils
 from models import AggregationDefinition
-from visualization_recommender import TIME_DIMENSIONS, GEO_DIMENSIONS, classify_dimensions
 
 # === CONSTANTS ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -69,33 +68,6 @@ def get_system_instruction() -> str:
     _system_instruction = _system_instruction.replace("{data_schema}", json.dumps(simplified_schema))
     
     return _system_instruction
-
-
-# === RESPONSE HANDLING ===
-def extract_json_from_text(json_text: str) -> Tuple[Dict, bool]:
-    """
-    Extracts and parses JSON from text content, handling code blocks.
-    
-    Args:
-        json_text: Text content that may contain JSON
-        
-    Returns:
-        Tuple of (parsed_json, is_valid_json)
-    """
-    is_json = json_text.strip().startswith("{") or "```json" in json_text
-    
-    if not is_json:
-        return {}, False
-    
-    # Clean up JSON formatting if it's in a code block
-    if "```json" in json_text:
-        json_text = json_text.split("```json")[1].split("```")[0].strip()
-    
-    try:
-        parsed_json = json.loads(json_text)
-        return parsed_json, True
-    except json.JSONDecodeError:
-        return {}, False
 
 
 # === DIMENSION HANDLING ===
@@ -179,7 +151,7 @@ def _build_order_clause(definition: AggregationDefinition) -> str:
             return "ORDER BY MIN(created_weekday_order) ASC"
         elif dims[0] == 'closed_weekday_datepart':
             return "ORDER BY MIN(closed_weekday_order) ASC"
-        elif dims[0] in TIME_DIMENSIONS:
+        elif dims[0] in utils.TIME_DIMENSIONS:
             return f"ORDER BY {dims[0]} ASC"
         elif definition.measures:
             return f"ORDER BY {definition.measures[0]['alias']} DESC"
@@ -404,23 +376,16 @@ def _extract_metadata_from_results(df: pd.DataFrame) -> Dict:
 
 
 # === DIMENSION ANALYSIS ===
-def _convert_to_dataframe(dataset: List[Dict]) -> Union[pl.DataFrame, pd.DataFrame]:
-    """Converts dataset to a DataFrame, using Polars if possible"""
-    try:
-        return pl.DataFrame(dataset)
-    except Exception as e:
-        logger.warning(f"Failed to use Polars: {str(e)}. Using pandas.")
-        return pd.DataFrame(dataset)
-
-
 def _calculate_single_dimension_stats(
-    df: Union[pl.DataFrame, pd.DataFrame], 
+    df: Union[pd.DataFrame, Any], 
     dim: str, 
     dimensions: List[str]
 ) -> Dict[str, float]:
     """Calculates statistics for a single dimension"""
     # Handle single dimension case
-    if isinstance(df, pl.DataFrame):
+    is_polars = hasattr(df, 'n_unique')
+    
+    if is_polars:
         total_unique = df[dim].n_unique()
     else:
         total_unique = df[dim].nunique()
@@ -438,10 +403,10 @@ def _calculate_single_dimension_stats(
     # For multiple dimensions, calculate per-group stats
     other_dims = [d for d in dimensions if d != dim]
     
-    if isinstance(df, pl.DataFrame):
+    if is_polars:
         grouped = (df
                  .group_by(other_dims)
-                 .agg(pl.col(dim).n_unique().alias("unique_count")))
+                 .agg(df[dim].n_unique().alias("unique_count")))
         
         unique_counts = grouped["unique_count"].to_numpy()
     else:
@@ -474,8 +439,8 @@ def calculate_dimension_cardinality_stats(dataset: List[Dict], dimensions: List[
     if not dataset or not dimensions:
         return {}
     
-    # Try using Polars first, fall back to pandas if needed
-    df = _convert_to_dataframe(dataset)
+    # Use utility function to convert to dataframe
+    df = utils.convert_to_dataframe(dataset)
     
     stats = {}
     for dim in dimensions:
@@ -509,8 +474,8 @@ def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_
         reverse=True
     )
     
-    # Re-classify dimensions after sorting
-    time_dim, geo_dim, cat_dim = classify_dimensions(sorted_dims)
+    # Re-classify dimensions after sorting using utility function
+    time_dim, geo_dim, cat_dim = utils.classify_dimensions(sorted_dims)
     
     return agg_def.copy(update={
         "dimensions": sorted_dims,
@@ -549,18 +514,18 @@ async def process_aggregation_query(
         contents=[translated_query]
     )
     
-    # Parse the AI response
+    # Parse the AI response using utility function
     json_text = response.candidates[0].content.parts[0].text
-    parsed_json, is_valid_json = extract_json_from_text(json_text)
+    parsed_json, is_valid_json = utils.extract_json_from_text(json_text)
     
     # If not valid JSON or contains text response, return as text
     if not is_valid_json or "textResponse" in parsed_json:
         text = parsed_json.get("textResponse", json_text)
         return {"textResponse": text, "chartType": "text", "availableChartTypes": ["text"]}
     
-    # Process data response - classify dimensions
+    # Process data response - classify dimensions using utility function
     agg_def = AggregationDefinition(**parsed_json)
-    time_dim, geo_dim, cat_dim = classify_dimensions(agg_def.dimensions)
+    time_dim, geo_dim, cat_dim = utils.classify_dimensions(agg_def.dimensions)
     agg_def = agg_def.copy(update={
         "timeDimension": time_dim,
         "geoDimension": geo_dim,

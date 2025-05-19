@@ -22,20 +22,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from google import genai
 from google.genai import types
+import numpy as np
+import pandas as pd
+import polars as pl
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-import polars as pl
-import pandas as pd
-import numpy as np
 
 # Local imports
 import query_engine
 import text_insights
+import utils
 from models import AggregationDefinition, PromptRequest
-from query_engine import extract_json_from_text
 from query_translator import translate_query
-from visualization_recommender import classify_dimensions, get_chart_options
+from visualization_recommender import get_chart_options
 
 # === CONSTANTS ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -143,6 +143,14 @@ def gemini_safe(fn):
     return wrapper
 
 
+def add_date_range_metadata(agg_def: AggregationDefinition, query_metadata: Dict[str, Any]) -> AggregationDefinition:
+    """Add date range from query metadata to aggregation definition"""
+    if 'createdDateRange' in query_metadata:
+        agg_def = agg_def.copy(update={"createdDateRange": query_metadata['createdDateRange']})
+    
+    return agg_def
+
+
 # === DIMENSION ANALYSIS FUNCTIONS ===
 def _convert_to_dataframe(dataset: List[Dict]) -> Union[pl.DataFrame, pd.DataFrame]:
     """Converts dataset to a DataFrame, using Polars if possible."""
@@ -232,7 +240,7 @@ def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_
     )
     
     # Re-classify dimensions after sorting
-    time_dim, geo_dim, cat_dim = classify_dimensions(sorted_dims)
+    time_dim, geo_dim, cat_dim = utils.classify_dimensions(sorted_dims)  # Use utils version
     
     return agg_def.copy(update={
         "dimensions": sorted_dims,
@@ -240,31 +248,6 @@ def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_
         "geoDimension": geo_dim,
         "categoricalDimension": cat_dim
     })
-
-
-def add_date_range_metadata(agg_def: AggregationDefinition, query_metadata: Dict[str, Any]) -> AggregationDefinition:
-    """Add date range from query metadata to aggregation definition"""
-    if 'createdDateRange' in query_metadata:
-        agg_def = agg_def.copy(update={"createdDateRange": query_metadata['createdDateRange']})
-    
-    return agg_def
-
-
-def calculate_dimension_stats(dataset: List[Dict], dimensions: List[str]) -> Dict[str, Dict[str, float]]:
-    """Calculate cardinality statistics for dimensions"""
-    if not dataset or not dimensions:
-        return {}
-    
-    return calculate_dimension_cardinality_stats(dataset, dimensions)
-
-
-def optimize_dimension_order(agg_def: AggregationDefinition, 
-                           dimension_stats: Dict[str, Dict[str, float]]) -> AggregationDefinition:
-    """Reorder dimensions based on cardinality"""
-    if not agg_def.dimensions or len(agg_def.dimensions) <= 1 or not dimension_stats:
-        return agg_def
-    
-    return reorder_dimensions_by_cardinality(agg_def, dimension_stats)
 
 
 def recommend_visualization(agg_def, dimension_stats, dataset_size):
@@ -413,14 +396,13 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         dataset = query_result["dataset"]
         agg_def = query_result["aggregationDefinition"]
         query_metadata = query_result["queryMetadata"]
-        print(f"Query Metadata: {query_metadata}")
 
         # Calculate dimension statistics
-        dimension_stats = calculate_dimension_stats(dataset, agg_def.dimensions)
+        dimension_stats = calculate_dimension_cardinality_stats(dataset, agg_def.dimensions)
 
         # Update aggregation definition
         agg_def = add_date_range_metadata(agg_def, query_metadata)
-        agg_def = optimize_dimension_order(agg_def, dimension_stats)
+        agg_def = reorder_dimensions_by_cardinality(agg_def, dimension_stats)        
         
         # Recommend visualization
         available_charts, ideal_chart = recommend_visualization(
@@ -482,5 +464,9 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         logger.exception(f"[{request_id}] Error processing prompt")
         return JSONResponse(
             status_code=500, 
-            content={"error": "An error occurred while processing your request"}
+            content={
+                "error": "An error occurred while processing your request",
+                "errorType": "server_error",
+                "success": False
+            }
         )

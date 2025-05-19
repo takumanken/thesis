@@ -2,28 +2,12 @@ import logging
 from typing import Dict, List, Tuple
 
 from models import AggregationDefinition
+from utils import classify_dimensions, TIME_DIMENSIONS, GEO_DIMENSIONS
 
 logger = logging.getLogger(__name__)
 
 # Constants
-TIME_DIMENSIONS = [
-    "created_week", "closed_week", "created_date", "closed_date",
-    "created_month", "closed_month", "created_year", "closed_year",
-    "created_year_datepart", "created_month_datepart", "created_day_datepart",
-    "created_hour_datepart", "closed_year_datepart", "closed_month_datepart", 
-    "closed_day_datepart", "closed_hour_datepart"
-]
-GEO_DIMENSIONS = ["borough", "county", "location", "incident_zip", "neighborhood_name"]
 ADDITIVE_MEASURES = ["num_of_requests", "population"]
-
-def classify_dimensions(dimensions: list[str]) -> tuple[list[str], list[str], list[str]]:
-    """
-    Categorizes dimensions into time, geographic, and categorical types.
-    """
-    time_dim = [dim for dim in dimensions if dim in TIME_DIMENSIONS]
-    geo_dim = [dim for dim in dimensions if dim in GEO_DIMENSIONS]
-    cat_dim = [dim for dim in dimensions if dim not in time_dim]
-    return time_dim, geo_dim, cat_dim
 
 def is_measure_additive(measure_alias: str) -> bool:
     """
