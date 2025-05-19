@@ -155,6 +155,8 @@ def _build_order_clause(definition: AggregationDefinition) -> str:
         # Handle time dimensions
         elif dims[0] in TIME_DIMENSIONS:
             return f"ORDER BY {dims[0]} ASC"
+        elif definition.measures:
+            return f"ORDER BY {definition.measures[0]['alias']} DESC"
     elif definition.timeDimension:
         return f"ORDER BY {definition.timeDimension[0]} ASC"
     elif definition.measures:
