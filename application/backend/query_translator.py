@@ -9,11 +9,9 @@ into structured query definitions for the database engine.
 import json
 import logging
 import os
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple
 
 # Third-party library imports
-from fastapi import HTTPException
-from google import genai
 from google.genai import types
 
 # Local imports
@@ -35,17 +33,19 @@ _schema = None
 
 
 # === HELPER FUNCTIONS ===
-
-# --- Initialization Helpers ---
-def _initialize():
+def _initialize() -> None:
     """
     Initialize the query translator with API client and instructions.
     
-    This function loads the system instruction, data schema, and API client.
+    This function loads the system instruction, data schema, and filter values.
     It runs only once during the module lifetime and caches the results.
     """
     global _client, _system_instruction, _schema
        
+    # Only initialize once
+    if _system_instruction is not None:
+        return
+        
     # Load API client
     _client = get_gemini_client()
     
@@ -77,19 +77,29 @@ def _initialize():
 async def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) -> Tuple[str, bool]:
     """
     Translate natural language query into a structured aggregation definition.
+    
+    Args:
+        raw_query: The natural language query from the user
+        context: Optional conversation context including history
+        
+    Returns:
+        Tuple containing:
+        - The structured query definition or direct response text
+        - Boolean flag indicating if this is a direct response (True) or query definition (False)
     """
+    # Ensure system is initialized
     _initialize()
     
-    # Prepare context prompt if available
+    # Prepare full prompt with context if available
+    full_prompt = raw_query
     if context and context.get("conversationHistory"):
         context_prompt = json.dumps(context, indent=2)
         full_prompt = f"USER_QUERY:\n{raw_query}\n\n\n\nCONTEXT:\n{context_prompt}"
-    else:
-        full_prompt = raw_query
             
     # Log query info
     logger.info(f"Translating query: {full_prompt}")
     
+    # Call Gemini API
     response = await call_gemini_async(
         "gemini-2.0-flash",
         full_prompt,
@@ -102,8 +112,8 @@ async def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = No
     # Extract response text
     response_text = response.candidates[0].content.parts[0].text.strip()
     
-    # Check if this is a direct response
-    if response_text.strip().startswith("DIRECT_RESPONSE:"):
+    # Handle direct responses that don't need query translation
+    if response_text.startswith("DIRECT_RESPONSE:"):
         direct_response = response_text[len("DIRECT_RESPONSE:"):].strip()
         logger.info("Query translator provided direct response")
         return direct_response, True
