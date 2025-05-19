@@ -147,10 +147,6 @@ def add_date_range_metadata(agg_def: AggregationDefinition, query_metadata: Dict
 # === DIMENSION ANALYSIS ===
 def calculate_dimension_cardinality(dataset: List[Dict], dimensions: List[str]) -> Dict[str, int]:
     """Calculates total unique values for each dimension."""
-    if not dataset or not dimensions:
-        return {}
-    
-    # Create DataFrame and calculate unique values directly
     df = pl.DataFrame(dataset)
     
     return {
@@ -172,15 +168,7 @@ def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_
         reverse=True
     )
     
-    # Re-classify dimensions after sorting
-    time_dim, geo_dim, cat_dim = utils.classify_dimensions(sorted_dims)
-    
-    return agg_def.copy(update={
-        "dimensions": sorted_dims,
-        "timeDimension": time_dim,
-        "geoDimension": geo_dim,
-        "categoricalDimension": cat_dim
-    })
+    return agg_def.copy(update={"dimensions": sorted_dims})
 
 
 def recommend_visualization(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]], 
