@@ -32,7 +32,7 @@ import text_insights
 import utils
 from models import AggregationDefinition, PromptRequest
 from query_translator import translate_query
-from visualization_recommender import get_chart_options
+from visualization_recommender import get_viz_recommendations
 
 # === CONSTANTS ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -177,7 +177,7 @@ def recommend_visualization(agg_def: AggregationDefinition, dimension_stats: Dic
     if dataset_size == 0:
         return ['text'], 'text'
     
-    return get_chart_options(agg_def, dimension_stats, dataset_size)
+    return get_viz_recommendations(agg_def, dimension_stats, dataset_size)
 
 
 # === API INTEGRATION ===

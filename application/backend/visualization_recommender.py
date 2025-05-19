@@ -42,7 +42,7 @@ def is_topn_query(agg_def: AggregationDefinition) -> bool:
     """
     return hasattr(agg_def, 'topN') and agg_def.topN is not None
 
-def get_chart_options(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]] = None, dataset_length: int = None) -> tuple[list[str], str]:
+def get_viz_recommendations(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]] = None, dataset_length: int = None) -> tuple[list[str], str]:
     """
     Determines available and ideal chart types based on the aggregation definition.
     
