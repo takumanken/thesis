@@ -42,6 +42,9 @@
     },
   };
 
+  // Store original element styles to restore later
+  const originalStyles = new Map();
+
   /**
    * Check if device screen size is unsuitable for our app
    * @returns {boolean} true if device should be blocked
@@ -62,14 +65,14 @@
 
     // Add content
     mobileBlocker.innerHTML = `
-        <div class="mobile-blocker-content">
-          <div class="mobile-message">
-            <h3>Larger Screen Required</h3>
-            <p>We're sorry, but ASK NYC is not available in your current environment.</p>
-            <p>Please try using a device with a larger screen, such as a desktop or laptop.</p>
+          <div class="mobile-blocker-content">
+            <div class="mobile-message">
+              <h3>Larger Screen Required</h3>
+              <p>We're sorry, but ASK NYC is not available in your current environment.</p>
+              <p>Please try using a device with a larger screen, such as a desktop or laptop.</p>
+            </div>
           </div>
-        </div>
-      `;
+        `;
     document.body.appendChild(mobileBlocker);
 
     // Apply styles to elements
@@ -85,6 +88,29 @@
   }
 
   /**
+   * Save original element styles before changing them
+   * @param {Element} element - DOM element to save style for
+   */
+  function saveOriginalStyle(element) {
+    if (!originalStyles.has(element)) {
+      originalStyles.set(element, element.style.display);
+    }
+  }
+
+  /**
+   * Restore original element styles
+   * @param {Element} element - DOM element to restore style for
+   */
+  function restoreOriginalStyle(element) {
+    if (originalStyles.has(element)) {
+      element.style.display = originalStyles.get(element);
+    } else {
+      // If we don't have a saved style, just remove the inline style
+      element.style.display = "";
+    }
+  }
+
+  /**
    * Update DOM based on device compatibility
    */
   function handleDeviceCompatibility() {
@@ -94,6 +120,9 @@
 
     // Handle blocker visibility
     if (shouldBlock) {
+      // Save original styles before changing them
+      contentElements.forEach(saveOriginalStyle);
+
       if (!mobileBlocker) {
         createBlocker();
       } else {
@@ -110,17 +139,16 @@
         mobileBlocker.style.display = "none";
       }
 
-      contentElements.forEach((el) => {
-        if (el.classList.contains("landing-container")) {
-          el.style.display = "flex";
-        } else {
-          el.style.display = "block";
-        }
-      });
+      // Restore original styles instead of setting arbitrary styles
+      contentElements.forEach(restoreOriginalStyle);
     }
   }
 
-  // Initialize and set up resize listener
-  handleDeviceCompatibility();
+  // Only run if we need to block or on resize
+  if (shouldBlockDevice()) {
+    handleDeviceCompatibility();
+  }
+
+  // Add resize listener
   window.addEventListener("resize", handleDeviceCompatibility);
 })();
