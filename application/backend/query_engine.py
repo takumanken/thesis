@@ -19,12 +19,13 @@ from google.genai import types
 # Local imports
 from models import AggregationDefinition
 from utils import (
-    BASE_DIR, DATA_SCHEMA_FILE, TIME_DIMENSIONS, extract_json, classify_dimensions,
+    BASE_DIR, DATA_SCHEMA_FILE, FILTER_VALUES_FILE, 
+    TIME_DIMENSIONS, extract_json, classify_dimensions,
+    call_gemini_async, gemini_safe
 )
 
 # === CONSTANTS ===
 SYSTEM_INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/data_aggregation_instruction.md")
-FILTER_VALUES_FILE = os.path.join(BASE_DIR, "gemini_instructions/references/all_filters.json")
 DUCKDB_FILE = os.path.join(BASE_DIR, "data/nyc_open_data_explorer.duckdb")
 _system_instruction = None
 
@@ -386,6 +387,7 @@ def execute_sql_in_duckDB(
 
 
 # === QUERY PROCESSING ===
+@gemini_safe
 async def process_aggregation_query(
     translated_query: str,
     user_location: Optional[Dict[str, Any]],
@@ -395,8 +397,8 @@ async def process_aggregation_query(
     # Get system instruction
     system_instruction = get_system_instruction()
     
-    # Call Gemini API for data aggregation definition - now with await
-    response = await generate_content_safe(
+    # Use call_gemini_async directly instead of passing in generate_content_safe
+    response = await call_gemini_async(
         "gemini-2.0-flash",
         translated_query,
         config=types.GenerateContentConfig(

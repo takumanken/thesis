@@ -33,7 +33,7 @@ from query_translator import translate_query
 from visualization_recommender import get_viz_recommendations
 from utils import (
     DATA_SCHEMA_FILE, get_gemini_client,
-    get_logger, configure_logging, call_gemini_async
+    get_logger, configure_logging, call_gemini_async, gemini_safe
 )
 
 # === CONSTANTS ===
@@ -68,33 +68,6 @@ class ResponsePayload:
 
 
 # === HELPER FUNCTIONS ===
-
-# --- Error Handling Helpers ---
-def gemini_safe(fn):
-    """Decorator for handling all Gemini API errors consistently"""
-    @functools.wraps(fn)
-    def wrapper(*args, **kwargs):
-        try:
-            return fn(*args, **kwargs)
-
-        except genai_errors.APIError as err:
-            logger.error(f"Gemini API error: {err}")
-
-            status_code = getattr(err, "code", 500)
-            if status_code == 429:
-                message = "Rate limit exceeded - please try again later"
-            elif 500 <= status_code < 600:
-                message = "AI service temporarily unavailable - please retry"
-            else:
-                message = err.message or "API error"
-
-            raise HTTPException(
-                status_code=status_code,
-                detail={"error": message, "error_type": err.__class__.__name__}
-            )
-
-    return wrapper
-
 
 # --- Response Formatting Helpers ---
 def create_text_response(text: str) -> Dict[str, Any]:

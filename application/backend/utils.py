@@ -4,10 +4,12 @@ import json
 import logging
 import os
 import asyncio
+import functools
 from typing import Dict, List, Tuple, Any, Union
 
 import pandas as pd
 import polars as pl
+from fastapi import HTTPException
 from google import genai
 
 # Base directory
@@ -15,6 +17,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Common file paths used across modules
 DATA_SCHEMA_FILE = os.path.join(BASE_DIR, "data/data_schema.json")
+FILTER_VALUES_FILE = os.path.join(BASE_DIR, "gemini_instructions/references/all_filters.json")
 
 # Constants that might be used in multiple places
 TIME_DIMENSIONS = [
@@ -133,6 +136,42 @@ async def call_gemini_async(model_name: str, prompt: Union[str, List], **kwargs)
         contents=[prompt] if isinstance(prompt, str) else prompt,
         **kwargs
     )
+
+
+# === ERROR HANDLING ===
+def gemini_safe(fn):
+    """Decorator for handling all Gemini API errors consistently"""
+    @functools.wraps(fn)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await fn(*args, **kwargs)
+
+        except genai.errors.ApiError as err:
+            logger = logging.getLogger('utils')
+            logger.error(f"Gemini API error: {err}")
+
+            status_code = getattr(err, "code", 500)
+            if status_code == 429:
+                message = "Rate limit exceeded - please try again later"
+            elif 500 <= status_code < 600:
+                message = "AI service temporarily unavailable - please retry"
+            else:
+                message = getattr(err, "message", "API error")
+
+            raise HTTPException(
+                status_code=status_code,
+                detail={"error": message, "error_type": err.__class__.__name__}
+            )
+        
+        except Exception as e:
+            logger = logging.getLogger('utils')
+            logger.exception(f"Unexpected error in Gemini API call: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "An unexpected error occurred", "error_type": "ServerError"}
+            )
+
+    return wrapper
 
 
 # === LOGGING UTILITIES ===

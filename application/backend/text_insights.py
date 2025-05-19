@@ -17,7 +17,10 @@ from google.genai import types
 
 # Local imports
 from models import AggregationDefinition
-from utils import BASE_DIR, extract_json, get_gemini_client, CustomJSONEncoder, call_gemini_async
+from utils import (
+    BASE_DIR, extract_json, CustomJSONEncoder, 
+    call_gemini_async, gemini_safe  # Add gemini_safe import
+)
 
 # === CONSTANTS ===
 INSIGHTS_INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/data_description_instruction.md")
@@ -146,6 +149,7 @@ def remove_date_filters(filter_descriptions: List[Any]) -> List[Any]:
 
 
 # === INSIGHT GENERATION ===
+@gemini_safe
 async def generate_data_description(
     original_query: str,
     dataset: List[Dict[str, Any]],
