@@ -186,7 +186,7 @@ def recommend_visualization(agg_def: AggregationDefinition, dimension_stats: Dic
 
 # === API INTEGRATION ===
 @gemini_safe
-async def translate_query_safe(request_id: str, raw_query: str, context: Optional[Dict]) -> Union[str, JSONResponse]:
+async def translate_query_safe(request_id: str, raw_query: str, context: Optional[Dict], request_client) -> Union[str, JSONResponse]:
     """Translate natural language query and handle direct responses"""
     translated_query, is_direct_response = await asyncio.to_thread(
         translate_query, raw_query, context
@@ -202,15 +202,15 @@ async def translate_query_safe(request_id: str, raw_query: str, context: Optiona
 
 
 @gemini_safe
-async def generate_content_safe(request_id: str, *args, **kwargs):
+async def generate_content_safe(request_id: str, request_client, *args, **kwargs):
     """Safe wrapper for generate_content that handles API errors asynchronously"""
-    return await asyncio.to_thread(client.models.generate_content, *args, **kwargs)
+    return await asyncio.to_thread(request_client.models.generate_content, *args, **kwargs)
 
 
 async def execute_sql_query(request_id: str, translated_query: str, 
-                           user_location: Optional[Dict]) -> Union[Dict, JSONResponse]:
+                           user_location: Optional[Dict], request_client) -> Union[Dict, JSONResponse]:
     """Execute SQL query based on translated query"""
-    safe_content_generator = lambda *args, **kwargs: generate_content_safe(request_id, *args, **kwargs)
+    safe_content_generator = lambda *args, **kwargs: generate_content_safe(request_id, request_client, *args, **kwargs)
     
     # Call the query engine to process the query
     result = await query_engine.process_aggregation_query(
@@ -287,6 +287,9 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
     response_payload = asdict(ResponsePayload())
     
     try:
+        # Create a new client for this request
+        request_client = get_gemini_client()
+        
         # ---- STEP 1: EXTRACT QUERY INFO ----
         query_info = extract_query_info(request_id, request_data)
         raw_query = query_info["raw_query"]
@@ -294,13 +297,13 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         context = query_info["context"]
         
         # ---- STEP 2: TRANSLATE QUERY ----
-        translated_query = await translate_query_safe(request_id, raw_query, context)
+        translated_query = await translate_query_safe(request_id, raw_query, context, request_client)
         if isinstance(translated_query, JSONResponse):
             return translated_query
         
         # ---- STEP 3: EXECUTE SQL QUERY ----
         query_result = await execute_sql_query(
-            request_id, translated_query, user_location
+            request_id, translated_query, user_location, request_client
         )
         if isinstance(query_result, JSONResponse):
             return query_result
