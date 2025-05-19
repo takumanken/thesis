@@ -44,6 +44,7 @@ API_RATE_LIMIT = "10/minute"
 # Configure logging
 logger = get_logger('api')
 
+
 # === DATA MODELS ===
 @dataclass
 class ResponsePayload:
@@ -66,7 +67,9 @@ class ResponsePayload:
     dataMetadataAll: Optional[Dict] = None
 
 
-# === ERROR HANDLING ===
+# === HELPER FUNCTIONS ===
+
+# --- Error Handling Helpers ---
 def gemini_safe(fn):
     """Decorator for handling all Gemini API errors consistently"""
     @functools.wraps(fn)
@@ -93,7 +96,7 @@ def gemini_safe(fn):
     return wrapper
 
 
-# === API RESPONSE HELPERS ===
+# --- Response Formatting Helpers ---
 def create_text_response(text: str) -> Dict[str, Any]:
     """Creates a standardized text-only response payload."""
     return {
@@ -126,7 +129,7 @@ def get_location_required_response() -> Dict[str, Any]:
     }
 
 
-# === REQUEST PROCESSING HELPERS ===
+# --- Request Processing Helpers ---
 def extract_query_info(request_data: PromptRequest) -> Dict[str, Any]:
     """Extract query, context, and location information from request"""
     user_location = None
@@ -154,7 +157,7 @@ def add_date_range_metadata(agg_def: AggregationDefinition, query_metadata: Dict
     return agg_def
 
 
-# === DIMENSION ANALYSIS ===
+# --- Visualization Classification Helpers ---
 def calculate_dimension_cardinality(dataset: List[Dict], dimensions: List[str]) -> Dict[str, int]:
     """
     Calculates total unique values for each dimension using memory-efficient streaming.
@@ -207,11 +210,10 @@ def recommend_visualization(agg_def: AggregationDefinition, dimension_stats: Dic
     return get_viz_recommendations(agg_def, dimension_stats, dataset_size)
 
 
-# === API INTEGRATION ===
+# --- API Integration Functions ---
 @gemini_safe
 async def translate_query_safe(raw_query: str, context: Optional[Dict]) -> Union[str, JSONResponse]:
     """Translate natural language query and handle direct responses"""
-    # Now with await
     translated_query, is_direct_response = await translate_query(raw_query, context)
     
     if is_direct_response:
@@ -232,7 +234,7 @@ async def generate_content_safe(model_name: str, prompt: str, **kwargs):
 async def execute_sql_query(translated_query: str, 
                     user_location: Optional[Dict]) -> Union[Dict, JSONResponse]:
     """Execute SQL query based on translated query"""
-    # Call the query engine to process the query - now with await
+    # Call the query engine to process the query
     result = await query_engine.process_aggregation_query(
         translated_query=translated_query,
         user_location=user_location,
@@ -254,7 +256,7 @@ async def execute_sql_query(translated_query: str,
     return result
 
 
-# === ENVIRONMENT SETUP ===
+# --- Environment Setup ---
 def setup_environment() -> Dict[str, Any]:
     """Load all resources and initialize services"""
     # Load data schema
