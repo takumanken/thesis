@@ -64,19 +64,6 @@ class ResponsePayload:
 
 
 # === HELPER FUNCTIONS ===
-def get_simplified_schema(data_schema: Dict[str, Any]) -> Dict[str, Any]:
-    """Remove description_to_user fields from schema for AI prompt"""
-    strip = lambda obj: {k: v for k, v in obj.items() if k != "description_to_user"}
-
-    return {
-        "dimensions": {
-            dim_type: [strip(dim) for dim in dims]
-            for dim_type, dims in data_schema["dimensions"].items()
-        },
-        "measures": [strip(m) for m in data_schema["measures"]],
-    }
-
-
 def extract_query_info(request_id: str, request_data: PromptRequest) -> Dict[str, Any]:
     """Extract query, context, and location information from request"""
     user_location = None
