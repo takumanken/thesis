@@ -52,20 +52,9 @@ def get_system_instruction() -> str:
     with open(DATA_SCHEMA_FILE, "r") as f:
         data_schema = json.load(f)
     
-    # Generate simplified schema
-    simplified_schema = {
-        "dimensions": {
-            dim_type: [{k: v for k, v in dim.items() if k != "description_to_user"} 
-                      for dim in dims]
-            for dim_type, dims in data_schema["dimensions"].items()
-        },
-        "measures": [{k: v for k, v in m.items() if k != "description_to_user"} 
-                    for m in data_schema["measures"]]
-    }
-                
     # Replace the placeholders in system instruction
     _system_instruction = _system_instruction.replace("{all_filters}", json.dumps(all_filters))
-    _system_instruction = _system_instruction.replace("{data_schema}", json.dumps(simplified_schema))
+    _system_instruction = _system_instruction.replace("{data_schema}", json.dumps(data_schema))
     
     return _system_instruction
 

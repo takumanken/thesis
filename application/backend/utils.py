@@ -19,15 +19,30 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_SCHEMA_FILE = os.path.join(BASE_DIR, "data/data_schema.json")
 FILTER_VALUES_FILE = os.path.join(BASE_DIR, "gemini_instructions/references/all_filters.json")
 
-# Constants that might be used in multiple places
-TIME_DIMENSIONS = [
-    "created_week", "closed_week", "created_date", "closed_date",
-    "created_month", "closed_month", "created_year", "closed_year",
-    "created_year_datepart", "created_month_datepart", "created_day_datepart",
-    "created_hour_datepart", "closed_year_datepart", "closed_month_datepart", 
-    "closed_day_datepart", "closed_hour_datepart"
-]
-GEO_DIMENSIONS = ["borough", "county", "location", "incident_zip", "neighborhood_name"]
+# Load dimension lists from schema file
+def _load_dimensions_from_schema() -> Tuple[List[str], List[str]]:
+    """
+    Load time and geo dimensions from the data schema file.
+    
+    Returns:
+        Tuple containing (time_dimensions, geo_dimensions)
+    """
+    try:
+        with open(DATA_SCHEMA_FILE, "r") as f:
+            schema = json.load(f)
+            
+        time_dimensions = [dim["physical_name"] for dim in schema["dimensions"]["time_dimension"]]
+        geo_dimensions = [dim["physical_name"] for dim in schema["dimensions"]["geo_dimension"]]
+        
+        return time_dimensions, geo_dimensions
+    except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error loading dimensions from schema: {e}")
+        # Fallback to empty lists if schema can't be loaded
+        return [], []
+
+# Constants loaded from schema
+TIME_DIMENSIONS, GEO_DIMENSIONS = _load_dimensions_from_schema()
 
 
 # === DIMENSION CLASSIFICATION ===
@@ -43,6 +58,8 @@ def classify_dimensions(dimensions: List[str]) -> Tuple[List[str], List[str], Li
     """
     time_dims = [d for d in dimensions if d in TIME_DIMENSIONS]
     geo_dims = [d for d in dimensions if d in GEO_DIMENSIONS]
+    # A dimension is categorical if it's not a time dimension
+    # (geo dimensions can be both geo and categorical)
     cat_dims = [d for d in dimensions if d not in TIME_DIMENSIONS]
     
     return time_dims, geo_dims, cat_dims
