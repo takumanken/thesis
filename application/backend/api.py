@@ -185,7 +185,7 @@ def recommend_visualization(agg_def: AggregationDefinition, dimension_stats: Dic
 
 # --- API Integration Functions ---
 @gemini_safe
-async def translate_query_safe(raw_query: str, context: Optional[Dict]) -> Union[str, JSONResponse]:
+async def handle_query_translation(raw_query: str, context: Optional[Dict]) -> Union[str, JSONResponse]:
     """Translate natural language query and handle direct responses"""
     translated_query, is_direct_response = await translate_query(raw_query, context)
     
@@ -291,7 +291,7 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         context = query_info["context"]
         
         # ---- STEP 2: TRANSLATE QUERY ----
-        translated_query = await translate_query_safe(raw_query, context)
+        translated_query = await handle_query_translation(raw_query, context)
         if isinstance(translated_query, JSONResponse):
             return translated_query
         
