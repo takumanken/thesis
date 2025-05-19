@@ -47,8 +47,8 @@
    * @returns {boolean} true if device should be blocked
    */
   function shouldBlockDevice() {
-    const viewportWidth = window.innerWidth;
-    return viewportWidth < MIN_VIEWPORT_WIDTH;
+    const deviceWidth = screen.width;
+    return deviceWidth < MIN_VIEWPORT_WIDTH;
   }
 
   /**
