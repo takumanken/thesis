@@ -37,14 +37,9 @@ from query_engine import extract_json_from_text
 from query_translator import translate_query
 from visualization_recommender import classify_dimensions, get_chart_options
 
-
 # === CONSTANTS ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SYSTEM_INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/data_aggregation_instruction.md")
-FILTER_VALUES_FILE = os.path.join(BASE_DIR, "gemini_instructions/references/all_filters.json")
 DATA_SCHEMA_FILE = os.path.join(BASE_DIR, "data/data_schema.json")
-DUCKDB_FILE = os.path.join(BASE_DIR, "data/nyc_open_data_explorer.duckdb")
-
 
 # === DATA MODELS ===
 @dataclass
@@ -277,15 +272,15 @@ def recommend_visualization(agg_def, dimension_stats, dataset_size):
 @gemini_safe
 def translate_query_safe(request_id, raw_query, context):
     """Translate natural language query and handle direct responses"""
-    response_text, is_direct_response = translate_query(raw_query, context)
+    translated_query, is_direct_response = translate_query(raw_query, context)
     
     if is_direct_response:
         logger.info(f"[{request_id}] Returning direct response")
         response_payload = asdict(ResponsePayload())
-        response_payload.update(create_text_response(response_text))
+        response_payload.update(create_text_response(translated_query))
         return JSONResponse(content=response_payload)
     
-    return response_text
+    return translated_query
 
 
 @gemini_safe
@@ -295,23 +290,15 @@ def generate_content_safe(request_id, *args, **kwargs):
 
 
 # === QUERY PROCESSING FUNCTIONS ===
-async def execute_sql_query(request_id, response_text, user_location):
-    """
-    Execute SQL query based on translated query
-    
-    Returns:
-        - JSONResponse if a special case requires immediate response
-        - Dict with query results if processing should continue
-    """
+async def execute_sql_query(request_id, translated_query, user_location):
+    """Execute SQL query based on translated query"""
     safe_content_generator = lambda *args, **kwargs: generate_content_safe(request_id, *args, **kwargs)
     
     # Call the query engine to process the query
     result = await query_engine.process_aggregation_query(
-        response_text=response_text,
+        translated_query=translated_query,
         user_location=user_location,
         request_id=request_id,
-        system_instruction=system_instruction,
-        db_filename=DUCKDB_FILE,
         generate_content_safe=safe_content_generator
     )
     
@@ -337,21 +324,6 @@ def setup_environment() -> Dict[str, Any]:
     with open(DATA_SCHEMA_FILE, "r") as f:
         data_schema = json.load(f)
     
-    # Load system instructions
-    with open(SYSTEM_INSTRUCTION_FILE, "r") as f:
-        system_instruction = f.read()
-    
-    # Load filter values
-    with open(FILTER_VALUES_FILE, "r") as f:
-        all_filters = json.load(f)
-        
-    # Generate simplified schema for AI
-    simplified_schema = get_simplified_schema(data_schema)
-                
-    # Replace the placeholders in system instruction
-    system_instruction = system_instruction.replace("{all_filters}", json.dumps(all_filters))
-    system_instruction = system_instruction.replace("{data_schema}", json.dumps(simplified_schema))
-    
     # Set up API client
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -359,7 +331,6 @@ def setup_environment() -> Dict[str, Any]:
         
     return {
         "data_schema": data_schema,
-        "system_instruction": system_instruction,
         "client": genai.Client(api_key=api_key)
     }
 
@@ -392,7 +363,6 @@ app.add_middleware(
 # Initialize environment
 resources = setup_environment()
 data_schema = resources["data_schema"]
-system_instruction = resources["system_instruction"]
 client = resources["client"]
 logger.info("Environment setup completed")
 

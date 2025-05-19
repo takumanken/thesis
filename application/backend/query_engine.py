@@ -1,22 +1,77 @@
+"""
+Query Engine Module
+
+Handles SQL query generation, execution, and result processing for NYC 311 data.
+"""
+# === STANDARD LIBRARY IMPORTS ===
 import json
-import time
 import logging
+import os
+import time
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+# === THIRD-PARTY IMPORTS ===
 import duckdb
+import numpy as np
 import pandas as pd
 import polars as pl
-import numpy as np
-from typing import Dict, List, Tuple, Optional, Any, Union
-
 from google.genai import types
+
+# === LOCAL IMPORTS ===
 from models import AggregationDefinition
 from visualization_recommender import TIME_DIMENSIONS, GEO_DIMENSIONS, classify_dimensions
 
+# === CONSTANTS ===
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SYSTEM_INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/data_aggregation_instruction.md")
+FILTER_VALUES_FILE = os.path.join(BASE_DIR, "gemini_instructions/references/all_filters.json")
+DATA_SCHEMA_FILE = os.path.join(BASE_DIR, "data/data_schema.json")
+DUCKDB_FILE = os.path.join(BASE_DIR, "data/nyc_open_data_explorer.duckdb")
+
+# === GLOBAL CONFIGURATION ===
 logger = logging.getLogger(__name__)
+_system_instruction = None  # Cache for system instruction
 
-# =========================================================
-# RESPONSE HANDLING
-# =========================================================
 
+# === SYSTEM INSTRUCTION HANDLING ===
+def get_system_instruction() -> str:
+    """Load and prepare system instruction for query processing"""
+    global _system_instruction
+    
+    if _system_instruction is not None:
+        return _system_instruction
+        
+    # Load system instructions
+    with open(SYSTEM_INSTRUCTION_FILE, "r") as f:
+        _system_instruction = f.read()
+    
+    # Load filter values
+    with open(FILTER_VALUES_FILE, "r") as f:
+        all_filters = json.load(f)
+        
+    # Load data schema for simplified schema
+    with open(DATA_SCHEMA_FILE, "r") as f:
+        data_schema = json.load(f)
+    
+    # Generate simplified schema
+    simplified_schema = {
+        "dimensions": {
+            dim_type: [{k: v for k, v in dim.items() if k != "description_to_user"} 
+                      for dim in dims]
+            for dim_type, dims in data_schema["dimensions"].items()
+        },
+        "measures": [{k: v for k, v in m.items() if k != "description_to_user"} 
+                    for m in data_schema["measures"]]
+    }
+                
+    # Replace the placeholders in system instruction
+    _system_instruction = _system_instruction.replace("{all_filters}", json.dumps(all_filters))
+    _system_instruction = _system_instruction.replace("{data_schema}", json.dumps(simplified_schema))
+    
+    return _system_instruction
+
+
+# === RESPONSE HANDLING ===
 def extract_json_from_text(json_text: str) -> Tuple[Dict, bool]:
     """
     Extracts and parses JSON from text content, handling code blocks.
@@ -42,18 +97,11 @@ def extract_json_from_text(json_text: str) -> Tuple[Dict, bool]:
     except json.JSONDecodeError:
         return {}, False
 
-# =========================================================
-# SQL GENERATION
-# =========================================================
 
+# === DIMENSION HANDLING ===
 def _get_dimension_types() -> Dict[str, str]:
-    """
-    Gets dimension types from data schema.
-    
-    Returns:
-        Dictionary mapping dimension names to their data types
-    """
-    with open("data/data_schema.json", "r") as f:
+    """Gets dimension types from data schema"""
+    with open(DATA_SCHEMA_FILE, "r") as f:
         data_schema = json.load(f)
     
     dimension_types = {}
@@ -63,32 +111,19 @@ def _get_dimension_types() -> Dict[str, str]:
             
     return dimension_types
 
+
+# === SQL GENERATION ===
 def _build_select_clause(definition: AggregationDefinition) -> str:
-    """
-    Builds the SELECT clause for a SQL query.
-    
-    Args:
-        definition: The aggregation definition
-        
-    Returns:
-        The SELECT clause as a string
-    """
+    """Builds the SELECT clause for a SQL query"""
     dims = definition.dimensions
     dims_clause = "\n  , ".join(dims) if dims else ""
     measures_clause = ", ".join([f"{m['expression']} AS {m['alias']}" for m in definition.measures])
     
     return f"{dims_clause}\n  , {measures_clause}" if dims_clause and measures_clause else (dims_clause or measures_clause)
 
+
 def _build_metadata_clauses(definition: AggregationDefinition) -> str:
-    """
-    Builds SQL clauses for metadata collection.
-    
-    Args:
-        definition: The aggregation definition
-        
-    Returns:
-        SQL clauses for metadata as a string
-    """
+    """Builds SQL clauses for metadata collection"""
     dims = definition.dimensions
     stats_metadata = ""
     
@@ -126,16 +161,9 @@ def _build_metadata_clauses(definition: AggregationDefinition) -> str:
     
     return stats_metadata + date_metadata + location_reference
 
+
 def _build_order_clause(definition: AggregationDefinition) -> str:
-    """
-    Builds the ORDER BY clause for a SQL query.
-    
-    Args:
-        definition: The aggregation definition
-        
-    Returns:
-        The ORDER BY clause as a string
-    """
+    """Builds the ORDER BY clause for a SQL query"""
     dims = definition.dimensions
     
     # Use topN if available
@@ -161,6 +189,7 @@ def _build_order_clause(definition: AggregationDefinition) -> str:
         return f"ORDER BY {definition.measures[0]['alias']} DESC"
     
     return ""  # Default is no explicit ordering
+
 
 def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     """
@@ -244,10 +273,8 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     
     return sql.strip()
 
-# =========================================================
-# SQL EXECUTION
-# =========================================================
 
+# === SQL EXECUTION ===
 def execute_sql_in_duckDB(sql: str, db_filename: str, user_location: Optional[Dict[str, float]] = None) -> Tuple[List, Dict]:
     """
     Executes a SQL query in DuckDB, replacing location placeholders right before execution.
@@ -338,16 +365,9 @@ def execute_sql_in_duckDB(sql: str, db_filename: str, user_location: Optional[Di
     results = json.loads(df.to_json(orient="records"))
     return results, metadata
 
+
 def _extract_metadata_from_results(df: pd.DataFrame) -> Dict:
-    """
-    Extracts metadata from query results.
-    
-    Args:
-        df: DataFrame containing query results
-        
-    Returns:
-        Dictionary of metadata
-    """
+    """Extracts metadata from query results"""
     metadata = {}
     metadata_cols = [col for col in df.columns if col.startswith('metadata_')]
     
@@ -382,69 +402,23 @@ def _extract_metadata_from_results(df: pd.DataFrame) -> Dict:
         
     return metadata
 
-# =========================================================
-# DIMENSION ANALYSIS
-# =========================================================
 
-def calculate_dimension_cardinality_stats(dataset: List[Dict], dimensions: List[str]) -> Dict[str, Dict[str, float]]:
-    """
-    Calculates cardinality statistics for each dimension in the dataset.
-    
-    Args:
-        dataset: List of data records
-        dimensions: List of dimension names
-        
-    Returns:
-        Dictionary mapping dimensions to their cardinality statistics
-    """
-    if not dataset or not dimensions:
-        return {}
-    
-    # Try using Polars first, fall back to pandas if needed
-    df = _convert_to_dataframe(dataset)
-    
-    stats = {}
-    for dim in dimensions:
-        if dim not in df.columns:
-            continue
-            
-        # Calculate dimension stats
-        stats[dim] = _calculate_single_dimension_stats(df, dim, dimensions)
-    
-    return stats
-
+# === DIMENSION ANALYSIS ===
 def _convert_to_dataframe(dataset: List[Dict]) -> Union[pl.DataFrame, pd.DataFrame]:
-    """
-    Converts dataset to a DataFrame, using Polars if possible.
-    
-    Args:
-        dataset: List of data records
-        
-    Returns:
-        Polars or pandas DataFrame
-    """
+    """Converts dataset to a DataFrame, using Polars if possible"""
     try:
         return pl.DataFrame(dataset)
     except Exception as e:
         logger.warning(f"Failed to use Polars: {str(e)}. Using pandas.")
         return pd.DataFrame(dataset)
 
+
 def _calculate_single_dimension_stats(
     df: Union[pl.DataFrame, pd.DataFrame], 
     dim: str, 
     dimensions: List[str]
 ) -> Dict[str, float]:
-    """
-    Calculates statistics for a single dimension.
-    
-    Args:
-        df: DataFrame containing data
-        dim: Dimension name
-        dimensions: List of all dimensions
-        
-    Returns:
-        Dictionary of dimension statistics
-    """
+    """Calculates statistics for a single dimension"""
     # Handle single dimension case
     if isinstance(df, pl.DataFrame):
         total_unique = df[dim].n_unique()
@@ -485,6 +459,35 @@ def _calculate_single_dimension_stats(
         "group_count": len(unique_counts)
     }
 
+
+def calculate_dimension_cardinality_stats(dataset: List[Dict], dimensions: List[str]) -> Dict[str, Dict[str, float]]:
+    """
+    Calculates cardinality statistics for each dimension in the dataset.
+    
+    Args:
+        dataset: List of data records
+        dimensions: List of dimension names
+        
+    Returns:
+        Dictionary mapping dimensions to their cardinality statistics
+    """
+    if not dataset or not dimensions:
+        return {}
+    
+    # Try using Polars first, fall back to pandas if needed
+    df = _convert_to_dataframe(dataset)
+    
+    stats = {}
+    for dim in dimensions:
+        if dim not in df.columns:
+            continue
+            
+        # Calculate dimension stats
+        stats[dim] = _calculate_single_dimension_stats(df, dim, dimensions)
+    
+    return stats
+
+
 def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]]) -> AggregationDefinition:
     """
     Reorders dimensions by their cardinality (highest to lowest).
@@ -516,37 +519,34 @@ def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_
         "categoricalDimension": cat_dim
     })
 
-# =========================================================
-# QUERY PROCESSING
-# =========================================================
 
+# === QUERY PROCESSING ===
 async def process_aggregation_query(
-    response_text: str,
+    translated_query: str,
     user_location: Optional[Dict[str, Any]],
     request_id: str,
-    system_instruction: str,
-    db_filename: str,
     generate_content_safe
 ) -> Dict[str, Any]:
     """
     Process translated query text into a data query and execute it
     
     Args:
-        response_text: Translated query from NL processor
+        translated_query: Translated query from NL processor
         user_location: Optional user location data
         request_id: Unique identifier for the request
-        system_instruction: System instruction for Gemini API
-        db_filename: Path to DuckDB database file
         generate_content_safe: Safe wrapper for Gemini API calls
         
     Returns:
         Dictionary with query results and metadata
     """
+    # Get system instruction
+    system_instruction = get_system_instruction()
+    
     # Call Gemini API for data aggregation definition
     response = generate_content_safe(
         model="gemini-2.0-flash",
         config=types.GenerateContentConfig(system_instruction=system_instruction, temperature=0),
-        contents=[response_text]
+        contents=[translated_query]
     )
     
     # Parse the AI response
@@ -577,7 +577,7 @@ async def process_aggregation_query(
         return {"locationRequired": True}
     
     # Execute SQL with location data
-    dataset, query_metadata = execute_sql_in_duckDB(sql, db_filename, user_location)
+    dataset, query_metadata = execute_sql_in_duckDB(sql, DUCKDB_FILE, user_location)
     
     # Return basic query results
     return {
