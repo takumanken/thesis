@@ -10,7 +10,6 @@ import logging
 import os
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
-import contextvars
 
 # Third-party imports
 import duckdb
@@ -21,7 +20,7 @@ from google.genai import types
 from models import AggregationDefinition
 from utils import (
     BASE_DIR, DATA_SCHEMA_FILE, TIME_DIMENSIONS, extract_json, classify_dimensions,
-    request_id_var, get_logger, create_logger_functions
+    get_logger
 )
 
 # === CONSTANTS ===
@@ -31,11 +30,7 @@ DUCKDB_FILE = os.path.join(BASE_DIR, "data/nyc_open_data_explorer.duckdb")
 _system_instruction = None
 
 # === GLOBAL CONFIGURATION ===
-logger = get_logger('query_engine')
-log_functions = create_logger_functions(logger)
-log_info = log_functions['info']
-log_error = log_functions['error']
-log_debug = log_functions['debug']
+logger = logging.getLogger('query_engine')
 
 # === SYSTEM INSTRUCTION HANDLING ===
 def get_system_instruction() -> str:
@@ -439,7 +434,7 @@ async def process_aggregation_query(
     # Check if location is required but not provided
     location_enabled = bool(user_location)
     if ('user_latitude' in sql or 'user_longitude' in sql) and not location_enabled:
-        log_info("Query requires location services but they are disabled")
+        logger.info("Query requires location services but they are disabled")
         return {"locationRequired": True}
     
     # Execute SQL with location data

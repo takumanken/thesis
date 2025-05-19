@@ -15,8 +15,6 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 from collections import defaultdict
-import contextvars
-from functools import partial
 
 # Third-party library imports
 from dotenv import load_dotenv
@@ -38,7 +36,7 @@ from query_translator import translate_query
 from visualization_recommender import get_viz_recommendations
 from utils import (
     BASE_DIR, DATA_SCHEMA_FILE, get_gemini_client,
-    request_id_var, get_logger, create_logger_functions
+    get_logger, configure_logging
 )
 
 # === CONSTANTS ===
@@ -48,11 +46,6 @@ API_RATE_LIMIT = "10/minute"
 # === GLOBAL CONFIGURATION ===
 # Configure logging
 logger = get_logger('api')
-log_functions = create_logger_functions(logger)
-log_info = log_functions['info']
-log_error = log_functions['error']
-log_debug = log_functions['debug']
-log_exception = log_functions['exception']
 
 # === DATA MODELS ===
 @dataclass
@@ -86,7 +79,7 @@ def gemini_safe(fn):
 
         # Catch *all* SDK-level API errors (4xx + 5xx)
         except genai_errors.APIError as err:
-            log_error(f"Gemini API error: {err}")
+            logger.error(f"Gemini API error: {err}")
 
             status_code = getattr(err, "code", 500)
             # Provide a friendlier message for the common cases
@@ -148,7 +141,7 @@ def extract_query_info(request_data: PromptRequest) -> Dict[str, Any]:
     # Add location info to query if available
     if hasattr(request_data, 'location') and request_data.location:
         user_location = request_data.location
-        log_info("Location data available but masked for privacy")
+        logger.info("Location data available but masked for privacy")
         raw_query = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
     
     return {
@@ -228,7 +221,7 @@ async def translate_query_safe(raw_query: str, context: Optional[Dict]) -> Union
     )
     
     if is_direct_response:
-        log_info("Returning direct response")
+        logger.info("Returning direct response")
         response_payload = asdict(ResponsePayload())
         response_payload.update(create_text_response(translated_query))
         return JSONResponse(content=response_payload)
@@ -286,7 +279,11 @@ def setup_environment() -> Dict[str, Any]:
 
 
 # === APPLICATION SETUP ===
+# Load environment variables first
 load_dotenv()
+configure_logging()
+
+# Create FastAPI app
 app = FastAPI()
 
 # Configure middleware
@@ -305,7 +302,7 @@ app.add_middleware(
 resources = setup_environment()
 data_schema = resources["data_schema"]
 client = resources["client"]
-log_info("Environment setup completed")
+logger.info("Environment setup completed")
 
 
 # === MAIN API ENDPOINT ===
@@ -313,11 +310,7 @@ log_info("Environment setup completed")
 @limiter.limit(API_RATE_LIMIT)
 async def process_prompt(request_data: PromptRequest, request: Request) -> JSONResponse:
     """Process natural language queries about NYC 311 data"""
-    # Generate request_id and set it in context
-    req_id = str(uuid.uuid4())[:8]
-    request_id_var.set(req_id)
-    
-    log_info("Processing new request")
+    logger.info(f"Processing request: {request_data.prompt[:50]}...")
     start_time = time.time()
     
     # Initialize response structure
@@ -335,7 +328,7 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         translated_query, is_direct_response = await translate_query(raw_query, context)
         
         if is_direct_response:
-            log_info("Returning direct response")
+            logger.info("Returning direct response")
             response_payload.update(create_text_response(translated_query))
             return JSONResponse(content=response_payload)
         
@@ -363,7 +356,6 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         
         # ---- STEP 5: GENERATE DATA INSIGHTS ----
         insights_result = await text_insights.generate_data_insights_complete(
-            req_id,
             request_data.prompt,
             dataset,
             agg_def,
@@ -389,11 +381,11 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
             "dataInsights": data_insights
         })
         
-        log_info(f"Completed in {time.time() - start_time:.2f}s")
+        logger.info(f"Completed in {time.time() - start_time:.2f}s")
         return JSONResponse(content=response_payload)
         
     except HTTPException as http_error:
-        log_error(f"HTTP error: {http_error.status_code} - {http_error.detail}")
+        logger.error(f"HTTP error: {http_error.status_code} - {http_error.detail}")
         error_message = (
             http_error.detail.get("error") 
             if isinstance(http_error.detail, dict) 
@@ -409,7 +401,7 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
             }
         )
     except Exception as error:
-        log_exception("Error processing prompt")
+        logger.exception("Error processing prompt")
         return JSONResponse(
             status_code=500, 
             content={

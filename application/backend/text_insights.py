@@ -148,7 +148,6 @@ def remove_date_filters(filter_descriptions: List[Any]) -> List[Any]:
 
 # === INSIGHT GENERATION ===
 async def generate_data_description(
-    request_id: str,
     original_query: str,
     dataset: List[Dict[str, Any]],
     aggregation_definition: Dict[str, Any],
@@ -190,7 +189,7 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
             
         # Extract and parse response
         response_text = response.candidates[0].content.parts[0].text
-        logger.info(f"[{request_id}] Generated data description")
+        logger.info("Generated data description")
         result = extract_json(response_text)
         
         # Default values
@@ -207,7 +206,7 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
         return result
             
     except Exception as e:
-        logger.error(f"[{request_id}] Error generating data description: {e}", exc_info=True)
+        logger.error(f"Error generating data description: {e}", exc_info=True)
         return {
             "title": "Data Overview",
             "dataDescription": "Here is a summary of the requested data.",
@@ -216,7 +215,6 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
 
 
 async def generate_data_insights_complete(
-    request_id: str,
     original_query: str,
     dataset: List[Dict[str, Any]],
     agg_def: AggregationDefinition,
@@ -234,7 +232,6 @@ async def generate_data_insights_complete(
     4. Returns a complete results object
     
     Args:
-        request_id: Unique identifier for this request
         original_query: The user's original query text
         dataset: The result dataset
         agg_def: Aggregation definition object
@@ -259,7 +256,6 @@ async def generate_data_insights_complete(
     
     # 4. Generate data insights/description
     data_description = await generate_data_description(
-        request_id=request_id,
         original_query=original_query, 
         dataset=dataset,
         aggregation_definition=descriptor_agg_def,

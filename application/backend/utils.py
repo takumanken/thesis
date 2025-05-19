@@ -8,8 +8,6 @@ from typing import Dict, List, Tuple, Any, Union
 import pandas as pd
 import polars as pl
 from google import genai
-import contextvars
-from functools import partial
 
 # Base directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -128,30 +126,9 @@ def get_gemini_client():
 
 # === LOGGING UTILITIES ===
 
-# Create a context variable to store request_id
-request_id_var = contextvars.ContextVar('request_id', default='no-request-id')
-
 def get_logger(name=None):
     """Get a logger with the given name"""
     return logging.getLogger(name or __name__)
-
-# Create a context-aware logging function
-def log_with_context(logger_instance, level, message, *args, **kwargs):
-    """Log with the current request context automatically included"""
-    request_id = request_id_var.get()
-    formatted_message = f"[{request_id}] {message}"
-    getattr(logger_instance, level)(formatted_message, *args, **kwargs)
-
-# Create factory functions for module-specific loggers
-def create_logger_functions(logger_instance):
-    """Create a set of convenience logging functions for a specific logger"""
-    return {
-        'info': partial(log_with_context, logger_instance, 'info'),
-        'error': partial(log_with_context, logger_instance, 'error'),
-        'debug': partial(log_with_context, logger_instance, 'debug'),
-        'warning': partial(log_with_context, logger_instance, 'warning'),
-        'exception': partial(log_with_context, logger_instance, 'exception')
-    }
 
 # Configure basic logging setup
 def configure_logging():
