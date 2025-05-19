@@ -216,6 +216,24 @@ It must be bullet points, **not** JSON.
 
 ---
 
+### Statistical Measures Reference
+
+When analyzing data distributions, the system automatically calculates several statistical measures for each measure in the query:
+
+* **Average (avg)**: The mean value of the measure across all records
+* **25th Percentile (1Q)**: The value below which 25% of observations fall
+* **Median (median)**: The value below which 50% of observations fall (middle value)
+* **75th Percentile (3Q)**: The value below which 75% of observations fall
+* **Standard Deviation (stddev)**: A measure of data dispersion or variability
+
+These statistical measures help users understand:
+- Central tendency (average, median)
+- Data spread (25th to 75th percentile range, known as the interquartile range)
+- Outliers and data skew (by comparing median to average)
+- Data variability (standard deviation)
+
+---
+
 ## REFERENCE
 
 Use these resources to create aggregation definitions or support direct answers:
