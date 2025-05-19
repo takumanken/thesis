@@ -145,22 +145,22 @@ def _build_order_clause(definition: AggregationDefinition) -> str:
     
     # Use standard ordering rules
     if len(dims) == 1:
+        # Handle special cases for specific dimensions
         if dims[0] == 'time_to_resolve_day_bin':
             return "ORDER BY time_to_resolve_day_bin ASC"
         elif dims[0] == 'created_weekday_datepart':
             return "ORDER BY MIN(created_weekday_order) ASC"
         elif dims[0] == 'closed_weekday_datepart':
             return "ORDER BY MIN(closed_weekday_order) ASC"
+        # Handle time dimensions
         elif dims[0] in TIME_DIMENSIONS:
             return f"ORDER BY {dims[0]} ASC"
-        elif definition.measures:
-            return f"ORDER BY {definition.measures[0]['alias']} DESC"
     elif definition.timeDimension:
         return f"ORDER BY {definition.timeDimension[0]} ASC"
     elif definition.measures:
         return f"ORDER BY {definition.measures[0]['alias']} DESC"
     
-    return ""  # Default is no explicit ordering
+    return ""
 
 
 def _extract_metadata_from_results(df: pd.DataFrame) -> Dict:
@@ -214,10 +214,7 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     """
     start_time = time.time()
     logger.info("Generating SQL from aggregation definition")
-    
-    # Get dimension types for quality filters
-    dimension_types = _get_dimension_types()
-    
+        
     # Build SQL components
     select_clause = _build_select_clause(definition)
     metadata_clauses = _build_metadata_clauses(definition)
@@ -227,6 +224,7 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
     sql = f"SELECT\n  {full_select}\nFROM {table_name}"
     
     # Create quality filters based on dimensions
+    dimension_types = _get_dimension_types()
     dims = definition.dimensions
     quality_filters = []
     for dim in dims:
@@ -274,7 +272,6 @@ def generate_sql(definition: AggregationDefinition, table_name: str) -> str:
         sql += ";"
     
     logger.info(f"SQL generation completed in {time.time() - start_time:.2f}s")
-    logger.info("Generated SQL with placeholders (sensitive data masked)")
     
     return sql.strip()
 
@@ -304,10 +301,7 @@ def execute_sql_in_duckDB(
     location_used = False
     
     if user_location and ("{{user_latitude}}" in sql or "{user_latitude}" in sql):
-        logger.info("Replacing location placeholders for execution only")
         location_used = True
-        
-        # Limit precision to 3 decimal places for privacy
         lat = user_location.get('latitude')
         lng = user_location.get('longitude')
         
