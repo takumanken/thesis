@@ -21,6 +21,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from google import genai
+from google.genai import errors as genai_errors
 import polars as pl
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -71,16 +72,30 @@ class ResponsePayload:
 
 # === ERROR HANDLING ===
 def gemini_safe(fn):
-    """Decorator for handling Gemini API errors consistently"""
+    """Decorator for handling all Gemini API errors consistently"""
     @functools.wraps(fn)
-    def wrapper(request_id, *args, **kwargs):
+    async def wrapper(request_id: str, *args, **kwargs):
         try:
-            return fn(request_id, *args, **kwargs)
-        except genai.errors.ClientError as err:
-            logger.error(f"[{request_id}] API error: {err}")
-            status = getattr(err, "status_code", 500)
-            msg = "Rate limit exceeded" if status == 429 else "API error"
-            raise HTTPException(status_code=status, detail={"error": msg})
+            return await fn(request_id, *args, **kwargs)
+
+        # Catch *all* SDK-level API errors (4xx + 5xx)
+        except genai_errors.APIError as err:
+            logger.error(f"[{request_id}] Gemini API error: {err}")
+
+            status_code = getattr(err, "code", 500)     # 400, 429, 500, 503 ...
+            # Provide a friendlier message for the common cases
+            if status_code == 429:
+                message = "Rate limit exceeded - please try again later"
+            elif 500 <= status_code < 600:
+                message = "AI service temporarily unavailable - please retry"
+            else:
+                message = err.message or "API error"
+
+            raise HTTPException(
+                status_code=status_code,
+                detail={"error": message, "error_type": err.__class__.__name__}
+            )
+
     return wrapper
 
 
