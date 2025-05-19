@@ -21,6 +21,7 @@ const CHART_DESIGN = {
   maxChartHeight: 650, // Maximum overall chart height
   minChartHeight: 400, // Minimum overall chart height
   percentagePrecision: 1, // Decimal places for percentage values
+  labelMaxLength: 20, // Maximum length for category labels
 };
 // -------------------------------------------------------------------------
 
@@ -65,7 +66,7 @@ function renderStackedBarChart(container) {
     tooltip,
     config
   );
-  renderAxes(elements.svg, elements.xAxisSvg, scales, config, isPercentage);
+  renderAxes(elements.svg, elements.xAxisSvg, scales, config, isPercentage, stackData, groupKey);
   legendUtil.createColorLegend(legendContainer, sortedStacks, color, {}, stackKey, "stackedBar");
   setupEventHandlers(container);
 }
@@ -331,11 +332,14 @@ function renderValueLabels(svg, stackData, sortedStacks, scales, groupKey, isPer
 /**
  * Render chart axes
  */
-function renderAxes(svg, xAxisSvg, scales, config, isPercentage) {
+function renderAxes(svg, xAxisSvg, scales, config, isPercentage, stackData, groupKey) {
   // Y axis with labels
-  chartAxes.renderCategoryAxis(svg, scales.y, null, {
+  chartAxes.renderCategoryAxis(svg, scales.y, stackData, {
     orientation: "left",
     position: { x: config.margin.left, y: 0 },
+    labelField: groupKey,
+    maxLabelLength: CHART_DESIGN.labelMaxLength,
+    showTickLines: false,
     className: "y-axis",
   });
 

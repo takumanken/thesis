@@ -22,6 +22,7 @@ const CHART_DESIGN = {
   maxChartHeight: 650, // Maximum overall chart height
   minChartHeight: 500, // Minimum overall chart height
   labelGap: 10, // Gap between axis and labels
+  labelMaxLength: 20, // Maximum length for category labels
 };
 // -------------------------------------------------------------------------
 
@@ -330,24 +331,29 @@ function drawYAxis(svg, sortedGroups, groupPositions, config) {
     className: "y-axis-line",
   });
 
-  const fontSizeInteger = parseInt(chartStyles.fontSize.axisLabel, 10);
+  const fontSize = 11;
 
   // Add labels for each group
-  yAxisGroup
+  const labels = yAxisGroup
     .selectAll(".group-label")
     .data(sortedGroups)
     .join("text")
     .attr("class", "group-label")
     .attr("x", -CHART_DESIGN.labelGap)
     .attr("y", (d) => {
-      return groupPositions[d] + (config.groupHeights[d] - config.groupPadding) / 2 - fontSizeInteger * 0.8;
+      return groupPositions[d] + (config.groupHeights[d] - config.groupPadding) / 2 - fontSize * 0.8;
     })
     .attr("text-anchor", "end")
     .attr("dominant-baseline", "middle")
-    .text((d) => d)
     .style("font-family", chartStyles.fontFamily)
-    .style("font-size", chartStyles.fontSize.axisLabel)
+    .style("font-size", fontSize)
     .style("fill", chartStyles.colors.text);
+
+  // Apply text truncation with ellipsis
+  labels.text((d) => chartUtils.truncateLabel(d, CHART_DESIGN.labelMaxLength));
+
+  // Add tooltips for truncated labels
+  labels.append("title").text((d) => d);
 }
 
 /**

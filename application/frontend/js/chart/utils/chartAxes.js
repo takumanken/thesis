@@ -95,6 +95,9 @@ export function renderCategoryAxis(svg, scale, data, options = {}) {
   if (typeof scale.domain()[0] === "number") {
     // Handle index-based scales (like in single_bar_chart)
     axisGenerator.tickFormat((d, i) => truncateLabel(data[i]?.[labelField] || "", maxLabelLength));
+  } else {
+    // For non-numeric domains (like in stacked_bar_chart), apply truncation directly
+    axisGenerator.tickFormat((d) => truncateLabel(d, maxLabelLength));
   }
 
   if (!showTickLines) {
@@ -111,13 +114,14 @@ export function renderCategoryAxis(svg, scale, data, options = {}) {
   // Apply standard styling
   chartStyles.applyAxisStyles(axis, { hideTickLines: !showTickLines });
 
-  // Add tooltips for truncated labels if using index-based scale
-  if (typeof scale.domain()[0] === "number") {
-    axis
-      .selectAll(".tick text")
-      .append("title")
-      .text((d, i) => data[i]?.[labelField] || "");
-  }
+  // Add tooltips for all truncated labels
+  axis
+    .selectAll(".tick text")
+    .append("title")
+    .text(function () {
+      // For the tooltip, use the full text (before truncation)
+      return d3.select(this.parentNode).text();
+    });
 
   return axis;
 }
