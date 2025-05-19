@@ -15,7 +15,7 @@ def is_measure_additive(measure_alias: str) -> bool:
     """
     return measure_alias in ADDITIVE_MEASURES
 
-def all_dimensions_exceed_cardinality(dimensions: list[str], dimension_stats: Dict[str, Dict[str, float]], threshold: int = 15) -> bool:
+def all_dimensions_exceed_cardinality(dimensions: list[str], dimension_stats: Dict[str, int], threshold: int = 15) -> bool:
     """
     Checks if all non-time dimensions exceed the cardinality threshold.
     """
@@ -30,7 +30,7 @@ def all_dimensions_exceed_cardinality(dimensions: list[str], dimension_stats: Di
         if dim not in dimension_stats:
             continue
         
-        cardinality = dimension_stats[dim].get("total_unique", 0)
+        cardinality = dimension_stats.get(dim, 0)
         if cardinality <= threshold:
             return False
             

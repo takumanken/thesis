@@ -21,8 +21,6 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from google import genai
-from google.genai import types
-import numpy as np
 import polars as pl
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -147,62 +145,30 @@ def add_date_range_metadata(agg_def: AggregationDefinition, query_metadata: Dict
 
 
 # === DIMENSION ANALYSIS ===
-def calculate_dimension_cardinality_stats(dataset: List[Dict], dimensions: List[str]) -> Dict[str, Dict[str, float]]:
-    """Calculates cardinality statistics for dimensions in the dataset."""
+def calculate_dimension_cardinality(dataset: List[Dict], dimensions: List[str]) -> Dict[str, int]:
+    """Calculates total unique values for each dimension."""
     if not dataset or not dimensions:
         return {}
     
-    # Convert to polars DataFrame
+    # Create DataFrame and calculate unique values directly
     df = pl.DataFrame(dataset)
     
-    stats = {}
-    for dim in dimensions:
-        if dim not in df.columns:
-            continue
-        
-        # Calculate total unique values
-        total_unique = int(df[dim].n_unique())
-        
-        # Create basic stats dictionary
-        stats[dim] = {"total_unique": total_unique}
-        
-        # Handle single vs multiple dimensions
-        if len(dimensions) == 1:
-            # For single dimension, all stats are based on the total value
-            unique_counts = [total_unique]
-            group_count = 1
-        else:
-            # For multiple dimensions, calculate per-group stats
-            other_dims = [d for d in dimensions if d != dim]
-            grouped = (df
-                    .group_by(other_dims)
-                    .agg(pl.col(dim).n_unique().alias("unique_count")))
-            
-            unique_counts = grouped["unique_count"].to_numpy()
-            group_count = len(unique_counts)
-        
-        # Add common statistics with appropriate values
-        stats[dim].update({
-            "min_per_group": int(np.min(unique_counts)),
-            "max_per_group": int(np.max(unique_counts)),
-            "avg_per_group": float(np.mean(unique_counts)),
-            "median_per_group": float(np.median(unique_counts)),
-            "std_per_group": float(np.std(unique_counts)) if len(unique_counts) > 1 else 0.0,
-            "group_count": group_count
-        })
-    
-    return stats
+    return {
+        dim: int(df[dim].n_unique())
+        for dim in dimensions
+        if dim in df.columns
+    }
 
 
-def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]]) -> AggregationDefinition:
+def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_stats: Dict[str, int]) -> AggregationDefinition:
     """Reorders dimensions by their cardinality (highest to lowest)."""
     if not agg_def.dimensions or len(agg_def.dimensions) <= 1 or not dimension_stats:
         return agg_def
     
-    # Sort dimensions by total_unique (descending)
+    # Sort dimensions by cardinality (descending)
     sorted_dims = sorted(
         agg_def.dimensions,
-        key=lambda dim: dimension_stats.get(dim, {}).get("total_unique", 0),
+        key=lambda dim: dimension_stats.get(dim, 0),
         reverse=True
     )
     
@@ -355,11 +321,11 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         query_metadata = query_result["queryMetadata"]
 
         # Calculate dimension statistics
-        dimension_stats = calculate_dimension_cardinality_stats(dataset, agg_def.dimensions)
+        dimension_stats = calculate_dimension_cardinality(dataset, agg_def.dimensions)
 
         # Update aggregation definition
         agg_def = add_date_range_metadata(agg_def, query_metadata)
-        agg_def = reorder_dimensions_by_cardinality(agg_def, dimension_stats)        
+        agg_def = reorder_dimensions_by_cardinality(agg_def, dimension_stats)
         
         # Recommend visualization
         available_charts, ideal_chart = recommend_visualization(
@@ -398,10 +364,7 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         return JSONResponse(content=response_payload)
         
     except HTTPException as http_error:
-        # Create a clear error message with more details
         logger.error(f"[{request_id}] HTTP error: {http_error.status_code} - {http_error.detail}")
-        
-        # Construct a consistent error response
         error_message = (
             http_error.detail.get("error") 
             if isinstance(http_error.detail, dict) 
@@ -417,7 +380,6 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
             }
         )
     except Exception as error:
-        # Handle general errors
         logger.exception(f"[{request_id}] Error processing prompt")
         return JSONResponse(
             status_code=500, 
