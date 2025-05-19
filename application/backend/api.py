@@ -301,8 +301,7 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         if isinstance(query_result, JSONResponse):
             return query_result
         
-        # ---- STEP 4: ANALYZE DATA AND GENERATE INSIGHTS ----
-        # Extract key components from query result
+        # ---- STEP 4: SELECT VISUALIZATION TYPES ----
         sql = query_result["sql"]
         dataset = query_result["dataset"]
         agg_def = query_result["aggregationDefinition"]
@@ -314,13 +313,13 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         # Update aggregation definition
         agg_def = add_date_range_metadata(agg_def, query_metadata)
         agg_def = reorder_dimensions_by_cardinality(agg_def, dimension_stats)
-        
+
         # Recommend visualization
         available_charts, ideal_chart = recommend_visualization(
             agg_def, dimension_stats, len(dataset)
         )
         
-        # Generate insights
+        # ---- STEP 5: GENERATE DATA INSIGHTS ----
         insights_result = text_insights.generate_data_insights_complete(
             request_id,
             request_data.prompt,

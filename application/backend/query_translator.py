@@ -210,6 +210,5 @@ if __name__ == "__main__":
     try:
         result, is_direct = translate_query("Show me noise complaints in Manhattan")
         print(f"Is direct response: {is_direct}")
-        print(result)
     except Exception as e:
         print(f"Error: {e}")
