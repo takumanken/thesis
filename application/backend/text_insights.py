@@ -1,4 +1,3 @@
-import os
 import json
 import logging
 from typing import Dict, List, Any, Optional, Tuple
@@ -7,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 from google import genai
 from google.genai import types
-from utils import get_gemini_client
+from utils import get_gemini_client, extract_json
 
 # Single client instance
 gemini_client = None
@@ -89,27 +88,6 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
             "dataDescription": "Here is a summary of the requested data.",
             "filterDescription": []
         }
-
-
-def extract_json(text: str) -> Dict[str, Any]:
-    """Extract JSON from text, handling code blocks"""
-    try:
-        clean_text = text.strip()
-        if "```" in clean_text:
-            for block in ["```json", "```"]:
-                if block in clean_text:
-                    clean_text = clean_text.split(block, 1)[1]
-                    break
-            if "```" in clean_text:
-                clean_text = clean_text.split("```", 1)[0]
-                
-        clean_text = clean_text.strip()
-        result = json.loads(clean_text)
-        logger.info(f"Successfully parsed JSON result with keys: {list(result.keys())}")
-        return result
-    except Exception as e:
-        logger.warning(f"Failed to parse JSON response: {e}")
-        return {}
 
 
 def extract_filter_fields(data_description: Dict[str, Any]) -> List[str]:

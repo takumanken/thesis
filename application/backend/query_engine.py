@@ -17,7 +17,7 @@ from google.genai import types
 
 # === LOCAL IMPORTS ===
 from models import AggregationDefinition
-from utils import BASE_DIR, DATA_SCHEMA_FILE, TIME_DIMENSIONS, extract_json_from_text, classify_dimensions
+from utils import BASE_DIR, DATA_SCHEMA_FILE, TIME_DIMENSIONS, extract_json, classify_dimensions
 
 # === CONSTANTS ===
 SYSTEM_INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/data_aggregation_instruction.md")
@@ -401,7 +401,7 @@ async def process_aggregation_query(
     
     # Parse the AI response using utility function
     json_text = response.candidates[0].content.parts[0].text
-    parsed_json, is_valid_json = extract_json_from_text(json_text)
+    parsed_json, is_valid_json = extract_json(json_text, return_status=True)
     
     # If not valid JSON or contains text response, return as text
     if not is_valid_json or "textResponse" in parsed_json:

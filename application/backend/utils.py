@@ -55,27 +55,44 @@ def convert_to_dataframe(dataset: List[Dict]) -> Union[pl.DataFrame, pd.DataFram
 
 
 # === JSON HANDLING ===
-def extract_json_from_text(json_text: str) -> Tuple[Dict, bool]:
+def extract_json(text: str, return_status: bool = False) -> Union[Dict[str, Any], Tuple[Dict[str, Any], bool]]:
     """
-    Extracts and parses JSON from text content, handling code blocks.
+    Extracts and parses JSON from text content, handling markdown code blocks.
+    
+    Args:
+        text: Text that may contain JSON, possibly within markdown code blocks
+        return_status: Whether to return a tuple with success flag (for backward compatibility)
     
     Returns:
-        Tuple of (parsed_json, is_valid_json)
+        If return_status=False: Parsed JSON dict or empty dict on failure
+        If return_status=True: Tuple of (parsed_json, is_valid_json)
     """
-    is_json = json_text.strip().startswith("{") or "```json" in json_text
+    is_json = text.strip().startswith("{") or "```" in text
     
     if not is_json:
-        return {}, False
+        return ({}, False) if return_status else {}
     
     # Clean up JSON formatting if it's in a code block
-    if "```json" in json_text:
-        json_text = json_text.split("```json")[1].split("```")[0].strip()
+    clean_text = text.strip()
+    if "```" in clean_text:
+        # Handle different markdown formats
+        for delimiter in ["```json", "```"]:
+            if delimiter in clean_text:
+                clean_text = clean_text.split(delimiter, 1)[1]
+                break
+                
+        if "```" in clean_text:
+            clean_text = clean_text.split("```", 1)[0]
+    
+    clean_text = clean_text.strip()
     
     try:
-        parsed_json = json.loads(json_text)
-        return parsed_json, True
-    except json.JSONDecodeError:
-        return {}, False
+        parsed_json = json.loads(clean_text)
+        logger.debug(f"Successfully parsed JSON with keys: {list(parsed_json.keys())}")
+        return (parsed_json, True) if return_status else parsed_json
+    except json.JSONDecodeError as e:
+        logger.warning(f"Failed to parse JSON: {e}")
+        return ({}, False) if return_status else {}
 
 
 # === GEMINI API CLIENT ===
