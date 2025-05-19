@@ -9,7 +9,6 @@ into SQL queries, executing them, and generating visualizations and insights.
 import functools
 import json
 import logging
-import os
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -34,7 +33,12 @@ from query_translator import translate_query
 from visualization_recommender import get_viz_recommendations
 from utils import BASE_DIR, DATA_SCHEMA_FILE, get_gemini_client
 
-# === LOGGING SETUP ===
+# === CONSTANTS ===
+ALLOWED_ORIGINS = ["https://takumanken.github.io", "http://127.0.0.1:5500"]
+API_RATE_LIMIT = "10/minute"
+
+# === GLOBAL CONFIGURATION ===
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -143,6 +147,9 @@ def add_date_range_metadata(agg_def: AggregationDefinition, query_metadata: Dict
 # === DIMENSION ANALYSIS ===
 def calculate_dimension_cardinality(dataset: List[Dict], dimensions: List[str]) -> Dict[str, int]:
     """Calculates total unique values for each dimension."""
+    if not dataset or not dimensions:
+        return {}
+        
     df = pl.DataFrame(dataset)
     
     return {
@@ -167,7 +174,7 @@ def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_
     return agg_def.copy(update={"dimensions": sorted_dims})
 
 
-def recommend_visualization(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]], 
+def recommend_visualization(agg_def: AggregationDefinition, dimension_stats: Dict[str, int], 
                            dataset_size: int) -> Tuple[List[str], str]:
     """Recommend the best visualization type for the data"""
     if dataset_size == 0:
@@ -233,9 +240,11 @@ def setup_environment() -> Dict[str, Any]:
         data_schema = json.load(f)
     
     # Set up API client
+    client = get_gemini_client()
+    
     return {
         "data_schema": data_schema,
-        "client": get_gemini_client()
+        "client": client
     }
 
 
@@ -249,7 +258,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://takumanken.github.io", "http://127.0.0.1:5500"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
     allow_methods=["POST"],
     allow_headers=["Content-Type"],
@@ -264,7 +273,7 @@ logger.info("Environment setup completed")
 
 # === MAIN API ENDPOINT ===
 @app.post("/process")
-@limiter.limit("10/minute")
+@limiter.limit(API_RATE_LIMIT)
 async def process_prompt(request_data: PromptRequest, request: Request) -> JSONResponse:
     """Process natural language queries about NYC 311 data"""
     request_id = str(uuid.uuid4())[:8]
@@ -293,7 +302,8 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         if isinstance(query_result, JSONResponse):
             return query_result
         
-        # ---- STEP 4: SELECT VISUALIZATION TYPES ----
+        # ---- STEP 4: ANALYZE DATA ----
+        # Extract key data from query result
         sql = query_result["sql"]
         dataset = query_result["dataset"]
         agg_def = query_result["aggregationDefinition"]
@@ -326,7 +336,7 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         data_insights = insights_result["dataInsights"]
         agg_def = insights_result["enhancedAggDef"]
         
-        # ---- STEP 5: BUILD RESPONSE ----
+        # ---- STEP 6: BUILD RESPONSE ----
         response_payload.update({
             "sql": sql,
             "dataset": dataset,
