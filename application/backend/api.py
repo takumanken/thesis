@@ -415,11 +415,13 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         query_metadata = query_result["queryMetadata"]
         print(f"Query Metadata: {query_metadata}")
 
-        
-        # Calculate statistics
-        agg_def = add_date_range_metadata(agg_def, query_metadata)
+        # Calculate dimension statistics
         dimension_stats = calculate_dimension_stats(dataset, agg_def.dimensions)
+
+        # Update aggregation definition
+        agg_def = add_date_range_metadata(agg_def, query_metadata)
         agg_def = optimize_dimension_order(agg_def, dimension_stats)
+
         
         # Recommend visualization
         available_charts, ideal_chart = recommend_visualization(
