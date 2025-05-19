@@ -421,7 +421,6 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         # Update aggregation definition
         agg_def = add_date_range_metadata(agg_def, query_metadata)
         agg_def = optimize_dimension_order(agg_def, dimension_stats)
-
         
         # Recommend visualization
         available_charts, ideal_chart = recommend_visualization(
