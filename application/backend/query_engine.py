@@ -387,7 +387,7 @@ def execute_sql_in_duckDB(
 
 
 # === QUERY PROCESSING ===
-async def process_aggregation_query(
+def process_aggregation_query(
     translated_query: str,
     user_location: Optional[Dict[str, Any]],
     generate_content_safe
@@ -397,7 +397,7 @@ async def process_aggregation_query(
     system_instruction = get_system_instruction()
     
     # Call Gemini API for data aggregation definition
-    response = await generate_content_safe(
+    response = generate_content_safe(
         model="gemini-2.0-flash",
         config=types.GenerateContentConfig(
             system_instruction=system_instruction, 

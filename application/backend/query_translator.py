@@ -10,7 +10,6 @@ import json
 import logging
 import os
 from typing import Any, Dict, Optional, Tuple, Union
-import asyncio
 
 # Third-party library imports
 from fastapi import HTTPException
@@ -134,7 +133,7 @@ def _prepare_context_prompt(context: Optional[Dict[str, Any]]) -> str:
 
 
 # === QUERY TRANSLATION ===
-async def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) -> Tuple[str, bool]:
+def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) -> Tuple[str, bool]:
     """Translate natural language query into a structured aggregation definition."""
     _initialize()
     
@@ -152,9 +151,7 @@ async def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = No
         query_preview = raw_query[:50] + "..." if len(raw_query) > 50 else raw_query
         logger.info(f"Translating query: {query_preview}")
         
-        # Call the Gemini API with full prompt using asyncio for non-blocking behavior
-        response = await asyncio.to_thread(
-            _client.models.generate_content,
+        response = _client.models.generate_content(
             model="gemini-2.0-flash",
             config=types.GenerateContentConfig(
                 system_instruction=_system_instruction,

@@ -10,7 +10,6 @@ import json
 import logging
 import os
 from typing import Dict, List, Any, Optional, Tuple
-import asyncio
 
 # Third-party imports
 from google import genai
@@ -147,7 +146,7 @@ def remove_date_filters(filter_descriptions: List[Any]) -> List[Any]:
 
 
 # === INSIGHT GENERATION ===
-async def generate_data_description(
+def generate_data_description(
     original_query: str,
     dataset: List[Dict[str, Any]],
     aggregation_definition: Dict[str, Any],
@@ -175,10 +174,8 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
 {json.dumps(sample_data, indent=2)}
 """
 
-        # Call Gemini API using asyncio for non-blocking behavior
         client = get_gemini_client()
-        response = await asyncio.to_thread(
-            client.models.generate_content,
+        response = client.models.generate_content(
             model="gemini-2.0-flash",
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction, 
@@ -186,7 +183,7 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
             ),
             contents=[prompt]
         )
-            
+        
         # Extract and parse response
         response_text = response.candidates[0].content.parts[0].text
         logger.info("Generated data description")
@@ -214,7 +211,7 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
         }
 
 
-async def generate_data_insights_complete(
+def generate_data_insights_complete(
     original_query: str,
     dataset: List[Dict[str, Any]],
     agg_def: AggregationDefinition,
@@ -222,26 +219,7 @@ async def generate_data_insights_complete(
     query_metadata: Dict[str, Any],
     data_schema: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """
-    Generate complete data insights with metadata enhancement.
-    
-    This function:
-    1. Prepares field metadata
-    2. Generates data description
-    3. Enhances metadata with filter fields
-    4. Returns a complete results object
-    
-    Args:
-        original_query: The user's original query text
-        dataset: The result dataset
-        agg_def: Aggregation definition object
-        chart_type: The visualization type
-        query_metadata: Additional metadata from query execution
-        data_schema: Complete data schema
-        
-    Returns:
-        Dict containing insights and enhanced aggregation definition
-    """
+    """Generate complete data insights with metadata enhancement."""
     # 1. Prepare visible fields list
     visible_fields = agg_def.dimensions + [field["alias"] for field in agg_def.measures]
     
@@ -254,8 +232,8 @@ async def generate_data_insights_complete(
     if 'statistics' in query_metadata:
         descriptor_agg_def['statistics'] = query_metadata['statistics']
     
-    # 4. Generate data insights/description
-    data_description = await generate_data_description(
+    # 4. Generate data description
+    data_description = generate_data_description(
         original_query=original_query, 
         dataset=dataset,
         aggregation_definition=descriptor_agg_def,

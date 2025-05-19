@@ -6,12 +6,9 @@ into SQL queries, executing them, and generating visualizations and insights.
 """
 
 # Standard library imports
-import asyncio
 import functools
 import json
-import logging
 import time
-import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 from collections import defaultdict
@@ -73,16 +70,14 @@ class ResponsePayload:
 def gemini_safe(fn):
     """Decorator for handling all Gemini API errors consistently"""
     @functools.wraps(fn)
-    async def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwargs):
         try:
-            return await fn(*args, **kwargs)
+            return fn(*args, **kwargs)
 
-        # Catch *all* SDK-level API errors (4xx + 5xx)
         except genai_errors.APIError as err:
             logger.error(f"Gemini API error: {err}")
 
             status_code = getattr(err, "code", 500)
-            # Provide a friendlier message for the common cases
             if status_code == 429:
                 message = "Rate limit exceeded - please try again later"
             elif 500 <= status_code < 600:
@@ -214,11 +209,10 @@ def recommend_visualization(agg_def: AggregationDefinition, dimension_stats: Dic
 
 # === API INTEGRATION ===
 @gemini_safe
-async def translate_query_safe(raw_query: str, context: Optional[Dict]) -> Union[str, JSONResponse]:
+def translate_query_safe(raw_query: str, context: Optional[Dict]) -> Union[str, JSONResponse]:
     """Translate natural language query and handle direct responses"""
-    translated_query, is_direct_response = await asyncio.to_thread(
-        translate_query, raw_query, context
-    )
+    # Direct call without asyncio.to_thread
+    translated_query, is_direct_response = translate_query(raw_query, context)
     
     if is_direct_response:
         logger.info("Returning direct response")
@@ -230,18 +224,18 @@ async def translate_query_safe(raw_query: str, context: Optional[Dict]) -> Union
 
 
 @gemini_safe
-async def generate_content_safe(*args, **kwargs):
-    """Safe wrapper for generate_content that handles API errors asynchronously"""
-    return await asyncio.to_thread(client.models.generate_content, *args, **kwargs)
+def generate_content_safe(*args, **kwargs):
+    """Safe wrapper for generate_content that handles API errors"""
+    return client.models.generate_content(*args, **kwargs)
 
 
-async def execute_sql_query(translated_query: str, 
-                           user_location: Optional[Dict]) -> Union[Dict, JSONResponse]:
+def execute_sql_query(translated_query: str, 
+                    user_location: Optional[Dict]) -> Union[Dict, JSONResponse]:
     """Execute SQL query based on translated query"""
     safe_content_generator = lambda *args, **kwargs: generate_content_safe(*args, **kwargs)
     
     # Call the query engine to process the query
-    result = await query_engine.process_aggregation_query(
+    result = query_engine.process_aggregation_query(
         translated_query=translated_query,
         user_location=user_location,
         generate_content_safe=safe_content_generator
@@ -324,16 +318,12 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         context = query_info["context"]
         
         # ---- STEP 2: TRANSLATE QUERY ----
-        # Use the async version directly
-        translated_query, is_direct_response = await translate_query(raw_query, context)
-        
-        if is_direct_response:
-            logger.info("Returning direct response")
-            response_payload.update(create_text_response(translated_query))
-            return JSONResponse(content=response_payload)
+        translated_query = translate_query_safe(raw_query, context)
+        if isinstance(translated_query, JSONResponse):
+            return translated_query
         
         # ---- STEP 3: EXECUTE SQL QUERY ----
-        query_result = await execute_sql_query(translated_query, user_location)
+        query_result = execute_sql_query(translated_query, user_location)
         
         # ---- STEP 4: ANALYZE DATA ----
         # Extract key data from query result
@@ -355,7 +345,7 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         )
         
         # ---- STEP 5: GENERATE DATA INSIGHTS ----
-        insights_result = await text_insights.generate_data_insights_complete(
+        insights_result = text_insights.generate_data_insights_complete(
             request_data.prompt,
             dataset,
             agg_def,
