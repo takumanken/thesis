@@ -9,8 +9,11 @@ import numpy as np
 import pandas as pd
 import polars as pl
 
-# Base directory - centralized for all modules
+# Base directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Common file paths used across modules
+DATA_SCHEMA_FILE = os.path.join(BASE_DIR, "data/data_schema.json")
 
 # Constants that might be used in multiple places
 TIME_DIMENSIONS = [

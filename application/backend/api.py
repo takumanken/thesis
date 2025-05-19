@@ -33,10 +33,7 @@ import utils
 from models import AggregationDefinition, PromptRequest
 from query_translator import translate_query
 from visualization_recommender import get_viz_recommendations
-from utils import BASE_DIR
-
-# === CONSTANTS ===
-DATA_SCHEMA_FILE = os.path.join(BASE_DIR, "data/data_schema.json")
+from utils import BASE_DIR, DATA_SCHEMA_FILE
 
 # === LOGGING SETUP ===
 logging.basicConfig(

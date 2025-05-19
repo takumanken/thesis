@@ -19,18 +19,16 @@ from google.genai import types
 # === LOCAL IMPORTS ===
 import utils
 from models import AggregationDefinition
-from utils import BASE_DIR
+from utils import BASE_DIR, DATA_SCHEMA_FILE
 
 # === CONSTANTS ===
 SYSTEM_INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/data_aggregation_instruction.md")
 FILTER_VALUES_FILE = os.path.join(BASE_DIR, "gemini_instructions/references/all_filters.json")
-DATA_SCHEMA_FILE = os.path.join(BASE_DIR, "data/data_schema.json")
 DUCKDB_FILE = os.path.join(BASE_DIR, "data/nyc_open_data_explorer.duckdb")
 
 # === GLOBAL CONFIGURATION ===
 logger = logging.getLogger(__name__)
 _system_instruction = None  # Cache for system instruction
-
 
 # === SYSTEM INSTRUCTION HANDLING ===
 def get_system_instruction() -> str:
