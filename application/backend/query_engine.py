@@ -20,7 +20,6 @@ from google.genai import types
 from models import AggregationDefinition
 from utils import (
     BASE_DIR, DATA_SCHEMA_FILE, TIME_DIMENSIONS, extract_json, classify_dimensions,
-    get_logger
 )
 
 # === CONSTANTS ===
@@ -387,7 +386,7 @@ def execute_sql_in_duckDB(
 
 
 # === QUERY PROCESSING ===
-def process_aggregation_query(
+async def process_aggregation_query(
     translated_query: str,
     user_location: Optional[Dict[str, Any]],
     generate_content_safe
@@ -396,14 +395,14 @@ def process_aggregation_query(
     # Get system instruction
     system_instruction = get_system_instruction()
     
-    # Call Gemini API for data aggregation definition
-    response = generate_content_safe(
-        model="gemini-2.0-flash",
+    # Call Gemini API for data aggregation definition - now with await
+    response = await generate_content_safe(
+        "gemini-2.0-flash",
+        translated_query,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction, 
             temperature=0
-        ),
-        contents=[translated_query]
+        )
     )
     
     # Parse the AI response using utility function

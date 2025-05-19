@@ -17,7 +17,7 @@ from google import genai
 from google.genai import types
 
 # Local imports
-from utils import BASE_DIR, DATA_SCHEMA_FILE, get_gemini_client
+from utils import BASE_DIR, DATA_SCHEMA_FILE, get_gemini_client, call_gemini_async
 
 # === CONSTANTS ===
 INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/query_translation_instruction.md")
@@ -133,7 +133,7 @@ def _prepare_context_prompt(context: Optional[Dict[str, Any]]) -> str:
 
 
 # === QUERY TRANSLATION ===
-def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) -> Tuple[str, bool]:
+async def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) -> Tuple[str, bool]:
     """Translate natural language query into a structured aggregation definition."""
     _initialize()
     
@@ -151,13 +151,14 @@ def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = None) ->
         query_preview = raw_query[:50] + "..." if len(raw_query) > 50 else raw_query
         logger.info(f"Translating query: {query_preview}")
         
-        response = _client.models.generate_content(
-            model="gemini-2.0-flash",
+        # Use the async wrapper
+        response = await call_gemini_async(
+            "gemini-2.0-flash",
+            full_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=_system_instruction,
                 temperature=0,
-            ),
-            contents=[full_prompt]
+            )
         )
         
         # Extract response text

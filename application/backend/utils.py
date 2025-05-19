@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import asyncio
 from typing import Dict, List, Tuple, Any, Union
 
 import pandas as pd
@@ -122,6 +123,16 @@ def get_gemini_client():
             raise ValueError("GEMINI_API_KEY environment variable is required")
         _gemini_client = genai.Client(api_key=api_key)
     return _gemini_client
+
+async def call_gemini_async(model_name: str, prompt: Union[str, List], **kwargs):
+    """Simple async wrapper for Gemini API calls"""
+    client = get_gemini_client()
+    return await asyncio.to_thread(
+        client.models.generate_content,
+        model=model_name,
+        contents=[prompt] if isinstance(prompt, str) else prompt,
+        **kwargs
+    )
 
 
 # === LOGGING UTILITIES ===

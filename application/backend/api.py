@@ -32,8 +32,8 @@ from models import AggregationDefinition, PromptRequest
 from query_translator import translate_query
 from visualization_recommender import get_viz_recommendations
 from utils import (
-    BASE_DIR, DATA_SCHEMA_FILE, get_gemini_client,
-    get_logger, configure_logging
+    DATA_SCHEMA_FILE, get_gemini_client,
+    get_logger, configure_logging, call_gemini_async
 )
 
 # === CONSTANTS ===
@@ -209,10 +209,10 @@ def recommend_visualization(agg_def: AggregationDefinition, dimension_stats: Dic
 
 # === API INTEGRATION ===
 @gemini_safe
-def translate_query_safe(raw_query: str, context: Optional[Dict]) -> Union[str, JSONResponse]:
+async def translate_query_safe(raw_query: str, context: Optional[Dict]) -> Union[str, JSONResponse]:
     """Translate natural language query and handle direct responses"""
-    # Direct call without asyncio.to_thread
-    translated_query, is_direct_response = translate_query(raw_query, context)
+    # Now with await
+    translated_query, is_direct_response = await translate_query(raw_query, context)
     
     if is_direct_response:
         logger.info("Returning direct response")
@@ -224,21 +224,19 @@ def translate_query_safe(raw_query: str, context: Optional[Dict]) -> Union[str, 
 
 
 @gemini_safe
-def generate_content_safe(*args, **kwargs):
+async def generate_content_safe(model_name: str, prompt: str, **kwargs):
     """Safe wrapper for generate_content that handles API errors"""
-    return client.models.generate_content(*args, **kwargs)
+    return await call_gemini_async(model_name, prompt, **kwargs)
 
 
-def execute_sql_query(translated_query: str, 
+async def execute_sql_query(translated_query: str, 
                     user_location: Optional[Dict]) -> Union[Dict, JSONResponse]:
     """Execute SQL query based on translated query"""
-    safe_content_generator = lambda *args, **kwargs: generate_content_safe(*args, **kwargs)
-    
-    # Call the query engine to process the query
-    result = query_engine.process_aggregation_query(
+    # Call the query engine to process the query - now with await
+    result = await query_engine.process_aggregation_query(
         translated_query=translated_query,
         user_location=user_location,
-        generate_content_safe=safe_content_generator
+        generate_content_safe=generate_content_safe
     )
     
     # Handle location required case
@@ -318,12 +316,12 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         context = query_info["context"]
         
         # ---- STEP 2: TRANSLATE QUERY ----
-        translated_query = translate_query_safe(raw_query, context)
+        translated_query = await translate_query_safe(raw_query, context)
         if isinstance(translated_query, JSONResponse):
             return translated_query
         
         # ---- STEP 3: EXECUTE SQL QUERY ----
-        query_result = execute_sql_query(translated_query, user_location)
+        query_result = await execute_sql_query(translated_query, user_location)
         
         # ---- STEP 4: ANALYZE DATA ----
         # Extract key data from query result
@@ -345,7 +343,7 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         )
         
         # ---- STEP 5: GENERATE DATA INSIGHTS ----
-        insights_result = text_insights.generate_data_insights_complete(
+        insights_result = await text_insights.generate_data_insights_complete(
             request_data.prompt,
             dataset,
             agg_def,

@@ -17,7 +17,7 @@ from google.genai import types
 
 # Local imports
 from models import AggregationDefinition
-from utils import BASE_DIR, extract_json, get_gemini_client, CustomJSONEncoder
+from utils import BASE_DIR, extract_json, get_gemini_client, CustomJSONEncoder, call_gemini_async
 
 # === CONSTANTS ===
 INSIGHTS_INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/data_description_instruction.md")
@@ -146,7 +146,7 @@ def remove_date_filters(filter_descriptions: List[Any]) -> List[Any]:
 
 
 # === INSIGHT GENERATION ===
-def generate_data_description(
+async def generate_data_description(
     original_query: str,
     dataset: List[Dict[str, Any]],
     aggregation_definition: Dict[str, Any],
@@ -174,14 +174,14 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
 {json.dumps(sample_data, indent=2)}
 """
 
-        client = get_gemini_client()
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
+        # Use the async wrapper
+        response = await call_gemini_async(
+            "gemini-2.0-flash",
+            prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction, 
                 temperature=0
-            ),
-            contents=[prompt]
+            )
         )
         
         # Extract and parse response
@@ -211,7 +211,7 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
         }
 
 
-def generate_data_insights_complete(
+async def generate_data_insights_complete(
     original_query: str,
     dataset: List[Dict[str, Any]],
     agg_def: AggregationDefinition,
@@ -233,7 +233,7 @@ def generate_data_insights_complete(
         descriptor_agg_def['statistics'] = query_metadata['statistics']
     
     # 4. Generate data description
-    data_description = generate_data_description(
+    data_description = await generate_data_description(
         original_query=original_query, 
         dataset=dataset,
         aggregation_definition=descriptor_agg_def,
