@@ -22,65 +22,33 @@ CARDINALITY_THRESHOLD = 15  # Maximum unique values for visualization without si
 
 # === HELPER FUNCTIONS ===
 def is_measure_additive(measure_alias: str) -> bool:
-    """
-    Determines if a measure can be summed (is additive).
-    
-    Args:
-        measure_alias: The alias name of the measure
-        
-    Returns:
-        True if the measure can be aggregated by summing, False otherwise
-    """
+    # Determines if a measure can be summed (is additive).
     return measure_alias in ADDITIVE_MEASURES
 
 
 def all_dimensions_exceed_cardinality(dimensions: List[str], dimension_stats: Dict[str, int], 
                                      threshold: int = CARDINALITY_THRESHOLD) -> bool:
-    """
-    Checks if all non-time dimensions exceed the cardinality threshold.
-    
-    High cardinality dimensions create visual clutter in many chart types,
-    so we need to detect when dimensions have too many unique values.
-    
-    Args:
-        dimensions: List of dimension names to check
-        dimension_stats: Dictionary mapping dimension names to their cardinality
-        threshold: Maximum acceptable unique values (default: 15)
-        
-    Returns:
-        True if all non-time dimensions exceed the threshold, False otherwise
-    """
-    if not dimensions or not dimension_stats:
-        return False
-        
+    # Checks if all non-time dimensions exceed the cardinality threshold.
     non_time_dims = [dim for dim in dimensions if dim not in TIME_DIMENSIONS]
-    if not non_time_dims:
+
+    # If no non-time dimensions, return False
+    if len(non_time_dims) == 0:
         return False
-        
+
+    # Check cardinality for each non-time dimension
+    # If any dimension's cardinality is less than or equal to the threshold, return False
     for dim in non_time_dims:
-        if dim not in dimension_stats:
-            continue
-        
         cardinality = dimension_stats.get(dim, 0)
         if cardinality <= threshold:
             return False
-            
+
+    # If all non-time dimensions exceed the threshold, return True   
     return True
 
 
 def is_topn_query(agg_def: AggregationDefinition) -> bool:
-    """
-    Determines if a query is a TOP N type query.
     
-    TOP N queries have special visualization requirements since they
-    explicitly limit and order the results.
-    
-    Args:
-        agg_def: The aggregation definition to check
-        
-    Returns:
-        True if this is a TOP N query, False otherwise
-    """
+    # Determines if a query is a TOP N type query.
     return hasattr(agg_def, 'topN') and agg_def.topN is not None
 
 
@@ -103,26 +71,18 @@ def get_viz_recommendations(agg_def: AggregationDefinition,
     Returns:
         Tuple of (available_charts, ideal_chart)
     """
-    # Handle edge cases
-    if dataset_length == 1:
-        logger.info("Single-row result detected: defaulting to table visualization")
-        return ["table"], "table"
     
     # Initialize defaults
     available = ["table"]  # Table is always available
     ideal = "table"        # Table is the default fallback
-    
+
     # Extract query components
     dimensions = agg_def.dimensions or []
     measures = agg_def.measures or []
-    
+
     # Classify dimensions by type
     time_dim, geo_dim, cat_dim = classify_dimensions(dimensions)
-    
-    # Log dimension classification for debugging
-    logger.info(f"Dimensions: {dimensions}, Measures: {measures}, "
-               f"Time: {time_dim}, Geo: {geo_dim}, Cat: {cat_dim}")
-    
+        
     # Count dimensions and measures by type
     dim_count = len(dimensions)
     time_count = len(time_dim)
@@ -133,29 +93,26 @@ def get_viz_recommendations(agg_def: AggregationDefinition,
     # Check measure additivity
     additive_measure_count = sum(is_measure_additive(m["alias"]) for m in measures) if measures else 0
     all_additive_measures = additive_measure_count == measure_count
+
+    # Handle edge cases
+    if dataset_length == 1:
+        return available, ideal
+    elif not dimensions and not measures:
+        return available, ideal
     
     # Check if this is a TOP N query
     is_topn = is_topn_query(agg_def)
-    if is_topn:
-        logger.info(f"Query identified as TOP N query with N={agg_def.topN.topN}")
-    
-    # Check for text response type
-    if hasattr(agg_def, 'response_type') and agg_def.response_type == "text":
-        return ["text"], "text"
-    
-    # Check for empty data
-    if not dimensions and not measures:
-        return available, ideal
-    
+            
     # Check dimension cardinality
-    high_cardinality = dimension_stats and all_dimensions_exceed_cardinality(dimensions, dimension_stats)
+    if dimensions and dimension_stats:
+        high_cardinality = all_dimensions_exceed_cardinality(dimensions, dimension_stats)
     
     # Check for location dimension (special case)
     is_not_location = dimensions[0] != "location" if dimensions else True
     
     # === VISUALIZATION SELECTION LOGIC ===
     
-    # Too many dimensions or no measures -> default to table
+    # More than two dimensions or no measures -> default to table
     if dim_count > 2 or measure_count == 0:
         return available, ideal
     
