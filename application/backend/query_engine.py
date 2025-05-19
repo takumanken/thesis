@@ -544,7 +544,7 @@ async def process_aggregation_query(
     """
     # Call Gemini API for data aggregation definition
     response = generate_content_safe(
-        model="gemini-2.5-flash-preview-04-17",
+        model="gemini-2.0-flash",
         config=types.GenerateContentConfig(system_instruction=system_instruction, temperature=0),
         contents=[response_text]
     )

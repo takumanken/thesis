@@ -25,16 +25,16 @@ from google.genai import types
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+import polars as pl
+import pandas as pd
+import numpy as np
 
 # Local imports
 import query_engine
+import text_insights
 from models import AggregationDefinition, PromptRequest
-from query_engine import (
-    calculate_dimension_cardinality_stats,
-    reorder_dimensions_by_cardinality,
-)
+from query_engine import extract_json_from_text
 from query_translator import translate_query
-from text_insights import generate_data_description
 from visualization_recommender import classify_dimensions, get_chart_options
 
 
@@ -102,15 +102,7 @@ def extract_query_info(request_id: str, request_data: PromptRequest) -> Dict[str
 
 
 def create_text_response(text: str) -> Dict[str, Any]:
-    """
-    Creates a standardized text-only response payload.
-    
-    Args:
-        text: The text content of the response
-        
-    Returns:
-        Response dictionary with text content and null data fields
-    """
+    """Creates a standardized text-only response payload."""
     return {
         "dataset": [],
         "fields": [],
@@ -141,52 +133,6 @@ def get_location_required_response() -> Dict[str, Any]:
     }
 
 
-def collect_metadata(fields: List[str], data_schema: Dict[str, Any]) -> Tuple[List[Dict], List[Dict]]:
-    """Collect metadata for fields and their associated data sources"""
-    # Get all field descriptions from schema
-    all_field_descriptions = (
-        data_schema["dimensions"]["time_dimension"] + 
-        data_schema["dimensions"]["geo_dimension"] + 
-        data_schema["dimensions"]["categorical_dimension"] + 
-        data_schema["measures"]
-    )
-
-    # Match fields to their metadata
-    field_metadata = []
-    for field in fields:
-        for field_description in all_field_descriptions:
-            if field_description["physical_name"] == field:
-                field_desc_copy = field_description.copy()
-                field_desc_copy.pop("synonym", None)  # Remove redundant synonym info
-                field_metadata.append(field_desc_copy)
-    
-    # Build set of unique data source IDs referenced by fields
-    used_datasources = set(
-        field['data_source_id'] 
-        for field in field_metadata 
-        if 'data_source_id' in field
-    )
-    
-    # Collect metadata for each data source
-    datasource_metadata = []
-    for used_datasource in used_datasources:
-        for datasource in data_schema["data_sources"]:
-            if datasource["data_source_id"] == used_datasource:
-                datasource_metadata.append(datasource)
-                
-    return field_metadata, datasource_metadata
-
-
-def extract_filter_fields(data_description: Dict[str, Any]) -> List[str]:
-    """Extract field names from filter descriptions"""
-    filter_fields = []
-    if data_description.get("filterDescription"):
-        for filter_desc in data_description.get("filterDescription", []):
-            if isinstance(filter_desc, dict) and "filteredFieldName" in filter_desc:
-                filter_fields.append(filter_desc["filteredFieldName"])
-    return filter_fields
-
-
 # === ERROR HANDLING ===
 def gemini_safe(fn):
     """Decorator for handling Gemini API errors consistently"""
@@ -200,6 +146,105 @@ def gemini_safe(fn):
             msg = "Rate limit exceeded" if status == 429 else "API error"
             raise HTTPException(status_code=status, detail={"error": msg})
     return wrapper
+
+
+# === DIMENSION ANALYSIS FUNCTIONS ===
+def _convert_to_dataframe(dataset: List[Dict]) -> Union[pl.DataFrame, pd.DataFrame]:
+    """Converts dataset to a DataFrame, using Polars if possible."""
+    try:
+        return pl.DataFrame(dataset)
+    except Exception as e:
+        logger.warning(f"Failed to use Polars: {str(e)}. Using pandas.")
+        return pd.DataFrame(dataset)
+
+
+def _calculate_single_dimension_stats(
+    df: Union[pl.DataFrame, pd.DataFrame], 
+    dim: str, 
+    dimensions: List[str]
+) -> Dict[str, float]:
+    """Calculates statistics for a single dimension."""
+    # Handle single dimension case
+    if isinstance(df, pl.DataFrame):
+        total_unique = df[dim].n_unique()
+    else:
+        total_unique = df[dim].nunique()
+        
+    if len(dimensions) == 1:
+        return {
+            "total_unique": total_unique,
+            "min_per_group": total_unique,
+            "max_per_group": total_unique,
+            "avg_per_group": float(total_unique),
+            "median_per_group": float(total_unique),
+            "std_per_group": 0.0
+        }
+        
+    # For multiple dimensions, calculate per-group stats
+    other_dims = [d for d in dimensions if d != dim]
+    
+    if isinstance(df, pl.DataFrame):
+        grouped = (df
+                 .group_by(other_dims)
+                 .agg(pl.col(dim).n_unique().alias("unique_count")))
+        
+        unique_counts = grouped["unique_count"].to_numpy()
+    else:
+        grouped = df.groupby(other_dims)[dim].nunique().reset_index()
+        unique_counts = grouped[dim].values
+    
+    # Calculate comprehensive statistics
+    return {
+        "total_unique": int(total_unique),
+        "min_per_group": int(np.min(unique_counts)),
+        "max_per_group": int(np.max(unique_counts)),
+        "avg_per_group": float(np.mean(unique_counts)),
+        "median_per_group": float(np.median(unique_counts)),
+        "std_per_group": float(np.std(unique_counts)),
+        "group_count": len(unique_counts)
+    }
+
+
+def calculate_dimension_cardinality_stats(dataset: List[Dict], dimensions: List[str]) -> Dict[str, Dict[str, float]]:
+    """Calculates cardinality statistics for each dimension in the dataset."""
+    if not dataset or not dimensions:
+        return {}
+    
+    # Try using Polars first, fall back to pandas if needed
+    df = _convert_to_dataframe(dataset)
+    
+    stats = {}
+    for dim in dimensions:
+        if dim not in df.columns:
+            continue
+            
+        # Calculate dimension stats
+        stats[dim] = _calculate_single_dimension_stats(df, dim, dimensions)
+    
+    return stats
+
+
+def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_stats: Dict[str, Dict[str, float]]) -> AggregationDefinition:
+    """Reorders dimensions by their cardinality (highest to lowest)."""
+    if not agg_def.dimensions or len(agg_def.dimensions) <= 1 or not dimension_stats:
+        return agg_def
+    
+    # Sort dimensions by total_unique (descending)
+    sorted_dims = sorted(
+        agg_def.dimensions,
+        key=lambda dim: dimension_stats.get(dim, {}).get("total_unique", 0),
+        reverse=True
+    )
+    
+    # Re-classify dimensions after sorting
+    time_dim, geo_dim, cat_dim = classify_dimensions(sorted_dims)
+    
+    return agg_def.copy(update={
+        "dimensions": sorted_dims,
+        "timeDimension": time_dim,
+        "geoDimension": geo_dim,
+        "categoricalDimension": cat_dim
+    })
 
 
 # === DATA ANALYSIS FUNCTIONS ===
@@ -228,27 +273,6 @@ def recommend_visualization(agg_def, dimension_stats, dataset_size):
     return available_charts, ideal_chart
 
 
-def prepare_field_metadata(agg_def, visible_fields, data_schema):
-    """Collect metadata for fields and data sources"""
-    # Collect basic metadata for visible fields
-    field_metadata, datasource_metadata = collect_metadata(visible_fields, data_schema)
-    
-    # Create descriptor aggregation definition
-    descriptor_agg_def = {
-        'dimensions': agg_def.dimensions,
-        'measures': agg_def.measures,
-        'preAggregationFilters': agg_def.preAggregationFilters,
-        'postAggregationFilters': agg_def.postAggregationFilters,
-        'topN': getattr(agg_def, 'topN', None),
-        'createdDateRange': getattr(agg_def, 'createdDateRange', []),
-        'datasourceMetadata': datasource_metadata,
-        'fieldMetadata': field_metadata,
-        'statistics': {}  # Will be populated by caller if needed
-    }
-    
-    return field_metadata, datasource_metadata, descriptor_agg_def
-
-
 # === WRAPPED API FUNCTIONS ===
 @gemini_safe
 def translate_query_safe(request_id, raw_query, context):
@@ -270,31 +294,6 @@ def generate_content_safe(request_id, *args, **kwargs):
     return client.models.generate_content(*args, **kwargs)
 
 
-@gemini_safe
-def generate_data_description_safe(request_id, *args, **kwargs):
-    """Safe wrapper for generate_data_description that handles API errors"""
-    return generate_data_description(*args, **kwargs)
-
-
-def generate_data_insights(request_id, original_query, dataset, descriptor_agg_def, chart_type):
-    """Generate natural language description of the data"""
-    # Generate description using AI
-    data_description = generate_data_description_safe(
-        request_id,
-        original_query=original_query, 
-        dataset=dataset,
-        aggregation_definition=descriptor_agg_def,
-        chart_type=chart_type
-    )
-    
-    # Structure the insights
-    return {
-        "title": data_description.get("title"),
-        "dataDescription": data_description.get("dataDescription"),
-        "filterDescription": data_description.get("filterDescription", [])
-    }
-
-
 # === QUERY PROCESSING FUNCTIONS ===
 async def execute_sql_query(request_id, response_text, user_location):
     """
@@ -304,7 +303,6 @@ async def execute_sql_query(request_id, response_text, user_location):
         - JSONResponse if a special case requires immediate response
         - Dict with query results if processing should continue
     """
-    # Fix: Don't add request_id in the lambda function to avoid duplication
     safe_content_generator = lambda *args, **kwargs: generate_content_safe(request_id, *args, **kwargs)
     
     # Call the query engine to process the query
@@ -445,38 +443,26 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
             agg_def, dimension_stats, len(dataset)
         )
         
-        # Prepare field metadata
-        visible_fields = agg_def.dimensions + [field["alias"] for field in agg_def.measures]
-        field_metadata, datasource_metadata, descriptor_agg_def = prepare_field_metadata(
-            agg_def, visible_fields, data_schema
+        # Use the new consolidated function from text_insights
+        insights_result = text_insights.generate_data_insights_complete(
+            request_id,
+            request_data.prompt,
+            dataset,
+            agg_def,
+            ideal_chart,
+            query_metadata,
+            data_schema
         )
         
-        # Add query statistics if available
-        if 'statistics' in query_metadata:
-            descriptor_agg_def['statistics'] = query_metadata['statistics']
-        
-        # Generate data insights
-        data_insights = generate_data_insights(
-            request_id, request_data.prompt, dataset, descriptor_agg_def, ideal_chart
-        )
-        
-        # Enhance metadata with filter fields
-        filter_fields = extract_filter_fields(data_insights)
-        if filter_fields:
-            all_fields = list(set(visible_fields + filter_fields))
-            if len(all_fields) > len(visible_fields):
-                field_metadata, datasource_metadata = collect_metadata(all_fields, data_schema)
-                # Update aggregation definition with complete metadata
-                agg_def = agg_def.copy(update={
-                    "datasourceMetadata": datasource_metadata,
-                    "fieldMetadata": field_metadata
-                })
+        # Extract results
+        data_insights = insights_result["dataInsights"]
+        agg_def = insights_result["enhancedAggDef"]
         
         # ---- STEP 5: BUILD RESPONSE ----
         response_payload.update({
             "sql": sql,
             "dataset": dataset,
-            "fields": visible_fields,
+            "fields": agg_def.dimensions + [field["alias"] for field in agg_def.measures],
             "chartType": ideal_chart,
             "availableChartTypes": available_charts,
             "dimensionStats": dimension_stats,
