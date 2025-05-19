@@ -397,23 +397,12 @@ async def process_aggregation_query(
     request_id: str,
     generate_content_safe
 ) -> Dict[str, Any]:
-    """
-    Process translated query text into a data query and execute it
-    
-    Args:
-        translated_query: Translated query from NL processor
-        user_location: Optional user location data
-        request_id: Unique identifier for the request
-        generate_content_safe: Safe wrapper for Gemini API calls
-        
-    Returns:
-        Dictionary with query results and metadata
-    """
+    """Process translated query text into a data query and execute it"""
     # Get system instruction
     system_instruction = get_system_instruction()
     
     # Call Gemini API for data aggregation definition
-    response = generate_content_safe(
+    response = await generate_content_safe(
         model="gemini-2.0-flash",
         config=types.GenerateContentConfig(
             system_instruction=system_instruction, 

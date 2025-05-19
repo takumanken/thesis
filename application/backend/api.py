@@ -6,6 +6,7 @@ into SQL queries, executing them, and generating visualizations and insights.
 """
 
 # Standard library imports
+import asyncio
 import functools
 import json
 import logging
@@ -185,9 +186,11 @@ def recommend_visualization(agg_def: AggregationDefinition, dimension_stats: Dic
 
 # === API INTEGRATION ===
 @gemini_safe
-def translate_query_safe(request_id: str, raw_query: str, context: Optional[Dict]) -> Union[str, JSONResponse]:
+async def translate_query_safe(request_id: str, raw_query: str, context: Optional[Dict]) -> Union[str, JSONResponse]:
     """Translate natural language query and handle direct responses"""
-    translated_query, is_direct_response = translate_query(raw_query, context)
+    translated_query, is_direct_response = await asyncio.to_thread(
+        translate_query, raw_query, context
+    )
     
     if is_direct_response:
         logger.info(f"[{request_id}] Returning direct response")
@@ -199,9 +202,9 @@ def translate_query_safe(request_id: str, raw_query: str, context: Optional[Dict
 
 
 @gemini_safe
-def generate_content_safe(request_id: str, *args, **kwargs):
-    """Safe wrapper for generate_content that handles API errors"""
-    return client.models.generate_content(*args, **kwargs)
+async def generate_content_safe(request_id: str, *args, **kwargs):
+    """Safe wrapper for generate_content that handles API errors asynchronously"""
+    return await asyncio.to_thread(client.models.generate_content, *args, **kwargs)
 
 
 async def execute_sql_query(request_id: str, translated_query: str, 
@@ -291,7 +294,7 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         context = query_info["context"]
         
         # ---- STEP 2: TRANSLATE QUERY ----
-        translated_query = translate_query_safe(request_id, raw_query, context)
+        translated_query = await translate_query_safe(request_id, raw_query, context)
         if isinstance(translated_query, JSONResponse):
             return translated_query
         
