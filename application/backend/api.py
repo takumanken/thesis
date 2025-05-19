@@ -242,20 +242,29 @@ def reorder_dimensions_by_cardinality(agg_def: AggregationDefinition, dimension_
     })
 
 
-# === DATA ANALYSIS FUNCTIONS ===
-def calculate_statistics(dataset, agg_def, query_metadata):
-    """Calculate statistics and optimize dimensions"""
-    # Add date range to aggregation definition if available
+def add_date_range_metadata(agg_def: AggregationDefinition, query_metadata: Dict[str, Any]) -> AggregationDefinition:
+    """Add date range from query metadata to aggregation definition"""
     if 'createdDateRange' in query_metadata:
-        agg_def.createdDateRange = query_metadata['createdDateRange']
+        agg_def = agg_def.copy(update={"createdDateRange": query_metadata['createdDateRange']})
     
-    # Process dimension statistics and optimize dimensions
-    dimension_stats = {}
-    if dataset and agg_def.dimensions:
-        dimension_stats = calculate_dimension_cardinality_stats(dataset, agg_def.dimensions)
-        agg_def = reorder_dimensions_by_cardinality(agg_def, dimension_stats)
+    return agg_def
+
+
+def calculate_dimension_stats(dataset: List[Dict], dimensions: List[str]) -> Dict[str, Dict[str, float]]:
+    """Calculate cardinality statistics for dimensions"""
+    if not dataset or not dimensions:
+        return {}
     
-    return dimension_stats, agg_def
+    return calculate_dimension_cardinality_stats(dataset, dimensions)
+
+
+def optimize_dimension_order(agg_def: AggregationDefinition, 
+                           dimension_stats: Dict[str, Dict[str, float]]) -> AggregationDefinition:
+    """Reorder dimensions based on cardinality"""
+    if not agg_def.dimensions or len(agg_def.dimensions) <= 1 or not dimension_stats:
+        return agg_def
+    
+    return reorder_dimensions_by_cardinality(agg_def, dimension_stats)
 
 
 def recommend_visualization(agg_def, dimension_stats, dataset_size):
@@ -404,9 +413,13 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         dataset = query_result["dataset"]
         agg_def = query_result["aggregationDefinition"]
         query_metadata = query_result["queryMetadata"]
+        print(f"Query Metadata: {query_metadata}")
+
         
         # Calculate statistics
-        dimension_stats, agg_def = calculate_statistics(dataset, agg_def, query_metadata)
+        agg_def = add_date_range_metadata(agg_def, query_metadata)
+        dimension_stats = calculate_dimension_stats(dataset, agg_def.dimensions)
+        agg_def = optimize_dimension_order(agg_def, dimension_stats)
         
         # Recommend visualization
         available_charts, ideal_chart = recommend_visualization(
