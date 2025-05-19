@@ -1,97 +1,43 @@
-import json
-import logging
-from typing import Dict, List, Any, Optional, Tuple
+"""
+Text Insights Generator
 
-logger = logging.getLogger(__name__)
-
-from google import genai
-from google.genai import types
-from utils import get_gemini_client, extract_json
-
-# Single client instance
-gemini_client = None
-
-# Add a custom JSON encoder to handle non-serializable objects
-class CustomJSONEncoder(json.JSONEncoder):
-    """Custom JSON encoder that handles TopNDefinition and other custom objects"""
-    def default(self, obj):
-        # Handle objects with __dict__ attribute (like TopNDefinition)
-        if hasattr(obj, '__dict__'):
-            return obj.__dict__
-        # Handle any other special cases
-        return super().default(obj)
-
-
-def generate_data_description(
-    request_id: str,
-    original_query: str,
-    dataset: List[Dict[str, Any]],
-    aggregation_definition: Dict[str, Any],
-    chart_type: str
-) -> Dict[str, Any]:
-    """Generate a user-friendly description of data and chart"""
-    try:
-        # Load system instruction
-        instruction_path = "gemini_instructions/data_description_instruction.md"
-        with open(instruction_path, "r") as f:
-            system_instruction = f.read()
-            
-        # Sample dataset to reduce tokens
-        sample_size = min(100, len(dataset))
-        sample_data = dataset[:sample_size]
-        
-        # Use custom encoder to handle TopNDefinition objects
-        prompt = f"""
-User Query: "{original_query}"
-Chart Type: {chart_type}
-
-Aggregation Definition:
-{json.dumps(aggregation_definition, indent=2, cls=CustomJSONEncoder)}
-
-Dataset Sample ({sample_size} of {len(dataset)} rows):
-{json.dumps(sample_data, indent=2)}
+Generates human-readable insights and descriptions for NYC 311 data
+based on query results, dataset statistics, and visualization types.
 """
 
-        # Call Gemini API
-        client = get_gemini_client()
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            config=types.GenerateContentConfig(system_instruction=system_instruction, temperature=0),
-            contents=[prompt],
-        )
-            
-        # Extract response text
-        response_text = response.candidates[0].content.parts[0].text
-        logger.info(f"[{request_id}] Generated data description")
-        
-        # Parse JSON, handling different formats
-        result = extract_json(response_text)
-        
-        # Ensure we have all expected fields with defaults
-        defaults = {
-            "title": "Data Overview",
-            "dataDescription": "Here is a summary of the requested data.",
-            "filterDescription": []
-        }
-        
-        # Apply defaults for any missing fields
-        for key, default_value in defaults.items():
-            if key not in result:
-                result[key] = default_value
-                            
-        return result
-            
-    except Exception as e:
-        logger.error(f"[{request_id}] Error generating data description: {e}", exc_info=True)
-        return {
-            "title": "Data Overview",
-            "dataDescription": "Here is a summary of the requested data.",
-            "filterDescription": []
-        }
+# Standard library imports
+import json
+import logging
+import os
+from typing import Dict, List, Any, Optional, Tuple
+
+# Third-party imports
+from google import genai
+from google.genai import types
+
+# Local imports
+from models import AggregationDefinition
+from utils import BASE_DIR, extract_json, get_gemini_client, CustomJSONEncoder
+
+# === CONSTANTS ===
+INSIGHTS_INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/data_description_instruction.md")
+MAX_SAMPLE_SIZE = 100
+
+# === GLOBAL CONFIGURATION ===
+logger = logging.getLogger(__name__)
 
 
+# === HELPER FUNCTIONS ===
 def extract_filter_fields(data_description: Dict[str, Any]) -> List[str]:
-    """Extract field names from filter descriptions"""
+    """
+    Extract field names from filter descriptions.
+    
+    Args:
+        data_description: Dictionary containing filter descriptions
+        
+    Returns:
+        List of field names mentioned in filters
+    """
     filter_fields = []
     if data_description.get("filterDescription"):
         for filter_desc in data_description.get("filterDescription", []):
@@ -101,7 +47,16 @@ def extract_filter_fields(data_description: Dict[str, Any]) -> List[str]:
 
 
 def collect_metadata(fields: List[str], data_schema: Dict[str, Any]) -> Tuple[List[Dict], List[Dict]]:
-    """Collect metadata for fields and their associated data sources"""
+    """
+    Collect metadata for fields and their associated data sources.
+    
+    Args:
+        fields: List of field names to get metadata for
+        data_schema: Complete data schema with field and source information
+        
+    Returns:
+        Tuple of (field_metadata, datasource_metadata)
+    """
     # Get all field descriptions from schema
     all_field_descriptions = (
         data_schema["dimensions"]["time_dimension"] + 
@@ -136,8 +91,19 @@ def collect_metadata(fields: List[str], data_schema: Dict[str, Any]) -> Tuple[Li
     return field_metadata, datasource_metadata
 
 
-def prepare_field_metadata(agg_def, visible_fields, data_schema):
-    """Collect metadata for fields and data sources"""
+def prepare_field_metadata(agg_def: AggregationDefinition, visible_fields: List[str], 
+                          data_schema: Dict[str, Any]) -> Tuple[List[Dict], List[Dict], Dict[str, Any]]:
+    """
+    Prepare enhanced field metadata for insights generation.
+    
+    Args:
+        agg_def: Aggregation definition containing query structure
+        visible_fields: List of fields visible in the current view
+        data_schema: Complete data schema
+        
+    Returns:
+        Tuple of (field_metadata, datasource_metadata, descriptor_agg_def)
+    """
     # Collect basic metadata for visible fields
     field_metadata, datasource_metadata = collect_metadata(visible_fields, data_schema)
     
@@ -157,17 +123,120 @@ def prepare_field_metadata(agg_def, visible_fields, data_schema):
     return field_metadata, datasource_metadata, descriptor_agg_def
 
 
+def remove_date_filters(filter_descriptions: List[Any]) -> List[Any]:
+    """
+    Remove filter descriptions related to date fields to avoid redundancy.
+    
+    Args:
+        filter_descriptions: List of filter descriptions
+        
+    Returns:
+        Filtered list with date-related filters removed
+    """
+    if not isinstance(filter_descriptions, list):
+        return filter_descriptions
+    
+    # Filter out both created_date and createdDateRange items
+    return [
+        item for item in filter_descriptions
+        if isinstance(item, str) or
+        not any(date_term in (item.get('filteredFieldName', '') + item.get('field', '')).lower() 
+                for date_term in ['created_date', 'createddaterange'])
+    ]
+
+
+# === INSIGHT GENERATION ===
+def generate_data_description(
+    request_id: str,
+    original_query: str,
+    dataset: List[Dict[str, Any]],
+    aggregation_definition: Dict[str, Any],
+    chart_type: str
+) -> Dict[str, Any]:
+    """
+    Generate a user-friendly description of data and chart.
+    
+    Args:
+        request_id: Unique identifier for tracking
+        original_query: User's original natural language query
+        dataset: Query result dataset
+        aggregation_definition: Enhanced aggregation definition with metadata
+        chart_type: Selected visualization type
+        
+    Returns:
+        Dictionary with title, data description, and filter descriptions
+    """
+    try:
+        # Load system instruction
+        with open(INSIGHTS_INSTRUCTION_FILE, "r") as f:
+            system_instruction = f.read()
+            
+        # Sample dataset to reduce tokens
+        sample_size = min(MAX_SAMPLE_SIZE, len(dataset))
+        sample_data = dataset[:sample_size]
+        
+        # Prepare prompt with custom encoder for complex objects
+        prompt = f"""
+User Query: "{original_query}"
+Chart Type: {chart_type}
+
+Aggregation Definition:
+{json.dumps(aggregation_definition, indent=2, cls=CustomJSONEncoder)}
+
+Dataset Sample ({sample_size} of {len(dataset)} rows):
+{json.dumps(sample_data, indent=2)}
+"""
+
+        # Call Gemini API
+        client = get_gemini_client()
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction, 
+                temperature=0
+            ),
+            contents=[prompt],
+        )
+            
+        # Extract and parse response
+        response_text = response.candidates[0].content.parts[0].text
+        logger.info(f"[{request_id}] Generated data description")
+        result = extract_json(response_text)
+        
+        # Ensure we have all expected fields with defaults
+        defaults = {
+            "title": "Data Overview",
+            "dataDescription": "Here is a summary of the requested data.",
+            "filterDescription": []
+        }
+        
+        # Apply defaults for any missing fields
+        for key, default_value in defaults.items():
+            if key not in result:
+                result[key] = default_value
+                            
+        return result
+            
+    except Exception as e:
+        logger.error(f"[{request_id}] Error generating data description: {e}", exc_info=True)
+        return {
+            "title": "Data Overview",
+            "dataDescription": "Here is a summary of the requested data.",
+            "filterDescription": []
+        }
+
+
 def generate_data_insights_complete(
     request_id: str,
     original_query: str,
     dataset: List[Dict[str, Any]],
-    agg_def: Any,
+    agg_def: AggregationDefinition,
     chart_type: str,
     query_metadata: Dict[str, Any],
     data_schema: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    Generate complete data insights with metadata enhancement
+    Generate complete data insights with metadata enhancement.
     
     This function:
     1. Prepares field metadata
@@ -187,28 +256,19 @@ def generate_data_insights_complete(
     Returns:
         Dict containing insights and enhanced aggregation definition
     """
-    # 1. Prepare field metadata
+    # 1. Prepare visible fields list
     visible_fields = agg_def.dimensions + [field["alias"] for field in agg_def.measures]
-    field_metadata, datasource_metadata = collect_metadata(visible_fields, data_schema)
     
-    # Create descriptor aggregation definition
-    descriptor_agg_def = {
-        'dimensions': agg_def.dimensions,
-        'measures': agg_def.measures,
-        'preAggregationFilters': agg_def.preAggregationFilters,
-        'postAggregationFilters': agg_def.postAggregationFilters,
-        'topN': getattr(agg_def, 'topN', None),
-        'createdDateRange': getattr(agg_def, 'createdDateRange', []),
-        'datasourceMetadata': datasource_metadata,
-        'fieldMetadata': field_metadata,
-        'statistics': {}  # Will be populated by caller if needed
-    }
+    # 2. Collect metadata and prepare enhanced aggregation definition
+    field_metadata, datasource_metadata, descriptor_agg_def = prepare_field_metadata(
+        agg_def, visible_fields, data_schema
+    )
     
-    # 2. Add query statistics if available
+    # 3. Add query statistics if available
     if 'statistics' in query_metadata:
         descriptor_agg_def['statistics'] = query_metadata['statistics']
     
-    # 3. Generate data insights/description
+    # 4. Generate data insights/description
     data_description = generate_data_description(
         request_id=request_id,
         original_query=original_query, 
@@ -217,14 +277,14 @@ def generate_data_insights_complete(
         chart_type=chart_type
     )
     
-    # 4. Structure insights
+    # 5. Structure insights
     data_insights = {
         "title": data_description.get("title"),
         "dataDescription": data_description.get("dataDescription"),
         "filterDescription": data_description.get("filterDescription", [])
     }
     
-    # 5. Enhance metadata with filter fields
+    # 6. Enhance metadata with filter fields
     filter_fields = extract_filter_fields(data_insights)
     if filter_fields:
         all_fields = list(set(visible_fields + filter_fields))
@@ -236,22 +296,8 @@ def generate_data_insights_complete(
                 "fieldMetadata": field_metadata
             })
     
-    # 6. Return complete results
+    # 7. Return complete results
     return {
         "dataInsights": data_insights,
         "enhancedAggDef": agg_def
     }
-
-
-def remove_date_filters(filterDescriptions):
-    """Remove filter descriptions related to created_date fields"""
-    if not isinstance(filterDescriptions, list):
-        return filterDescriptions
-    
-    # Filter out both created_date and createdDateRange items
-    return [
-        item for item in filterDescriptions
-        if isinstance(item, str) or
-        not any(date_term in (item.get('filteredFieldName', '') + item.get('field', '')).lower() 
-                for date_term in ['created_date', 'createddaterange'])
-    ]

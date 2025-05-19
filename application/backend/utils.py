@@ -95,6 +95,16 @@ def extract_json(text: str, return_status: bool = False) -> Union[Dict[str, Any]
         return ({}, False) if return_status else {}
 
 
+class CustomJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles objects with __dict__ attribute."""
+    def default(self, obj):
+        # Handle objects with __dict__ attribute (like TopNDefinition)
+        if hasattr(obj, '__dict__'):
+            return obj.__dict__
+        # Handle any other special cases
+        return super().default(obj)
+
+
 # === GEMINI API CLIENT ===
 _gemini_client = None
 
