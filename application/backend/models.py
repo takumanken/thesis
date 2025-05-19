@@ -1,6 +1,17 @@
-from typing import List, Dict, Optional, Any
+"""
+NYC 311 Data Explorer Models
+
+This module defines the data models used throughout the application,
+including request/response structures and data aggregation definitions.
+"""
+
+# Standard library imports
+from typing import Any, Dict, List, Optional
+
+# Third-party imports
 from pydantic import BaseModel
 
+# === DATA DEFINITION MODELS ===
 class TopNDefinition(BaseModel):
     """
     Defines the structure for TOP N queries.
@@ -9,9 +20,12 @@ class TopNDefinition(BaseModel):
     orderByKey: List[str]
     topN: int
 
+
+# === VISUALIZATION MODELS ===
 class CurrentVisualization(BaseModel):
     """
-    Represents the current visualization state
+    Represents the current visualization state in the frontend.
+    Contains chart type, dimensions, measures, and filters.
     """
     chartType: str
     dimensions: List[str] = []
@@ -20,13 +34,18 @@ class CurrentVisualization(BaseModel):
     postAggregationFilters: str = ""
     topN: Optional[TopNDefinition] = None
 
+
+# === CONVERSATION MODELS ===
 class ConversationContext(BaseModel):
     """
-    Contains the current visualization context and conversation history
+    Contains the current visualization context and conversation history.
+    Used to maintain state between user interactions.
     """
     currentVisualization: CurrentVisualization
     conversationHistory: List[Dict[str, Any]] = []
 
+
+# === API REQUEST MODELS ===
 class PromptRequest(BaseModel):
     """
     Request model for the /process endpoint.
@@ -36,10 +55,15 @@ class PromptRequest(BaseModel):
     context: Optional[ConversationContext] = None
     location: Optional[Dict[str, float]] = None
 
+
+# === DATA QUERY MODELS ===
 class AggregationDefinition(BaseModel):
     """
     Defines the structure of a data aggregation query.
     Contains dimensions, measures, and filters for aggregation operations.
+    
+    This is the central data model that drives SQL generation, visualization 
+    selection, and insight generation.
     """
     dimensions: List[str]
     measures: List[Dict[str, str]]
