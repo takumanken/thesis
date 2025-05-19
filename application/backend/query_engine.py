@@ -10,6 +10,7 @@ import logging
 import os
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
+import contextvars
 
 # Third-party imports
 import duckdb
@@ -19,22 +20,22 @@ from google.genai import types
 # Local imports
 from models import AggregationDefinition
 from utils import (
-    BASE_DIR,
-    DATA_SCHEMA_FILE,
-    TIME_DIMENSIONS,
-    extract_json,
-    classify_dimensions
+    BASE_DIR, DATA_SCHEMA_FILE, TIME_DIMENSIONS, extract_json, classify_dimensions,
+    request_id_var, get_logger, create_logger_functions
 )
 
 # === CONSTANTS ===
 SYSTEM_INSTRUCTION_FILE = os.path.join(BASE_DIR, "gemini_instructions/data_aggregation_instruction.md")
 FILTER_VALUES_FILE = os.path.join(BASE_DIR, "gemini_instructions/references/all_filters.json")
 DUCKDB_FILE = os.path.join(BASE_DIR, "data/nyc_open_data_explorer.duckdb")
+_system_instruction = None
 
 # === GLOBAL CONFIGURATION ===
-logger = logging.getLogger(__name__)
-_system_instruction = None  # Cache for system instruction
-
+logger = get_logger('query_engine')
+log_functions = create_logger_functions(logger)
+log_info = log_functions['info']
+log_error = log_functions['error']
+log_debug = log_functions['debug']
 
 # === SYSTEM INSTRUCTION HANDLING ===
 def get_system_instruction() -> str:
@@ -394,7 +395,6 @@ def execute_sql_in_duckDB(
 async def process_aggregation_query(
     translated_query: str,
     user_location: Optional[Dict[str, Any]],
-    request_id: str,
     generate_content_safe
 ) -> Dict[str, Any]:
     """Process translated query text into a data query and execute it"""
@@ -439,7 +439,7 @@ async def process_aggregation_query(
     # Check if location is required but not provided
     location_enabled = bool(user_location)
     if ('user_latitude' in sql or 'user_longitude' in sql) and not location_enabled:
-        logger.info(f"[{request_id}] Query requires location services but they are disabled")
+        log_info("Query requires location services but they are disabled")
         return {"locationRequired": True}
     
     # Execute SQL with location data

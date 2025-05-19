@@ -15,6 +15,8 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 from collections import defaultdict
+import contextvars
+from functools import partial
 
 # Third-party library imports
 from dotenv import load_dotenv
@@ -34,7 +36,10 @@ import text_insights
 from models import AggregationDefinition, PromptRequest
 from query_translator import translate_query
 from visualization_recommender import get_viz_recommendations
-from utils import BASE_DIR, DATA_SCHEMA_FILE, get_gemini_client
+from utils import (
+    BASE_DIR, DATA_SCHEMA_FILE, get_gemini_client,
+    request_id_var, get_logger, create_logger_functions
+)
 
 # === CONSTANTS ===
 ALLOWED_ORIGINS = ["https://takumanken.github.io", "http://127.0.0.1:5500"]
@@ -42,12 +47,12 @@ API_RATE_LIMIT = "10/minute"
 
 # === GLOBAL CONFIGURATION ===
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-logger = logging.getLogger(__name__)
+logger = get_logger('api')
+log_functions = create_logger_functions(logger)
+log_info = log_functions['info']
+log_error = log_functions['error']
+log_debug = log_functions['debug']
+log_exception = log_functions['exception']
 
 # === DATA MODELS ===
 @dataclass
@@ -75,15 +80,15 @@ class ResponsePayload:
 def gemini_safe(fn):
     """Decorator for handling all Gemini API errors consistently"""
     @functools.wraps(fn)
-    async def wrapper(request_id: str, *args, **kwargs):
+    async def wrapper(*args, **kwargs):
         try:
-            return await fn(request_id, *args, **kwargs)
+            return await fn(*args, **kwargs)
 
         # Catch *all* SDK-level API errors (4xx + 5xx)
         except genai_errors.APIError as err:
-            logger.error(f"[{request_id}] Gemini API error: {err}")
+            log_error(f"Gemini API error: {err}")
 
-            status_code = getattr(err, "code", 500)     # 400, 429, 500, 503 ...
+            status_code = getattr(err, "code", 500)
             # Provide a friendlier message for the common cases
             if status_code == 429:
                 message = "Rate limit exceeded - please try again later"
@@ -134,7 +139,7 @@ def get_location_required_response() -> Dict[str, Any]:
 
 
 # === REQUEST PROCESSING HELPERS ===
-def extract_query_info(request_id: str, request_data: PromptRequest) -> Dict[str, Any]:
+def extract_query_info(request_data: PromptRequest) -> Dict[str, Any]:
     """Extract query, context, and location information from request"""
     user_location = None
     raw_query = request_data.prompt
@@ -143,7 +148,7 @@ def extract_query_info(request_id: str, request_data: PromptRequest) -> Dict[str
     # Add location info to query if available
     if hasattr(request_data, 'location') and request_data.location:
         user_location = request_data.location
-        logger.info(f"[{request_id}] Location data available but masked for privacy")
+        log_info("Location data available but masked for privacy")
         raw_query = f"{request_data.prompt}\n[USER_LOCATION_AVAILABLE: TRUE]"
     
     return {
@@ -216,14 +221,14 @@ def recommend_visualization(agg_def: AggregationDefinition, dimension_stats: Dic
 
 # === API INTEGRATION ===
 @gemini_safe
-async def translate_query_safe(request_id: str, raw_query: str, context: Optional[Dict], request_client) -> Union[str, JSONResponse]:
+async def translate_query_safe(raw_query: str, context: Optional[Dict], request_client) -> Union[str, JSONResponse]:
     """Translate natural language query and handle direct responses"""
     translated_query, is_direct_response = await asyncio.to_thread(
         translate_query, raw_query, context
     )
     
     if is_direct_response:
-        logger.info(f"[{request_id}] Returning direct response")
+        log_info("Returning direct response")
         response_payload = asdict(ResponsePayload())
         response_payload.update(create_text_response(translated_query))
         return JSONResponse(content=response_payload)
@@ -232,21 +237,20 @@ async def translate_query_safe(request_id: str, raw_query: str, context: Optiona
 
 
 @gemini_safe
-async def generate_content_safe(request_id: str, request_client, *args, **kwargs):
+async def generate_content_safe(request_client, *args, **kwargs):
     """Safe wrapper for generate_content that handles API errors asynchronously"""
     return await asyncio.to_thread(request_client.models.generate_content, *args, **kwargs)
 
 
-async def execute_sql_query(request_id: str, translated_query: str, 
+async def execute_sql_query(translated_query: str, 
                            user_location: Optional[Dict], request_client) -> Union[Dict, JSONResponse]:
     """Execute SQL query based on translated query"""
-    safe_content_generator = lambda *args, **kwargs: generate_content_safe(request_id, request_client, *args, **kwargs)
+    safe_content_generator = lambda *args, **kwargs: generate_content_safe(request_client, *args, **kwargs)
     
     # Call the query engine to process the query
     result = await query_engine.process_aggregation_query(
         translated_query=translated_query,
         user_location=user_location,
-        request_id=request_id,
         generate_content_safe=safe_content_generator
     )
     
@@ -293,7 +297,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
-    allow_methods=["POST"],
+    allow_methods=["POST", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
 
@@ -301,7 +305,7 @@ app.add_middleware(
 resources = setup_environment()
 data_schema = resources["data_schema"]
 client = resources["client"]
-logger.info("Environment setup completed")
+log_info("Environment setup completed")
 
 
 # === MAIN API ENDPOINT ===
@@ -309,8 +313,11 @@ logger.info("Environment setup completed")
 @limiter.limit(API_RATE_LIMIT)
 async def process_prompt(request_data: PromptRequest, request: Request) -> JSONResponse:
     """Process natural language queries about NYC 311 data"""
-    request_id = str(uuid.uuid4())[:8]
-    logger.info(f"[{request_id}] Processing new request")
+    # Generate request_id and set it in context
+    req_id = str(uuid.uuid4())[:8]
+    request_id_var.set(req_id)
+    
+    log_info("Processing new request")  # Uses context automatically
     start_time = time.time()
     
     # Initialize response structure
@@ -321,19 +328,19 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         request_client = get_gemini_client()
         
         # ---- STEP 1: EXTRACT QUERY INFO ----
-        query_info = extract_query_info(request_id, request_data)
+        query_info = extract_query_info(request_data)  # No need to pass request_id
         raw_query = query_info["raw_query"]
         user_location = query_info["user_location"]
         context = query_info["context"]
         
         # ---- STEP 2: TRANSLATE QUERY ----
-        translated_query = await translate_query_safe(request_id, raw_query, context, request_client)
+        translated_query = await translate_query_safe(raw_query, context, request_client)
         if isinstance(translated_query, JSONResponse):
             return translated_query
         
         # ---- STEP 3: EXECUTE SQL QUERY ----
         query_result = await execute_sql_query(
-            request_id, translated_query, user_location, request_client
+            translated_query, user_location, request_client
         )
         if isinstance(query_result, JSONResponse):
             return query_result
@@ -359,7 +366,7 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         
         # ---- STEP 5: GENERATE DATA INSIGHTS ----
         insights_result = text_insights.generate_data_insights_complete(
-            request_id,
+            req_id,
             request_data.prompt,
             dataset,
             agg_def,
@@ -385,11 +392,11 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
             "dataInsights": data_insights
         })
         
-        logger.info(f"[{request_id}] Completed in {time.time() - start_time:.2f}s")
+        log_info(f"Completed in {time.time() - start_time:.2f}s")
         return JSONResponse(content=response_payload)
         
     except HTTPException as http_error:
-        logger.error(f"[{request_id}] HTTP error: {http_error.status_code} - {http_error.detail}")
+        log_error(f"HTTP error: {http_error.status_code} - {http_error.detail}")
         error_message = (
             http_error.detail.get("error") 
             if isinstance(http_error.detail, dict) 
@@ -405,7 +412,7 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
             }
         )
     except Exception as error:
-        logger.exception(f"[{request_id}] Error processing prompt")
+        log_exception("Error processing prompt")
         return JSONResponse(
             status_code=500, 
             content={
