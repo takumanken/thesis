@@ -475,10 +475,23 @@ async def process_prompt(request_data: PromptRequest, request: Request) -> JSONR
         return JSONResponse(content=response_payload)
         
     except HTTPException as http_error:
-        # Handle API errors
+        # Create a clear error message with more details
+        logger.error(f"[{request_id}] HTTP error: {http_error.status_code} - {http_error.detail}")
+        
+        # Construct a consistent error response
+        error_message = (
+            http_error.detail.get("error") 
+            if isinstance(http_error.detail, dict) 
+            else "An error occurred"
+        )
+        
         return JSONResponse(
             status_code=http_error.status_code,
-            content=http_error.detail
+            content={
+                "error": error_message,
+                "errorType": "api_error",
+                "success": False
+            }
         )
     except Exception as error:
         # Handle general errors
