@@ -7,10 +7,6 @@ This project was developed as part of a 2025 thesis for the M.S. in Data Visuali
 - ✍️ [Thesis Paper](https://github.com/takumanken/thesis/blob/main/A%20Natural%20Language%20Interface%20for%20Exploring%20NYC%20Open%20Data_%20Enhancing%20Public%20Access%20to%20Data.pdf)
 - 📹 [Demo Video](https://drive.google.com/file/d/1SkV6AFB3EMg4uR__qWwvjVxzxlrXK5dw/view)
 
-## Background
-
-While open data is intended to be universally accessible, using it often requires technical knowledge in data aggregation and visualization. This project aims to reduce that barrier by developing a natural language interface that allows users to generate visualized charts simply by asking questions.
-
 ## How to Use
 
 ### Top Page
