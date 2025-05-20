@@ -57,10 +57,10 @@
   
       #about-modal .modal-content, #privacy-modal .modal-content {
         background-color: white;
-        margin: 10% auto;
+        margin: 20% auto;
         padding: 2rem;
         width: 80%;
-        max-width: 600px;
+        max-width: 800px;
         border-radius: 8px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
         font-family: 'Noto Sans', sans-serif;
@@ -105,12 +105,11 @@
       </div>
     `;
 
-    // Create modals (unchanged)
+    // Create modals without close buttons
     const aboutModal = document.createElement("div");
     aboutModal.id = "about-modal";
     aboutModal.innerHTML = `
         <div class="modal-content">
-          <span class="close-modal">&times;</span>
           <h2>About ASK NYC</h2>
           <p>ASK NYC is a natural language interface for exploring New York City's 311 service requests.</p>
           <p>This project was developed as part of a 2025 thesis for the M.S. in Data Visualization program at Parsons School of Design.</p>
@@ -123,12 +122,11 @@
     privacyModal.id = "privacy-modal";
     privacyModal.innerHTML = `
             <div class="modal-content">
-              <span class="close-modal">&times;</span>
               <h2>Privacy Notice — May 2025</h2>
               <p>By using ASK NYC you agree that:</p>
               <ul>
                 <li>Query text—and, if you enable "Use my NYC location," your coarse latitude/longitude (3-dec ≈ 111 m)—are sent to Google's Gemini API to create a data visualisation. Because this site uses the free Gemini tier, Google may retain prompts and outputs to improve its services (<a href="https://ai.google.dev/terms" target="_blank">see link</a>).</li>
-                <li>Railway automatically logs connection metadata (e.g., IP address) for security. For detailed information, visit <a href="https://railway.com/legal/privacy" target="_blank">Railway's privacy policy</a>.</li>
+                <li>GitHub Pages (site host) and Railway (API host) automatically log connection metadata such as IP address for security. For more information, visit <a href="https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages#data-collection" target="_blank">GitHub Pages documentation</a> and <a href="https://railway.com/legal/privacy" target="_blank">Railway's privacy policy</a>.</li>
                 <li>We also keep brief internal diagnostics logs (timestamp + query/result) purely for troubleshooting; they auto-delete on routine rotation. We never share these logs.</li>
               </ul>
             </div>
@@ -152,7 +150,6 @@
     const aboutLink = document.getElementById("about-project-link");
     const privacyModal = document.getElementById("privacy-modal");
     const privacyLink = document.getElementById("privacy-notice-link");
-    const closeButtons = document.querySelectorAll(".close-modal");
 
     // About modal functionality
     if (aboutLink && aboutModal) {
@@ -170,14 +167,6 @@
       });
     }
 
-    // Close buttons functionality
-    closeButtons.forEach((btn) => {
-      btn.addEventListener("click", function () {
-        aboutModal.style.display = "none";
-        privacyModal.style.display = "none";
-      });
-    });
-
     // Click outside to close
     window.addEventListener("click", function (e) {
       if (e.target === aboutModal) {
@@ -186,6 +175,14 @@
       if (e.target === privacyModal) {
         privacyModal.style.display = "none";
       }
+    });
+
+    // Prevent clicks inside the modal from closing it
+    const modalContents = document.querySelectorAll(".modal-content");
+    modalContents.forEach((content) => {
+      content.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
     });
   }
 
