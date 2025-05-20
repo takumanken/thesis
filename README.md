@@ -4,7 +4,7 @@ This is the GitHub repository for ASK NYC – NYC Data Explorer, a natural langu
 
 This project was developed as part of a 2025 thesis for the M.S. in Data Visualization program at Parsons School of Design. 
 - 🌐 [Application URL](https://takumanken.github.io/thesis/application/frontend/index.html)
-- ✍️ [Thesis Paper](https://github.com/takumanken/thesis/blob/main/A%20Natural%20Language%20Interface%20for%20Exploring%20NYC%20Open%20Data_%20Enhancing%20Public%20Access%20to%20Data.pdf)
+- ✍️ [Thesis Paper](https://github.com/takumanken/ask-nyc/blob/main/A%20Natural%20Language%20Interface%20for%20Exploring%20NYC%20Open%20Data_%20Enhancing%20Public%20Access%20to%20Data.pdf)
 - 📹 [Demo Video](https://drive.google.com/file/d/1SkV6AFB3EMg4uR__qWwvjVxzxlrXK5dw/view)
 
 ## How to Use
