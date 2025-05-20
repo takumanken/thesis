@@ -113,7 +113,7 @@
           <h2>About ASK NYC</h2>
           <p>ASK NYC is a natural language interface for exploring New York City's 311 service requests.</p>
           <p>This project was developed as part of a 2025 thesis for the M.S. in Data Visualization program at Parsons School of Design.</p>
-          <p>This application uses the <a href="https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2010-to-Present/erm2-nwe9/about_data" target="_blank">NYC 311 Service Requests dataset</a> from NYC Open Data.</p>
+          <p>This application currently uses the <a href="https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2010-to-Present/erm2-nwe9/about_data" target="_blank">NYC 311 Service Requests dataset</a> from NYC Open Data, covering data from January 2020 through April 2025.</p>
           <p>For more information, please visit the <a href="https://github.com/takumanken/thesis" target="_blank">GitHub repository</a>.</p>
         </div>
       `;
