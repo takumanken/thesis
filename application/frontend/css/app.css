@@ -50,9 +50,10 @@ body {
     background-color: var(--color-background);
     display: grid;
     font-family: 'Noto Sans', sans-serif;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto 1fr 40px;
     line-height: 1.6;
-    height: 98vh;
+    height: 100vh;
+    margin: 0;
 }
 
 /* 2. LAYOUT STRUCTURE
@@ -89,7 +90,7 @@ body {
 }
 
 /* Search bar */
-.search-bar {
+.app-header .search-bar {
     background: white;
     border-radius: var(--border-radius);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -203,9 +204,9 @@ body {
     border-radius: var(--border-radius);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
     display: flex;
-    height: 100%;
-    margin: 0 var(--space-xl) var(--space-xl);
-    max-height: calc(100vh - 180px);
+    margin: 0 var(--space-xl) 0 var(--space-xl);
+    height: calc(85vh - 42px);
+    max-height: calc(85vh - 42px);
     padding: 25px;
     position: relative;
 }
@@ -534,6 +535,12 @@ body {
 @keyframes rotation {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* Footer placeholder styles */
+#app-footer-placeholder {
+    grid-row: 3;
+    height: 45px;
 }
 
 /* 8. MEDIA QUERIES

@@ -1,9 +1,8 @@
 /* Main layout elements */
 .landing-body {
   background-color: var(--color-background);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  grid-template-rows: auto 1fr 40px;
   height: 100vh;
   margin: 0;
   padding: 0;
@@ -13,9 +12,18 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   width: 100%;
   max-width: 900px;
   padding: 0 var(--space-lg);
+  margin: 0 auto;
+  grid-row: 2;
+}
+
+/* Footer placeholder - matches app page */
+#app-footer-placeholder {
+  grid-row: 3;
+  height: 40px;
 }
 
 /* App branding */
@@ -59,6 +67,14 @@
 .landing-search .search-button {
   height: 60px;
   width: 60px;
+}
+
+/* Search bar */
+.search-bar {
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
 }
 
 #promptInput::placeholder {

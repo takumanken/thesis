@@ -47,8 +47,18 @@ After submitting a question, you're taken to the main application workspace, whi
 
 
 ## Privacy Notice
-- All queries entered into the search bar are processed via the Gemini API. Please refrain from submitting sensitive or personally identifiable information.
-- If the “Use my NYC Location” option is enabled, your browser’s latitude and longitude (rounded to three decimal places) will be sent to the server. This information is used solely to retrieve relevant local data and is neither stored nor shared.
+
+By using ASK NYC you agree that:
+
+- **Query Processing**: All queries entered are processed through Google's Gemini API to create data visualizations. Because this site uses the free Gemini tier, Google may retain prompts and outputs to improve its services. See [Google's AI terms](https://ai.google.dev/terms) for more details.
+
+- **Location Data**: If you enable "Use my NYC location," your coarse latitude/longitude (3-decimal places, approximately 111m accuracy) will be sent to our servers. This information is used solely to retrieve relevant local data.
+
+- **Connection Logs**: GitHub Pages (site host) and Railway (API host) automatically log connection metadata such as IP addresses for security purposes. For details, see [GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages#data-collection) and [Railway's privacy policy](https://railway.com/legal/privacy).
+
+- **Internal Logs**: We maintain brief internal diagnostics logs (timestamp + query/result) purely for troubleshooting purposes. These logs auto-delete on routine rotation and are never shared with third parties.
+
+Please refrain from submitting sensitive or personally identifiable information through your queries.
 
 ## AI Model
 This project uses [Gemini 2.5 Flash](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash) as of May 14, 2025.
