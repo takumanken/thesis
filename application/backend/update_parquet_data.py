@@ -31,6 +31,23 @@ temp_updated_parquet_path = os.path.join(temp_dir, "updated_requests_311.parquet
 # Constants for date filtering
 MIN_DATE = "2020-01-01T00:00:00.000"
 
+def get_days_to_fetch():
+    """Determine how many days to fetch based on current date"""
+    ny_timezone = pytz.timezone('America/New_York')
+    current_time_ny = datetime.now(ny_timezone)
+    
+    # Check if it's the 1st of the month
+    if current_time_ny.day == 1:
+        return 365, "annual refresh (1st of month)"
+    
+    # Check if it's Monday (weekday() returns 0 for Monday)
+    elif current_time_ny.weekday() == 0:
+        return 90, "weekly extended refresh (Monday)"
+    
+    # Default case
+    else:
+        return 14, "daily refresh"
+
 def check_unique_ids(data_source, id_column_name, source_type):
     """Check if the given ID column contains only unique values"""
     try:
@@ -101,14 +118,17 @@ try:
         config=Config(signature_version='s3v4')
     )
 
-    # 1. Download data created in the last 14 days
-    print("Fetching recently created records...")
+    # 1. Determine how many days to fetch based on current date
+    days_to_fetch, fetch_reason = get_days_to_fetch()
     
-    # Calculate date 14 days ago in New York time
+    # Calculate date range in New York time
     ny_timezone = pytz.timezone('America/New_York')
     current_time_ny = datetime.now(ny_timezone)
-    fourteen_days_ago = (current_time_ny - timedelta(days=14)).strftime("%Y-%m-%dT00:00:00.000")
-    print(f"Fetching records created since {fourteen_days_ago} (New York time) and on or after {MIN_DATE}")
+    start_date = (current_time_ny - timedelta(days=days_to_fetch)).strftime("%Y-%m-%dT00:00:00.000")
+    
+    print(f"Fetching records for {fetch_reason}")
+    print(f"Date range: {start_date} to present ({days_to_fetch} days)")
+    print(f"Records must also be created on or after {MIN_DATE}")
     
     # Set up Socrata client
     client = Socrata("data.cityofnewyork.us", app_token=APP_TOKEN, timeout=60)
@@ -127,7 +147,7 @@ try:
             
             results = client.get(
                 "erm2-nwe9",
-                where=f"created_date >= '{fourteen_days_ago}' AND created_date >= '{MIN_DATE}'",
+                where=f"created_date >= '{start_date}' AND created_date >= '{MIN_DATE}'",
                 exclude_system_fields=False,
                 limit=50000,
                 offset=offset,
@@ -157,7 +177,7 @@ try:
         # Close the JSON array
         f.write("\n]")
     
-    print(f"Completed fetching recent records: {count} total records saved to temporary file")
+    print(f"Completed fetching records: {count} total records saved to temporary file")
     
     # 2. Download the existing Parquet file from R2
     print(f"Downloading existing Parquet file from R2...")
