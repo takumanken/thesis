@@ -97,14 +97,11 @@ def check_unique_ids(data_source, id_column_name, source_type):
         return False
 
 try:
-    # Load R2 secrets
-    with open('../../secrets.json') as f:
-        secrets = json.load(f)
-
-    ACCOUNT_ID = secrets['R2_ACCOUNT_ID']
-    ACCESS_KEY_ID = secrets['R2_ACCESS_KEY_ID']
-    SECRET_ACCESS_KEY = secrets['R2_SECRET_ACCESS_KEY']
-    BUCKET_NAME = secrets['R2_BUCKET_NAME']
+    # Load R2 credentials from environment variables
+    ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID')
+    ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID')
+    SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY')
+    BUCKET_NAME = os.environ.get('R2_BUCKET_NAME')
     ENDPOINT_URL = f'https://{ACCOUNT_ID}.r2.cloudflarestorage.com'
 
     # Create R2 client
