@@ -4,3 +4,4 @@ application/duckdb/data/
 .env
 *.parquet
 application/duckdb/venv/
+.tmp
