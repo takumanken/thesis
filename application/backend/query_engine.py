@@ -386,7 +386,7 @@ async def process_aggregation_query(
     
     # Use call_gemini_async directly instead of passing in generate_content_safe
     response = await call_gemini_async(
-        "gemini-2.0-flash",
+        "gemini-2.5-flash-lite",
         translated_query,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction, 

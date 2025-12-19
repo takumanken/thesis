@@ -193,7 +193,7 @@ Dataset Sample ({sample_size} of {len(dataset)} rows):
 
     # Call Gemini API
     response = await call_gemini_async(
-        "gemini-2.0-flash",
+        "gemini-2.5-flash-lite",
         prompt,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction, 
