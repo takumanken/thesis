@@ -101,7 +101,7 @@ async def translate_query(raw_query: str, context: Optional[Dict[str, Any]] = No
     
     # Call Gemini API
     response = await call_gemini_async(
-        "gemini-2.5-flash",
+        "gemini-3-flash-preview",
         full_prompt,
         config=types.GenerateContentConfig(
             system_instruction=_system_instruction,
