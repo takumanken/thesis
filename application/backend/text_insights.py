@@ -1,4 +1,4 @@
-2"""
+"""
 Text Insights Generator
 
 Generates human-readable insights and descriptions for NYC 311 data
